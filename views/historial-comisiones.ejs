@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" type="image/svg+xml" href="/img/bill-icon.svg">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Historial de Comisiones</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link rel="stylesheet" href="/styles/layout.css">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --bg:#0f1e1e;--bg2:#162828;--bg3:#1c3030;--bg4:#223838;
+      --green:#60e61a;--green-glow:rgba(96,230,26,0.3);--green-bright:#7af028;
+      --white:#ffffff;--muted:#8fada0;
+      --amber:#f0a500;--blue:#38c5f5;--red:#e74c3c;--teal:#10b981;
+      --contrato:#38c5f5;--escritura:#7af028;
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+    }
+
+    .stars{position:fixed;inset:0;pointer-events:none;z-index:0;}
+    .star{position:absolute;border-radius:50%;animation:twinkle var(--dur) ease-in-out infinite alternate;}
+    @keyframes twinkle{from{opacity:0.1;}to{opacity:0.7;}}
+    .beam{position:fixed;top:0;right:10%;width:280px;height:100vh;background:linear-gradient(180deg,rgba(96,230,26,0.05) 0%,transparent 65%);transform:skewX(-8deg);pointer-events:none;z-index:0;}
+
+    /* Ajuste al layout compartido */
+    .main-area { background: var(--bg); }
+    .app-header { background: rgba(15,30,30,0.98); }
+
+    /* CONTENT */
+    .hist-content{position:relative;z-index:1;max-width:1020px;width:92%;margin:0 auto;padding:2rem 0 5rem;}
+
+    /* SUMMARY */
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+    .summary-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.8rem;animation:fadeUp 0.4s ease both;}
+    .sum-pill{background:var(--bg2);border:1px solid rgba(96,230,26,0.15);border-radius:12px;padding:0.7rem 1.2rem;flex:1;min-width:140px;}
+    .sum-pill span{display:block;font-size:0.62rem;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+    .sum-pill strong{font-family:'Space Mono',monospace;font-size:1rem;color:var(--white);}
+    .sum-pill.c-contrato strong{color:var(--contrato);}
+    .sum-pill.c-escritura strong{color:var(--escritura);}
+    .sum-pill.c-total strong{color:var(--green-bright);}
+
+    /* CONTROLS */
+    .controls-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.4rem;animation:fadeUp 0.4s ease both;}
+    .search-wrap{position:relative;flex:1;min-width:220px;}
+    .search-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--green);font-size:0.82rem;pointer-events:none;}
+    .search-input{width:100%;background:var(--bg2);border:1px solid rgba(96,230,26,0.18);border-radius:100px;padding:0.6rem 1rem 0.6rem 2.4rem;color:var(--white);font-family:'Nunito',sans-serif;font-size:0.85rem;font-weight:600;outline:none;transition:border-color 0.2s;}
+    .search-input::placeholder{color:rgba(143,173,160,0.35);font-weight:400;}
+    .search-input:focus{border-color:var(--green);}
+
+    /* FILTERS */
+    .filters-section{background:var(--bg2);border:1px solid rgba(96,230,26,0.14);border-radius:16px;padding:1.2rem 1.4rem;margin-bottom:1.4rem;animation:fadeUp 0.4s 0.1s ease both;position:relative;z-index:10;}
+    .filters-title{font-size:0.68rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+    .filters-title i{color:var(--green);}
+    .filters-groups{display:flex;gap:1.4rem;flex-wrap:wrap;}
+    .filter-group{flex:1;min-width:180px;}
+    .filter-group-label{font-size:0.62rem;font-weight:900;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;display:flex;align-items:center;gap:6px;}
+    .filter-group-label i{color:var(--green);font-size:0.7rem;}
+    .filters-footer{display:flex;align-items:center;justify-content:flex-end;margin-top:1rem;}
+    .filters-clear{display:inline-flex;align-items:center;gap:5px;font-size:0.68rem;font-weight:800;color:var(--muted);cursor:pointer;letter-spacing:0.06em;text-transform:uppercase;transition:color 0.2s;background:none;border:none;padding:0;}
+    .filters-clear:hover{color:var(--red);}
+    .filters-clear.hidden{display:none;}
+
+    /* NOVU SELECT */
+    .novu-custom-select{position:relative;}
+    .novu-select-display{background:var(--bg3);border:1px solid rgba(96,230,26,0.2);border-radius:10px;padding:0.6rem 2.4rem 0.6rem 0.9rem;color:var(--white);font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:700;transition:all 0.2s;cursor:pointer;user-select:none;min-height:38px;display:flex;align-items:center;}
+    .novu-select-display.placeholder{color:rgba(143,173,160,0.5);}
+    .novu-select-display:hover{border-color:rgba(96,230,26,0.45);}
+    .novu-select-display.active{border-color:var(--green);box-shadow:0 0 0 3px rgba(96,230,26,0.1);}
+    .novu-select-arrow{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--green);font-size:0.72rem;pointer-events:none;transition:transform 0.25s;}
+    .novu-select-display.active .novu-select-arrow{transform:translateY(-50%) rotate(180deg);}
+    .novu-select-dropdown{position:absolute;top:calc(100% + 5px);left:0;right:0;background:rgba(18,32,32,0.99);backdrop-filter:blur(12px);border:1px solid rgba(96,230,26,0.3);border-radius:12px;max-height:0;overflow:hidden;opacity:0;transition:all 0.25s ease;z-index:9999;box-shadow:0 12px 32px rgba(0,0,0,0.55);}
+    .novu-select-dropdown.active{max-height:280px;opacity:1;overflow-y:auto;}
+    .novu-select-options{padding:4px;}
+    .novu-select-option{padding:9px 12px;cursor:pointer;border-radius:8px;transition:background 0.12s;color:var(--white);font-size:0.83rem;font-weight:600;}
+    .novu-select-option:hover{background:rgba(96,230,26,0.15);}
+    .novu-select-option.selected{background:rgba(96,230,26,0.22);color:var(--green-bright);}
+    .novu-no-results{padding:14px;text-align:center;color:var(--muted);font-size:0.82rem;}
+    .novu-select-dropdown::-webkit-scrollbar{width:6px;}
+    .novu-select-dropdown::-webkit-scrollbar-track{background:rgba(30,48,48,0.5);border-radius:6px;}
+    .novu-select-dropdown::-webkit-scrollbar-thumb{background:rgba(96,230,26,0.45);border-radius:6px;}
+
+    /* LOCATION BLOCK */
+    .location-block{background:var(--bg2);border:1px solid rgba(96,230,26,0.14);border-radius:18px;margin-bottom:14px;animation:fadeUp 0.4s ease both;position:relative;z-index:1;}
+    .loc-header{display:flex;align-items:center;gap:14px;padding:1.1rem 1.4rem;cursor:pointer;user-select:none;transition:background 0.15s;border-bottom:1px solid rgba(96,230,26,0.08);}
+    .loc-header:hover{background:rgba(96,230,26,0.04);}
+    .loc-icon{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(96,230,26,0.2),rgba(96,230,26,0.08));border:1px solid rgba(96,230,26,0.25);display:flex;align-items:center;justify-content:center;font-size:0.85rem;color:var(--green-bright);flex-shrink:0;}
+    .loc-info{flex:1;min-width:0;}
+    .loc-name{font-weight:900;font-size:0.98rem;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .loc-sub{font-size:0.7rem;color:var(--muted);font-weight:600;margin-top:3px;}
+    .loc-phases{display:flex;gap:8px;flex-shrink:0;}
+    .phase-pill{display:flex;align-items:center;gap:5px;padding:0.28rem 0.7rem;border-radius:100px;font-size:0.65rem;font-weight:900;letter-spacing:0.05em;text-transform:uppercase;}
+    .phase-pill.contrato{background:rgba(56,197,245,0.1);border:1px solid rgba(56,197,245,0.3);color:var(--contrato);}
+    .phase-pill.escritura{background:rgba(122,240,40,0.1);border:1px solid rgba(122,240,40,0.3);color:var(--escritura);}
+    .phase-dot{width:6px;height:6px;border-radius:50%;}
+    .phase-pill.contrato .phase-dot{background:var(--contrato);}
+    .phase-pill.escritura .phase-dot{background:var(--escritura);}
+    .loc-total{text-align:right;flex-shrink:0;}
+    .loc-total-label{font-size:0.62rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;}
+    .loc-total-amt{font-family:'Space Mono',monospace;font-size:0.92rem;color:var(--white);font-weight:700;margin-top:1px;}
+    .chevron{width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(96,230,26,0.3);display:flex;align-items:center;justify-content:center;color:var(--green);font-size:11px;transition:transform 0.3s,background 0.2s;flex-shrink:0;margin-left:6px;}
+    .location-block.open .chevron{transform:rotate(180deg);background:rgba(96,230,26,0.12);border-color:rgba(96,230,26,0.6);}
+
+    /* PHASES */
+    .phases-body{max-height:0;overflow:hidden;transition:max-height 0.45s cubic-bezier(0.4,0,0.2,1);}
+    .location-block.open .phases-body{max-height:1400px;}
+    .phases-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+    .phase-col{padding:1.2rem 1.4rem;position:relative;}
+    .phase-col.contrato-col{border-right:1px solid rgba(56,197,245,0.1);}
+    .phase-col-header{display:flex;align-items:center;gap:8px;margin-bottom:1rem;padding-bottom:0.7rem;border-bottom:1px solid;}
+    .contrato-col .phase-col-header{border-color:rgba(56,197,245,0.15);}
+    .escritura-col .phase-col-header{border-color:rgba(122,240,40,0.15);}
+    .phase-col-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;}
+    .contrato-col .phase-col-icon{background:rgba(56,197,245,0.12);color:var(--contrato);}
+    .escritura-col .phase-col-icon{background:rgba(122,240,40,0.12);color:var(--escritura);}
+    .phase-col-title{font-weight:900;font-size:0.88rem;}
+    .contrato-col .phase-col-title{color:var(--contrato);}
+    .escritura-col .phase-col-title{color:var(--escritura);}
+    .phase-col-date{font-size:0.68rem;color:var(--muted);margin-top:1px;font-weight:600;}
+    .phase-price-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding:0.6rem 0.8rem;border-radius:10px;background:var(--bg3);}
+    .phase-price-label{font-size:0.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;}
+    .phase-price-val{font-family:'Space Mono',monospace;font-size:0.9rem;color:var(--white);}
+    .phase-commission-total{font-size:0.7rem;font-weight:700;margin-top:2px;}
+    .contrato-col .phase-commission-total{color:var(--contrato);}
+    .escritura-col .phase-commission-total{color:var(--escritura);}
+
+    /* PARTICIPANTS */
+    .p-list{display:flex;flex-direction:column;gap:8px;}
+    .p-item{display:flex;align-items:center;gap:10px;padding:0.65rem 0.8rem;background:var(--bg3);border-radius:10px;border:1px solid rgba(96,230,26,0.08);transition:border-color 0.15s;}
+    .p-item:hover{border-color:rgba(96,230,26,0.2);}
+    .p-av{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.75rem;font-family:'Space Mono',monospace;flex-shrink:0;}
+    .av-teal{background:linear-gradient(135deg,#38c5f5,#1a8bb5);color:#0a1a24;}
+    .av-green{background:linear-gradient(135deg,#7af028,#3a9010);color:#0f1e1e;}
+    .av-pink{background:linear-gradient(135deg,#f08080,#c04040);color:#fff;}
+    .av-amber{background:linear-gradient(135deg,#f0c040,#c88a10);color:#0f1e1e;}
+    .av-purple{background:linear-gradient(135deg,#b080f0,#7040c0);color:#fff;}
+    .p-data{flex:1;min-width:0;}
+    .p-name{font-weight:900;font-size:0.8rem;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .p-role{font-size:0.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
+    .p-nums{text-align:right;flex-shrink:0;}
+    .p-pct{font-size:0.65rem;color:var(--muted);}
+    .p-amt{font-family:'Space Mono',monospace;font-size:0.8rem;font-weight:700;}
+    .contrato-col .p-amt{color:var(--contrato);}
+    .escritura-col .p-amt{color:var(--escritura);}
+
+    /* TOTALS ROW */
+    .loc-totals-row{display:flex;gap:0;border-top:1px solid rgba(96,230,26,0.1);}
+    .loc-total-cell{flex:1;padding:0.8rem 1.4rem;display:flex;align-items:center;gap:10px;}
+    .loc-total-cell:first-child{border-right:1px solid rgba(96,230,26,0.08);}
+    .ltc-label{font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);}
+    .ltc-val{font-family:'Space Mono',monospace;font-size:0.88rem;font-weight:700;margin-top:1px;}
+    .ltc-val.c{color:var(--contrato);}
+    .ltc-val.e{color:var(--escritura);}
+    .ltc-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;}
+    .ltc-icon.c{background:rgba(56,197,245,0.1);color:var(--contrato);}
+    .ltc-icon.e{background:rgba(122,240,40,0.1);color:var(--escritura);}
+
+    /* ESTADO */
+    .list-loading{display:flex;align-items:center;justify-content:center;gap:12px;padding:3rem;color:var(--green);font-weight:700;font-size:0.9rem;}
+    .list-loading i{font-size:1.4rem;animation:spin 1s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .no-results{text-align:center;padding:4rem;color:var(--muted);opacity:0.6;}
+    .no-results i{font-size:2.2rem;margin-bottom:0.8rem;display:block;}
+
+    @media(max-width:680px){
+      .phases-grid{grid-template-columns:1fr;}
+      .phase-col.contrato-col{border-right:none;border-bottom:1px solid rgba(56,197,245,0.1);}
+      .loc-phases{display:none;}
+      .loc-totals-row{flex-direction:column;}
+      .loc-total-cell:first-child{border-right:none;border-bottom:1px solid rgba(96,230,26,0.08);}
+      .filters-groups{flex-direction:column;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+<div class="beam"></div>
+
+<%- include('partials/sidebar') %>
+<div class="main-area">
+<%- include('partials/header') %>
+
+<main class="hist-content">
+
+  <!-- SUMMARY -->
+  <div class="summary-row" id="summaryRow"></div>
+
+  <!-- SEARCH -->
+  <div class="controls-bar">
+    <div class="search-wrap">
+      <i class="fas fa-search"></i>
+      <input class="search-input" id="searchInput" type="text" placeholder="Buscar por desarrollo, empresa, ubicación, participante…">
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters-section">
+    <div class="filters-title"><i class="fas fa-filter"></i> Filtros</div>
+    <div class="filters-groups">
+
+      <div class="filter-group">
+        <div class="filter-group-label"><i class="fas fa-city"></i> Compañía</div>
+        <div class="novu-custom-select" id="selCompania">
+          <div class="novu-select-display placeholder">Todas las compañías<i class="fas fa-chevron-down novu-select-arrow"></i></div>
+          <div class="novu-select-dropdown"><div class="novu-select-options"></div></div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label"><i class="fas fa-building"></i> Desarrollo</div>
+        <div class="novu-custom-select" id="selDesarrollo">
+          <div class="novu-select-display placeholder">Todos los desarrollos<i class="fas fa-chevron-down novu-select-arrow"></i></div>
+          <div class="novu-select-dropdown"><div class="novu-select-options"></div></div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label"><i class="fas fa-map-marker-alt"></i> Ubicación</div>
+        <div class="novu-custom-select" id="selUbicacion">
+          <div class="novu-select-display placeholder">Todas las ubicaciones<i class="fas fa-chevron-down novu-select-arrow"></i></div>
+          <div class="novu-select-dropdown"><div class="novu-select-options"></div></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="filters-footer">
+      <button class="filters-clear hidden" id="btnClear"><i class="fas fa-times"></i> Limpiar filtros</button>
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div id="locationList"></div>
+
+</main>
+</div><!-- /.main-area -->
+
+<script>
+// ── Formato ───────────────────────────────────────────────────────────────────
+const fmt = n => '$' + Number(n || 0).toLocaleString('es-MX');
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+const AV_COLORS = ['av-teal', 'av-green', 'av-pink', 'av-amber', 'av-purple'];
+
+// ── Estado ────────────────────────────────────────────────────────────────────
+let ALL_DATA = null;
+const filters = { compania: null, desarrollo: null, ubicacion: null, search: '' };
+
+// ── Fetch ─────────────────────────────────────────────────────────────────────
+async function fetchHistorial() {
+  const res = await fetch('/api/comisiones/historial', { credentials: 'include' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  if (!j.success) throw new Error(j.message || 'Error del servidor');
+  return j.data || [];
+}
+
+// ── NOVU Select ───────────────────────────────────────────────────────────────
+function initNovuSelect(wrap, onSelect) {
+  const display  = wrap.querySelector('.novu-select-display');
+  const dropdown = wrap.querySelector('.novu-select-dropdown');
+
+  display.addEventListener('click', e => {
+    e.stopPropagation();
+    const isOpen = dropdown.classList.contains('active');
+    closeAllSelects();
+    if (!isOpen) { dropdown.classList.add('active'); display.classList.add('active'); }
+  });
+
+  wrap.querySelector('.novu-select-options').addEventListener('click', e => {
+    const opt = e.target.closest('.novu-select-option');
+    if (!opt) return;
+    wrap.querySelectorAll('.novu-select-option').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    const val = opt.dataset.value;
+    if (val) {
+      display.textContent = opt.textContent;
+      display.classList.remove('placeholder');
+    } else {
+      display.textContent = opt.dataset.placeholder || '—';
+      display.classList.add('placeholder');
+    }
+    const arrow = document.createElement('i');
+    arrow.className = 'fas fa-chevron-down novu-select-arrow';
+    display.appendChild(arrow);
+    closeAllSelects();
+    onSelect(val || null);
+  });
+}
+
+function closeAllSelects() {
+  document.querySelectorAll('.novu-select-dropdown.active').forEach(dd => {
+    dd.classList.remove('active');
+    dd.previousElementSibling.classList.remove('active');
+  });
+}
+document.addEventListener('click', () => closeAllSelects());
+
+function fillSelect(wrap, items, placeholder) {
+  const container = wrap.querySelector('.novu-select-options');
+  container.innerHTML = '';
+  const allOpt = document.createElement('div');
+  allOpt.className = 'novu-select-option';
+  allOpt.textContent = placeholder;
+  allOpt.dataset.value = '';
+  allOpt.dataset.placeholder = placeholder;
+  container.appendChild(allOpt);
+  items.forEach(item => {
+    const opt = document.createElement('div');
+    opt.className = 'novu-select-option';
+    opt.textContent = item;
+    opt.dataset.value = item;
+    container.appendChild(opt);
+  });
+  if (!items.length) {
+    const nr = document.createElement('div');
+    nr.className = 'novu-no-results';
+    nr.textContent = 'Sin opciones';
+    container.appendChild(nr);
+  }
+}
+
+function populateFilters(data) {
+  const companies    = [...new Set(data.map(d => d.company).filter(Boolean))].sort();
+  const developments = [...new Set(data.map(d => d.development).filter(Boolean))].sort();
+  const locations    = [...new Set(data.map(d => d.locationText).filter(Boolean))].sort();
+  fillSelect(document.getElementById('selCompania'),   companies,    'Todas las compañías');
+  fillSelect(document.getElementById('selDesarrollo'), developments, 'Todos los desarrollos');
+  fillSelect(document.getElementById('selUbicacion'),  locations,    'Todas las ubicaciones');
+}
+
+function resetSelectDisplay(id, placeholder) {
+  const wrap    = document.getElementById(id);
+  const display = wrap.querySelector('.novu-select-display');
+  display.textContent = placeholder;
+  display.classList.add('placeholder');
+  const arrow = document.createElement('i');
+  arrow.className = 'fas fa-chevron-down novu-select-arrow';
+  display.appendChild(arrow);
+  wrap.querySelectorAll('.novu-select-option').forEach(o => o.classList.remove('selected'));
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function phaseTotal(fase) {
+  return fase?.total_commission ||
+    (fase?.participantes || []).reduce((a, p) => a + (p.commission_amount || 0), 0);
+}
+
+function buildParticipants(participantes) {
+  return (participantes || []).map((p, i) => {
+    const name     = p.usuario?.name || '?';
+    const initials = name.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
+    const pct      = p.percentage != null ? (p.percentage * 100).toFixed(1) : '0';
+    const role     = p.role_in_comision === 'asesor' ? 'Asesor' : p.role_in_comision === 'gerente' ? 'Gerente' : (p.role_in_comision || '');
+    const av       = AV_COLORS[i % AV_COLORS.length];
+    return `
+      <div class="p-item">
+        <div class="p-av ${av}">${initials}</div>
+        <div class="p-data">
+          <div class="p-name">${name}</div>
+          <div class="p-role">${role}</div>
+        </div>
+        <div class="p-nums">
+          <div class="p-pct">${pct}%</div>
+          <div class="p-amt">${fmt(p.commission_amount || 0)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function buildPhaseCol(fase, tipo, loc) {
+  if (!fase) fase = {};
+  const isC   = tipo === 'contrato';
+  const cls   = isC ? 'contrato-col' : 'escritura-col';
+  const label = isC ? 'Contrato' : 'Escritura';
+  const icon  = isC ? 'fas fa-file-signature' : 'fas fa-stamp';
+  const total = phaseTotal(fase);
+
+  let contentHtml = '';
+  if (!isC && !fase._id && loc && loc.contrato && loc.contrato._id) {
+    contentHtml = `
+      <div style="padding: 2rem; display: flex; justify-content: center; align-items: center; height: 100%;">
+        <a href="/registrar-comision?fromContrato=${loc.contrato._id}" style="text-decoration: none;">
+          <button style="background: transparent; border: 1px solid var(--green); color: var(--green); padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(96,230,26,0.1)'" onmouseout="this.style.background='transparent'">
+            Registrar comisión de escritura
+          </button>
+        </a>
+      </div>
+    `;
+  } else {
+    contentHtml = `
+      <div class="phase-price-row">
+        <div>
+          <div class="phase-price-label">Precio de venta</div>
+          <div class="phase-price-val">${fmt(fase.sale_price)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="phase-price-label">Comisión total</div>
+          <div class="phase-commission-total">${fmt(total)}</div>
+        </div>
+      </div>
+      <div class="p-list">${buildParticipants(fase.participantes)}</div>
+    `;
+  }
+
+  return `
+    <div class="phase-col ${cls}">
+      <div class="phase-col-header">
+        <div class="phase-col-icon"><i class="${icon}"></i></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div>
+            <div class="phase-col-title">${label}</div>
+            <div class="phase-col-date"><i class="fas fa-calendar-alt" style="margin-right:4px;opacity:0.6;"></i>${fmtDate(fase.operation_date)}</div>
+          </div>
+        </div>
+      </div>
+      ${contentHtml}
+    </div>`;
+}
+
+function buildLocationBlock(loc, idx) {
+  const cTotal = phaseTotal(loc.contrato);
+  const eTotal = phaseTotal(loc.escritura);
+  const grand  = cTotal + eTotal;
+  const locText = loc.locationText || '';
+
+  const block = document.createElement('div');
+  block.className = 'location-block';
+  block.id = `loc-${loc.id}`;
+  block.style.animationDelay = `${idx * 0.05}s`;
+  block.innerHTML = `
+    <div class="loc-header" onclick="toggleLoc('${loc.id}')">
+      <div class="loc-icon"><i class="fas fa-building"></i></div>
+      <div class="loc-info">
+        <div class="loc-name">${loc.development} — ${locText}</div>
+        <div class="loc-sub">${loc.company}</div>
+      </div>
+      <div class="loc-phases">
+        <div class="phase-pill contrato"><div class="phase-dot"></div>Contrato</div>
+        <div class="phase-pill escritura"><div class="phase-dot"></div>Escritura</div>
+      </div>
+      <div class="loc-total">
+        <div class="loc-total-label">Total comisiones</div>
+        <div class="loc-total-amt">${fmt(grand)}</div>
+      </div>
+      <div class="chevron"><i class="fas fa-chevron-down"></i></div>
+    </div>
+    <div class="phases-body" id="pb-${loc.id}">
+      <div class="phases-grid">
+        ${buildPhaseCol(loc.contrato, 'contrato', loc)}
+        ${buildPhaseCol(loc.escritura, 'escritura', loc)}
+      </div>
+      <div class="loc-totals-row">
+        <div class="loc-total-cell">
+          <div class="ltc-icon c"><i class="fas fa-file-signature"></i></div>
+          <div><div class="ltc-label">Total Contrato</div><div class="ltc-val c">${fmt(cTotal)}</div></div>
+        </div>
+        <div class="loc-total-cell">
+          <div class="ltc-icon e"><i class="fas fa-stamp"></i></div>
+          <div><div class="ltc-label">Total Escritura</div><div class="ltc-val e">${fmt(eTotal)}</div></div>
+        </div>
+      </div>
+    </div>`;
+  return block;
+}
+
+function toggleLoc(id) {
+  const block = document.getElementById(`loc-${id}`);
+  const wasOpen = block.classList.contains('open');
+  document.querySelectorAll('.location-block.open').forEach(b => b.classList.remove('open'));
+  if (!wasOpen) block.classList.add('open');
+}
+
+function renderSummary(data) {
+  const totalC = data.reduce((a, l) => a + phaseTotal(l.contrato), 0);
+  const totalE = data.reduce((a, l) => a + phaseTotal(l.escritura), 0);
+  document.getElementById('summaryRow').innerHTML = `
+    <div class="sum-pill"><span>Ubicaciones</span><strong>${data.length}</strong></div>
+    <div class="sum-pill c-contrato"><span>Comisiones Contrato</span><strong>${fmt(totalC)}</strong></div>
+    <div class="sum-pill c-escritura"><span>Comisiones Escritura</span><strong>${fmt(totalE)}</strong></div>
+    <div class="sum-pill c-total"><span>Gran Total</span><strong>${fmt(totalC + totalE)}</strong></div>`;
+}
+
+function applyFilters() {
+  if (!ALL_DATA) return;
+  const filtered = ALL_DATA.filter(d => {
+    if (filters.compania   && d.company          !== filters.compania)   return false;
+    if (filters.desarrollo && d.development       !== filters.desarrollo) return false;
+    if (filters.ubicacion  && d.locationText       !== filters.ubicacion)  return false;
+    if (filters.search) {
+      const hay = [
+        d.development, d.company, d.locationText,
+        ...(d.contrato?.participantes  || []).map(p => p.usuario?.name || ''),
+        ...(d.escritura?.participantes || []).map(p => p.usuario?.name || ''),
+      ].join(' ').toLowerCase();
+      if (!hay.includes(filters.search)) return false;
+    }
+    return true;
+  });
+  renderSummary(filtered);
+  const list = document.getElementById('locationList');
+  list.innerHTML = '';
+  if (!filtered.length) {
+    list.innerHTML = '<div class="no-results"><i class="fas fa-search"></i>Sin resultados para los filtros aplicados</div>';
+    return;
+  }
+  filtered.forEach((loc, i) => list.appendChild(buildLocationBlock(loc, i)));
+}
+
+function updateClearBtn() {
+  const active = filters.compania || filters.desarrollo || filters.ubicacion;
+  document.getElementById('btnClear').classList.toggle('hidden', !active);
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+async function init() {
+  const list = document.getElementById('locationList');
+  list.innerHTML = '<div class="list-loading"><i class="fas fa-spinner"></i> Cargando historial…</div>';
+  document.getElementById('summaryRow').innerHTML = '';
+
+  try {
+    ALL_DATA = await fetchHistorial();
+  } catch (e) {
+    list.innerHTML = '<div class="no-results"><i class="fas fa-exclamation-triangle"></i>Error al cargar el historial</div>';
+    return;
+  }
+
+  populateFilters(ALL_DATA);
+  applyFilters();
+}
+
+// ── Filtros ────────────────────────────────────────────────────────────────────
+initNovuSelect(document.getElementById('selCompania'), val => {
+  filters.compania = val;
+  // Repoblar desarrollo y ubicación según compañía
+  const devs = val ? [...new Set(ALL_DATA.filter(d => d.company === val).map(d => d.development))] : [...new Set(ALL_DATA.map(d => d.development))];
+  const locs = val ? [...new Set(ALL_DATA.filter(d => d.company === val).map(d => d.locationText))] : [...new Set(ALL_DATA.map(d => d.locationText))];
+  fillSelect(document.getElementById('selDesarrollo'), devs.filter(Boolean).sort(), 'Todos los desarrollos');
+  fillSelect(document.getElementById('selUbicacion'),  locs.filter(Boolean).sort(), 'Todas las ubicaciones');
+  filters.desarrollo = null; filters.ubicacion = null;
+  resetSelectDisplay('selDesarrollo', 'Todos los desarrollos');
+  resetSelectDisplay('selUbicacion',  'Todas las ubicaciones');
+  updateClearBtn(); applyFilters();
+});
+
+initNovuSelect(document.getElementById('selDesarrollo'), val => {
+  filters.desarrollo = val;
+  const base = val ? ALL_DATA.filter(d => d.development === val) : (filters.compania ? ALL_DATA.filter(d => d.company === filters.compania) : ALL_DATA);
+  const locs = [...new Set(base.map(d => d.locationText))];
+  fillSelect(document.getElementById('selUbicacion'), locs.filter(Boolean).sort(), 'Todas las ubicaciones');
+  filters.ubicacion = null;
+  resetSelectDisplay('selUbicacion', 'Todas las ubicaciones');
+  updateClearBtn(); applyFilters();
+});
+
+initNovuSelect(document.getElementById('selUbicacion'), val => {
+  filters.ubicacion = val;
+  updateClearBtn(); applyFilters();
+});
+
+document.getElementById('btnClear').addEventListener('click', () => {
+  filters.compania = filters.desarrollo = filters.ubicacion = null;
+  resetSelectDisplay('selCompania',   'Todas las compañías');
+  resetSelectDisplay('selDesarrollo', 'Todos los desarrollos');
+  resetSelectDisplay('selUbicacion',  'Todas las ubicaciones');
+  populateFilters(ALL_DATA);
+  updateClearBtn(); applyFilters();
+});
+
+document.getElementById('searchInput').addEventListener('input', function() {
+  filters.search = this.value.toLowerCase().trim();
+  applyFilters();
+});
+
+// ── Stars ─────────────────────────────────────────────────────────────────────
+(function() {
+  const el = document.getElementById('stars');
+  const colors = ['#ffffff', '#7af028', '#c8e88a'];
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random() * 2 + 0.4;
+    s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*colors.length)]};--dur:${1.5+Math.random()*3}s;animation-delay:${Math.random()*3}s;`;
+    el.appendChild(s);
+  }
+})();
+
+init();
+</script>
+</body>
+</html>

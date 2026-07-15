@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/svg+xml" href="/img/bill-icon.svg">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOVU</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/styles/layout.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #ffffff; overflow-x: hidden; }
+    </style> 
+    <style>
+        body { background: #0f1e1e; min-height: 100vh; }
+        body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(circle at 20% 50%, rgba(96,230,26,0.07) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(96,230,26,0.05) 0%, transparent 50%), linear-gradient(135deg, #0f1e1e 0%, #162828 50%, #0f1e1e 100%); z-index: -1; }   
+        #novu-beam { position: fixed; top: 0; right: 10%; width: 260px; height: 100vh; background: linear-gradient(180deg, rgba(96,230,26,0.07) 0%, transparent 65%); transform: skewX(-8deg); pointer-events: none; z-index: 0; }
+        .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+        .star  { position: absolute; border-radius: 50%; animation: twinkle var(--dur) ease-in-out infinite alternate; }
+        @keyframes twinkle { from { opacity: 0.2; transform: scale(1); } to { opacity: 1; transform: scale(1.4); } }
+        .beam  { position: fixed; top: 0; right: 15%; width: 260px; height: 100vh; background: linear-gradient(180deg, rgba(96,230,26,0.07) 0%, transparent 70%); transform: skewX(-8deg); pointer-events: none; z-index: 0; }
+        #novu-header { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 2rem 4rem 1.4rem; border-bottom: 1px solid rgba(96,230,26,0.15); margin-bottom: 0; }
+        #novu-logo { font-family: 'Space Mono', monospace; font-size: clamp(3.5rem, 8vw, 6rem); font-weight: 700; line-height: 1; letter-spacing: -3px; color: #ffffff; text-shadow: 0 0 60px rgba(96,230,26,0.3); display: inline-block; cursor: pointer; transition: color 0.2s, text-shadow 0.2s; position: relative; text-decoration: none; }
+        #novu-logo::after { content: ''; position: absolute; bottom: 3px; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #60e61a, #7af028); border-radius: 2px; transform: scaleX(0); transform-origin: left; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); }
+        #novu-logo:hover { color: #7af028; text-shadow: 0 0 40px rgba(96,230,26,0.4); }
+        #novu-logo:hover::after { transform: scaleX(1); }
+        #novu-logo .dot { color: #60e61a; }
+        #novu-header-right { display: flex; align-items: center; gap: 20px; }
+        .novu-ver-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: rgba(96,230,26,0.1); border: 1px solid rgba(96,230,26,0.3); border-radius: 10px; color: #7af028; font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: all 0.25s; white-space: nowrap; }
+        .novu-ver-btn:hover { background: rgba(96,230,26,0.2); border-color: #60e61a; color: #fff; transform: translateY(-2px); }
+        #novu-mascot { animation: novuFloat 4s ease-in-out infinite; }
+        @keyframes novuFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+        .novu-unicorn-wrap { position: relative; width: clamp(75px, 8vw, 110px); height: clamp(75px, 8vw, 110px); }
+        .novu-glow-bubble { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 80%; height: 80%; border-radius: 50%; background: radial-gradient(circle, rgba(74,133,24,0.5) 0%, transparent 70%); filter: blur(12px); }
+        .novu-svg { position: relative; z-index: 1; width: 100%; height: 100%; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); }
+        .container { position: relative; z-index: 1; padding: 2rem 2rem 3rem; }
+        @media (max-width: 640px) { #novu-header { padding: 1.2rem 1.4rem; } .novu-ver-btn span { display: none; } .novu-ver-btn { padding: 10px 12px; } }
+    </style>
+    <style>
+        .hero { text-align: center; }
+        .hero h1 { font-size: 2.8rem; font-weight: 800; margin-bottom: 15px; background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -2px; }
+        .hero .decorative-line { width: 40px; height: 3px; background: linear-gradient(90deg, transparent, #60e61a, transparent); margin: 20px auto; border-radius: 10px; }
+    </style>
+    <style>
+        .form-card { background: rgba(20, 20, 20, 0.8); backdrop-filter: blur(10px); border-radius: 24px; padding: 45px; border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); }
+        .form-grid { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 30px; margin-bottom: 30px; align-items: start; }
+        .column-divider { width: 2px; height: 100%; background: linear-gradient(180deg, transparent, rgba(96, 230, 26, 0.3), transparent); border-radius: 10px; justify-self: center; }
+        .column-left, .column-right { display: flex; flex-direction: column; gap: 25px; }
+        .form-group { display: flex; flex-direction: column; position: relative; }
+        label { font-size: 0.9rem; font-weight: 600; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+        label i { color: #60e61a; font-size: 0.85rem; }
+        .req { color: #e74c3c; font-size: 0.85rem; line-height: 1; }
+        .field-error { font-size: 0.78rem; color: #e74c3c; margin-top: 6px; display: none; align-items: center; gap: 5px; animation: errorFadeIn 0.25s ease; }
+        .field-error.visible { display: flex; }
+        @keyframes errorFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .field-error i { font-size: 0.72rem; flex-shrink: 0; }
+        .custom-select.has-error .select-display { border-color: rgba(231, 76, 60, 0.7) !important; box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12) !important; }
+        input.has-error { border-color: rgba(231, 76, 60, 0.7) !important; box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12) !important; }
+        .custom-select.valid .select-display { border-color: rgba(96, 230, 26, 0.5) !important; }
+        input.valid { border-color: rgba(96, 230, 26, 0.5) !important; }
+        .custom-select { position: relative; }
+        .select-display { background: rgba(30, 30, 30, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px 40px 14px 18px; color: #ffffff; font-size: 1rem; font-family: inherit; transition: all 0.3s ease; cursor: pointer; position: relative; user-select: none; min-height: 48px; display: flex; align-items: center; }
+        .select-display.placeholder { color: #666; }
+        .select-display.loading { color: #888; cursor: wait; }
+        .select-display.auto-selected { border-color: rgba(96, 230, 26, 0.5); background: rgba(96, 230, 26, 0.05); }
+        .select-display:hover:not(.loading) { border-color: rgba(96, 230, 26, 0.4); }
+        .select-display.active { background: rgba(30, 30, 30, 0.8); border-color: #60e61a; box-shadow: 0 0 0 3px rgba(96, 230, 26, 0.1); }
+        .select-arrow { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #60e61a; transition: transform 0.3s ease; pointer-events: none; }
+        .select-display.active .select-arrow { transform: translateY(-50%) rotate(180deg); }
+        .select-display.loading .select-arrow { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: translateY(-50%) rotate(0deg); } to { transform: translateY(-50%) rotate(360deg); } }
+        .select-dropdown { position: absolute; top: calc(100% + 5px); left: 0; right: 0; background: rgba(20, 20, 20, 0.98); backdrop-filter: blur(10px); border: 1px solid rgba(96, 230, 26, 0.3); border-radius: 12px; max-height: 0; overflow: hidden; opacity: 0; transition: all 0.3s ease; z-index: 1000; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+        .select-dropdown.active { max-height: 350px; opacity: 1; overflow-y: auto; }
+        .select-search { padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); position: sticky; top: 0; background: rgba(20, 20, 20, 0.98); z-index: 10; }
+        .select-search input { width: 100%; background: rgba(30, 30, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px 35px 10px 12px; color: #ffffff; font-size: 0.9rem; font-family: inherit; outline: none; transition: all 0.3s ease; }
+        .select-search input:focus { border-color: #60e61a; box-shadow: 0 0 0 2px rgba(96, 230, 26, 0.1); }
+        .select-search i { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); color: #60e61a; font-size: 0.85rem; }
+        .select-options { padding: 5px; }
+        .select-option { padding: 12px 15px; cursor: pointer; border-radius: 8px; transition: all 0.2s ease; color: #ffffff; font-size: 0.95rem; }
+        .select-option:hover { background: rgba(96, 230, 26, 0.15); }
+        .select-option.selected { background: rgba(96, 230, 26, 0.25); color: #60e61a; font-weight: 600; }
+        .select-option.hidden, .select-option.filtered-out { display: none; }
+        .no-results, .loading-message, .error-message { padding: 20px; text-align: center; font-size: 0.9rem; }
+        .no-results { color: #666; }
+        .loading-message { color: #60e61a; }
+        .loading-message i { animation: spin 1s linear infinite; display: inline-block; margin-right: 8px; }
+        .error-message { color: #ff6b6b; }
+        .auto-select-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(96, 230, 26, 0.2); border: 1px solid rgba(96, 230, 26, 0.4); color: #60e61a; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; margin-left: 8px; animation: fadeInScale 0.3s ease; }
+        @keyframes fadeInScale { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        input[type="date"] { background: rgba(30, 30, 30, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px 18px; color: #ffffff; font-size: 1rem; font-family: inherit; transition: all 0.3s ease; outline: none; width: 100%; }
+        input[type="date"]:focus { background: rgba(30, 30, 30, 0.8); border-color: #60e61a; box-shadow: 0 0 0 3px rgba(96, 230, 26, 0.1); }
+        input[type="date"]:hover { border-color: rgba(96, 230, 26, 0.4); }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1) brightness(0.8); cursor: pointer; }
+        .mp-checkbox-inline { display: flex; align-items: center; gap: 12px; padding: 18px 20px; background: rgba(96, 230, 26, 0.1); border: 1px solid rgba(96, 230, 26, 0.3); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; }
+        .mp-checkbox-inline:hover { background: rgba(96, 230, 26, 0.15); border-color: rgba(96, 230, 26, 0.5); }
+        .mp-checkbox-inline input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: #60e61a; }
+        .mp-checkbox-inline .checkbox-label { font-size: 0.95rem; font-weight: 600; color: #ffffff; text-transform: none; letter-spacing: 0; margin: 0; }
+        .personnel-section { margin-top: 40px; padding-top: 40px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        .section-title { font-size: 1.3rem; font-weight: 700; color: #60e61a; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; }
+        .section-title i { font-size: 1.1rem; }
+        .personnel-row { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 20px; padding: 20px; background: rgba(30, 30, 30, 0.3); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.3s ease; }
+        .personnel-row.first-row { grid-template-columns: 1fr 1fr 1fr; }
+        .personnel-row:hover { background: rgba(30, 30, 30, 0.5); border-color: rgba(96, 230, 26, 0.2); }
+        .row-number { grid-column: 1 / -1; font-size: 0.85rem; font-weight: 600; color: #60e61a; margin-bottom: 10px; }
+        .row-buttons { display: flex; justify-content: space-between; }
+        .row-btn { display: inline-flex; align-items: center; gap: 10px; padding: 12px 24px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; margin-top: 15px; }
+        .add-row-btn { color: #60e61a; background: rgba(96, 230, 26, 0.15); border: 1px solid rgba(96, 230, 26, 0.3); }
+        .delete-row-btn { color: #e74c3c; background: rgba(231, 76, 60, 0.12); border: 1px solid rgba(231, 76, 60, 0.3); }
+        .add-row-btn:hover { border-color: #60e61a; background: rgba(96, 230, 26, 0.25); }
+        .delete-row-btn:hover { border-color: #e74c3c; background: rgba(231, 76, 60, 0.2); }
+        .row-btn:hover { transform: translateY(-2px); }
+        .row-btn i { font-size: 0.9rem; }
+        .actions { display: flex; gap: 20px; justify-content: center; margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+        .btn { padding: 16px 40px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 10px; letter-spacing: 0.5px; }
+        .btn-primary { background: linear-gradient(135deg, #60e61a, #3a9010); color: #ffffff; box-shadow: 0 4px 15px rgba(96, 230, 26, 0.3); }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(96, 230, 26, 0.4); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.05); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-3px); }
+        .sale-price-input { background: rgba(30, 30, 30, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px 18px; color: #ffffff; font-size: 1rem; font-family: inherit; transition: all 0.3s ease; outline: none; width: 100%; }
+        .sale-price-input:hover { border-color: rgba(96, 230, 26, 0.4); }
+        .sale-price-input:focus { background: rgba(30, 30, 30, 0.8); border-color: #60e61a; box-shadow: 0 0 0 3px rgba(96, 230, 26, 0.1); }
+        .sale-price-input::placeholder { color: #666; }
+        .pct-select { background: rgba(30, 30, 30, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 0 15px; color: #ffffff; font-size: 0.95rem; font-family: inherit; outline: none; cursor: pointer; height: 48px; width: 100px; appearance: none; transition: all 0.3s ease; }
+        .pct-select:hover { border-color: rgba(96, 230, 26, 0.4); }
+        .pct-select:focus { border-color: #60e61a; box-shadow: 0 0 0 3px rgba(96, 230, 26, 0.1); }
+        .pct-select option { background: #111a11; color: #fff; }
+        .pct-custom-input { background: rgba(30, 30, 30, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 0 10px; color: #ffffff; font-size: 0.95rem; font-family: inherit; outline: none; height: 48px; width: 80px; transition: all 0.3s ease; }
+        .pct-custom-input:focus { border-color: #60e61a; box-shadow: 0 0 0 3px rgba(96, 230, 26, 0.1); }
+        .participant-group { display: flex; gap: 10px; }
+        .participant-group .custom-select { flex: 1; }
+        .select-dropdown::-webkit-scrollbar { width: 8px; }
+        .select-dropdown::-webkit-scrollbar-track { background: rgba(30, 30, 30, 0.5); border-radius: 10px; }
+        .select-dropdown::-webkit-scrollbar-thumb { background: rgba(96, 230, 26, 0.5); border-radius: 10px; }
+        .select-dropdown::-webkit-scrollbar-thumb:hover { background: rgba(96, 230, 26, 0.7); }
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .form-card { padding: 30px 20px; }
+            .form-grid { grid-template-columns: 1fr; gap: 20px; }
+            .column-divider { display: none; }
+            .personnel-row, .personnel-row.first-row { grid-template-columns: 1fr; gap: 15px; }
+            .actions { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+    <style>
+        .novu-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px); z-index: 9000; align-items: center; justify-content: center; padding: 20px; }
+        .novu-modal-overlay.active { display: flex; }
+        .novu-modal { background: #111a11; border: 1px solid rgba(96, 230, 26, 0.25); border-radius: 20px; width: 100%; max-width: 600px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(96,230,26,0.1); animation: modalIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes modalIn { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .novu-modal-header { padding: 28px 32px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: flex-start; gap: 16px; }
+        .novu-modal-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+        .novu-modal-icon.success { background: rgba(96,230,26,0.15); color: #60e61a; border: 1px solid rgba(96,230,26,0.3); }
+        .novu-modal-icon.error { background: rgba(231,76,60,0.15); color: #e74c3c; border: 1px solid rgba(231,76,60,0.3); }
+        .novu-modal-icon.warning { background: rgba(240,165,0,0.15); color: #f0a500; border: 1px solid rgba(240,165,0,0.3); }
+        .novu-modal-icon.info { background: rgba(96,230,26,0.15); color: #60e61a; border: 1px solid rgba(96,230,26,0.3); }
+        .novu-modal-titles { flex: 1; }
+        .novu-modal-titles h2 { font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 4px; }
+        .novu-modal-titles p { font-size: 0.9rem; color: #888; line-height: 1.5; }
+        .novu-modal-close { background: none; border: none; color: #555; font-size: 1.1rem; cursor: pointer; padding: 4px; border-radius: 6px; transition: color 0.2s, background 0.2s; flex-shrink: 0; }
+        .novu-modal-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
+        .novu-modal-body { padding: 24px 32px; overflow-y: auto; flex: 1; }
+        .novu-modal-body::-webkit-scrollbar { width: 6px; }
+        .novu-modal-body::-webkit-scrollbar-track { background: rgba(30,30,30,0.5); border-radius: 6px; }
+        .novu-modal-body::-webkit-scrollbar-thumb { background: rgba(96,230,26,0.4); border-radius: 6px; }
+        .payload-section-label { font-size: 0.75rem; font-weight: 700; color: #60e61a; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; margin-top: 20px; display: flex; align-items: center; gap: 8px; }
+        .payload-section-label:first-child { margin-top: 0; }
+        .payload-section-label::after { content: ''; flex: 1; height: 1px; background: rgba(96,230,26,0.2); }
+        .payload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+        .payload-grid.full { grid-template-columns: 1fr; }
+        .payload-field { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 14px; }
+        .payload-field-label { font-size: 0.72rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .payload-field-value { font-size: 0.95rem; color: #e0e0e0; font-weight: 500; word-break: break-all; }
+        .payload-field-value.accent { color: #60e61a; font-weight: 700; }
+        .payload-field-value.money { color: #7af028; font-weight: 700; font-size: 1.05rem; }
+        .participant-card { background: rgba(96,230,26,0.05); border: 1px solid rgba(96,230,26,0.15); border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; }
+        .participant-card:last-child { margin-bottom: 0; }
+        .participant-role { font-size: 0.72rem; font-weight: 700; color: #60e61a; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .participant-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .participant-name { font-size: 0.95rem; color: #fff; font-weight: 600; }
+        .participant-pct { font-size: 0.85rem; color: #888; }
+        .participant-commission { font-size: 0.85rem; color: #7af028; font-weight: 700; }
+        .novu-modal-footer { padding: 20px 32px 28px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 12px; justify-content: flex-end; }
+        .novu-modal-footer.centered { justify-content: center; }
+        .novu-btn { padding: 12px 28px; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.25s ease; display: inline-flex; align-items: center; gap: 8px; }
+        .novu-btn-primary { background: linear-gradient(135deg, #60e61a, #3a9010); color: #fff; box-shadow: 0 4px 14px rgba(96,230,26,0.3); }
+        .novu-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(96,230,26,0.4); }
+        .novu-btn-secondary { background: rgba(255,255,255,0.05); color: #ccc; border: 1px solid rgba(255,255,255,0.1); }
+        .novu-btn-secondary:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .novu-btn-danger { background: rgba(220,50,50,0.15); color: #f05555; border: 1px solid rgba(220,50,50,0.3); }
+        .novu-btn-danger:hover { background: rgba(220,50,50,0.25); }
+        @media (max-width: 640px) {
+            .novu-modal { border-radius: 16px; }
+            .novu-modal-header, .novu-modal-body, .novu-modal-footer { padding-left: 20px; padding-right: 20px; }
+            .payload-grid { grid-template-columns: 1fr; }
+            .novu-modal-footer { flex-direction: column; }
+            .novu-btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+<%- include('partials/sidebar') %>
+<div class="main-area">
+<%- include('partials/header') %>
+
+    <div class="stars" id="stars"></div>
+    <div class="beam"></div>
+
+
+
+    <main class="container">
+        
+        <hero class="hero">
+            <!-- <div class="decorative-line"></div> -->
+             
+            <h1>Registro de Comisión</h1>
+            <div class="decorative-line"></div>
+        </hero>
+
+        <div class="form-card">
+            <form id="commissionForm" novalidate>
+                <div class="form-grid">
+                    <div class="column-left">
+                        <div class="form-group">
+                            <label><i class="fas fa-building"></i> Compañía <span class="req">*</span></label>
+                            <div class="custom-select" data-field="compania" data-api="/v10/companias" data-required="true">
+                                <div class="select-display placeholder">Seleccionar compañía<i class="fas fa-chevron-down select-arrow"></i></div>
+                                <div class="select-dropdown">
+                                    <div class="select-search"><input type="text" placeholder="Buscar compañía..."><i class="fas fa-search"></i></div>
+                                    <div class="select-options"></div>
+                                </div>
+                            </div>
+                            <div class="field-error" data-for="compania"><i class="fas fa-exclamation-circle"></i> Por favor selecciona una compañía.</div>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-rocket"></i> Desarrollo <span class="req">*</span></label>
+                            <div class="custom-select" data-field="desarrollo" data-api="/v10/desarrollos" data-required="true">
+                                <div class="select-display placeholder">Seleccionar desarrollo<i class="fas fa-chevron-down select-arrow"></i></div>
+                                <div class="select-dropdown">
+                                    <div class="select-search"><input type="text" placeholder="Buscar desarrollo..."><i class="fas fa-search"></i></div>
+                                    <div class="select-options"></div>
+                                </div>
+                            </div>
+                            <div class="field-error" data-for="desarrollo"><i class="fas fa-exclamation-circle"></i> Por favor selecciona un desarrollo.</div>
+                        </div>
+
+
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt"></i> Ubicación <span class="req">*</span></label>
+                            <div class="custom-select" data-field="ubicacion" data-api="/v10/ubicaciones" data-required="true">
+                                <div class="select-display placeholder">Seleccionar ubicación<i class="fas fa-chevron-down select-arrow"></i></div>
+                                <div class="select-dropdown">
+                                    <div class="select-search"><input type="text" placeholder="Buscar ubicación..."><i class="fas fa-search"></i></div>
+                                    <div class="select-options"></div>
+                                </div>
+                            </div>
+                            <div class="field-error" data-for="ubicacion"><i class="fas fa-exclamation-circle"></i> Por favor selecciona una ubicación.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-folder-open"></i> Expediente <span class="req">*</span></label>
+                            <div class="custom-select" data-field="expediente" data-api="/v10/expedientes" data-required="true">
+                                <div class="select-display placeholder">Seleccionar expediente<i class="fas fa-chevron-down select-arrow"></i></div>
+                                <div class="select-dropdown">
+                                    <div class="select-search"><input type="text" placeholder="Buscar expediente o cliente..."><i class="fas fa-search"></i></div>
+                                    <div class="select-options"></div>
+                                </div>
+                            </div>
+                            <div class="field-error" data-for="expediente"><i class="fas fa-exclamation-circle"></i> Por favor selecciona un expediente.</div>
+                        </div>
+
+                    </div>
+
+                    <div class="column-divider"></div>
+
+                    <div class="column-right">
+                        <div class="form-group">
+                            <label><i class="fas fa-calendar-day"></i> Fecha registro</label>
+                            <input type="date" id="fechaRegistro" value="" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-receipt"></i> Concepto <span class="req">*</span></label>
+                            <div class="custom-select" data-field="concepto" data-api="/v10/conceptos" data-required="true">
+                                <div class="select-display placeholder">Seleccionar concepto<i class="fas fa-chevron-down select-arrow"></i></div>
+                                <div class="select-dropdown">
+                                    <div class="select-search"><input type="text" placeholder="Buscar concepto..."><i class="fas fa-search"></i></div>
+                                    <div class="select-options"></div>
+                                </div>
+                            </div>
+                            <div class="field-error" data-for="concepto"><i class="fas fa-exclamation-circle"></i> Por favor selecciona un concepto.</div>
+                        </div>
+                        <div class="form-group" id="penaltyTargetContainer" style="display: none;">
+                            <label><i class="fas fa-balance-scale"></i> ¿A quién se aplica la penalización?</label>
+                            <div class="radio-group" style="display: flex; gap: 15px; margin-top: 5px;">
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="radio" name="penaltyTarget" value="cliente" checked>
+                                    Cliente
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="radio" name="penaltyTarget" value="miembros">
+                                    Miembros de la comisión
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-calendar-check"></i> Fecha contrato/escritura <span class="req">*</span></label>
+                            <input type="date" id="fechaContrato">
+                            <div class="field-error" data-for="fechaContrato"><i class="fas fa-exclamation-circle"></i> Por favor selecciona la fecha de contrato.</div>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-dollar-sign"></i> Precio de Venta <span class="req">*</span></label>
+                            <input type="text" id="salePrice" class="sale-price-input" placeholder="$0" inputmode="numeric" oninput="formatSalePrice(this)">
+                            <div class="field-error" data-for="salePrice"><i class="fas fa-exclamation-circle"></i> Por favor ingresa el precio de venta.</div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="personnel-section">
+                    <div class="section-title"><i class="fas fa-users"></i> Gerentes y Asesores</div>
+                    <div id="personnelRows">
+                        <div class="personnel-row first-row">
+                            <div class="row-number"><i class="fas fa-hashtag"></i> Fila 1</div>
+                            <div class="form-group">
+                                <label><i class="fas fa-user-tie"></i> Gerente <span class="req">*</span></label>
+                                <div class="participant-group">
+                                    <div class="custom-select" data-field="gerente" data-row="1" data-api="/api/users/by-role/Gerente" data-required="true">
+                                        <div class="select-display placeholder">Seleccionar gerente<i class="fas fa-chevron-down select-arrow"></i></div>
+                                        <div class="select-dropdown"><div class="select-search"><input type="text" placeholder="Buscar gerente..."><i class="fas fa-search"></i></div><div class="select-options"></div></div>
+                                    </div>
+                                    <select class="pct-select" data-field="pct-gerente" data-row="1">
+                                        <option value="0.012">1.2%</option><option value="0.01">1%</option><option value="0.009">0.9%</option><option value="0.008">0.8%</option><option value="0.006">0.6%</option><option value="0.005">0.5%</option><option value="0.0042">0.42%</option><option value="0.0036">0.36%</option><option value="0.0035">0.35%</option><option value="0.003">0.3%</option><option value="0.0028">0.28%</option><option value="0.0025">0.25%</option><option value="0.0024">0.24%</option><option value="0.0015">0.15%</option><option value="0.00125">0.125%</option><option value="0.001">0.1%</option><option value="0.00075">0.075%</option><option value="0.0005">0.05%</option><option value="0">0.0%</option><option value="custom">Otro...</option>
+                                    </select>
+                                    <input type="number" class="pct-custom-input" data-field="pct-custom-gerente" data-row="1" style="display:none;" placeholder="%" step="0.01" min="0">
+                                </div>
+                                <div class="field-error" data-for="gerente-1"><i class="fas fa-exclamation-circle"></i> Por favor selecciona un gerente.</div>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-user"></i> Asesor <span class="req">*</span></label>
+                                <div class="participant-group">
+                                    <div class="custom-select" data-field="asesor" data-row="1" data-api="/api/users/by-role/Asesor" data-required="true">
+                                        <div class="select-display placeholder">Seleccionar asesor<i class="fas fa-chevron-down select-arrow"></i></div>
+                                        <div class="select-dropdown"><div class="select-search"><input type="text" placeholder="Buscar asesor..."><i class="fas fa-search"></i></div><div class="select-options"></div></div>
+                                    </div>
+                                    <select class="pct-select" data-field="pct-asesor" data-row="1">
+                                        <option value="0.012">1.2%</option><option value="0.01">1%</option><option value="0.009">0.9%</option><option value="0.008">0.8%</option><option value="0.006">0.6%</option><option value="0.005">0.5%</option><option value="0.0042">0.42%</option><option value="0.0036">0.36%</option><option value="0.0035">0.35%</option><option value="0.003">0.3%</option><option value="0.0028">0.28%</option><option value="0.0025">0.25%</option><option value="0.0024">0.24%</option><option value="0.0015">0.15%</option><option value="0.00125">0.125%</option><option value="0.001">0.1%</option><option value="0.00075">0.075%</option><option value="0.0005">0.05%</option><option value="0">0.0%</option><option value="custom">Otro...</option>
+                                    </select>
+                                    <input type="number" class="pct-custom-input" data-field="pct-custom-asesor" data-row="1" style="display:none;" placeholder="%" step="0.01" min="0">
+                                </div>
+                                <div class="field-error" data-for="asesor-1"><i class="fas fa-exclamation-circle"></i> Por favor selecciona un asesor.</div>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-shield-alt"></i> Multipunto</label>
+                                <div class="mp-checkbox-inline">
+                                    <input type="checkbox" id="mpCheckbox">
+                                    <label for="mpCheckbox" class="checkbox-label">MP</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row-buttons">
+                        <button type="button" class="row-btn add-row-btn" onclick="addPersonnelRow()"><i class="fas fa-plus"></i> Agregar otra fila</button>
+                        <button type="button" class="row-btn delete-row-btn" onclick="deletePersonnelRow()"><i class="fas fa-minus"></i> Quitar última fila</button>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button type="button" class="btn btn-secondary" onclick="cancelForm()"><i class="fas fa-times"></i> Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Comisión</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- MODAL: Alert -->
+    <div id="alertModal" class="novu-modal-overlay">
+        <div class="novu-modal" style="max-width:460px">
+            <div class="novu-modal-header">
+                <div class="novu-modal-icon" id="alertModalIcon"><i class="fas fa-info-circle"></i></div>
+                <div class="novu-modal-titles">
+                    <h2 id="alertModalTitle">Aviso</h2>
+                    <p id="alertModalMessage">Mensaje</p>
+                </div>
+                <button class="novu-modal-close" onclick="closeAlertModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="novu-modal-footer centered">
+                <button class="novu-btn novu-btn-primary" onclick="closeAlertModal()"><i class="fas fa-check"></i> Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Confirm cancel -->
+    <div id="confirmModal" class="novu-modal-overlay">
+        <div class="novu-modal" style="max-width:440px">
+            <div class="novu-modal-header">
+                <div class="novu-modal-icon warning"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="novu-modal-titles">
+                    <h2>¿Cancelar registro?</h2>
+                    <p>Se perderán todos los cambios realizados en el formulario.</p>
+                </div>
+                <button class="novu-modal-close" onclick="closeConfirmModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="novu-modal-footer">
+                <button class="novu-btn novu-btn-secondary" onclick="closeConfirmModal()"><i class="fas fa-arrow-left"></i> Volver</button>
+                <button class="novu-btn novu-btn-danger" onclick="confirmCancel()"><i class="fas fa-times"></i> Sí, cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Payload preview -->
+    <div id="payloadModal" class="novu-modal-overlay">
+        <div class="novu-modal">
+            <div class="novu-modal-header">
+                <div class="novu-modal-icon success"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div class="novu-modal-titles">
+                    <h2>Confirmar Comisión</h2>
+                    <p>Revisa los datos antes de guardar</p>
+                </div>
+                <button class="novu-modal-close" onclick="closePayloadModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="novu-modal-body" id="payloadModalBody"></div>
+            <div class="novu-modal-footer">
+                <button class="novu-btn novu-btn-secondary" onclick="closePayloadModal()"><i class="fas fa-pencil-alt"></i> Editar</button>
+                <button class="novu-btn novu-btn-primary" id="confirmSaveBtn"><i class="fas fa-save"></i> Confirmar y guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const starsEl = document.getElementById('stars');
+            const colors = ['#ffffff','#7af028','#c8e88a','#60e61a'];
+            for (let i = 0; i < 120; i++) {
+                const s = document.createElement('div');
+                s.className = 'star';
+                const size = Math.random() * 3 + 1;
+                s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*colors.length)]};--dur:${1.5+Math.random()*3}s;animation-delay:${Math.random()*3}s;opacity:${Math.random()*0.6+0.2};`;
+                starsEl.appendChild(s);
+            }
+        })();
+    </script>
+
+    <script>
+        // --- Alert modal ---
+        function showAlert(title, message, type = 'info') {
+            const iconMap = { success: { cls: 'success', icon: 'fa-check-circle' }, error: { cls: 'error', icon: 'fa-times-circle' }, warning: { cls: 'warning', icon: 'fa-exclamation-triangle' }, info: { cls: 'info', icon: 'fa-info-circle' } };
+            const t = iconMap[type] || iconMap.info;
+            const iconEl = document.getElementById('alertModalIcon');
+            iconEl.className = `novu-modal-icon ${t.cls}`;
+            iconEl.innerHTML = `<i class="fas ${t.icon}"></i>`;
+            document.getElementById('alertModalTitle').textContent = title;
+            document.getElementById('alertModalMessage').textContent = message;
+            document.getElementById('alertModal').classList.add('active');
+        }
+        function closeAlertModal() { document.getElementById('alertModal').classList.remove('active'); }
+
+        function closeConfirmModal() { document.getElementById('confirmModal').classList.remove('active'); }
+        function confirmCancel() { closeConfirmModal(); resetFormSilently(); }
+
+        let pendingPayload = null;
+
+        function showPayloadModal(data) {
+            pendingPayload = data;
+            const body = document.getElementById('payloadModalBody');
+            const fmt = (v) => v || '<span style="color:#555">—</span>';
+            const fmtMoney = (v) => v ? '$' + Number(v).toLocaleString('es-MX') : '—';
+            const fmtPct = (v) => v != null ? (v * 100).toFixed(2) + '%' : '—';
+            let html = '';
+            html += `<div class="payload-section-label"><i class="fas fa-info-circle"></i> Información general</div>`;
+            html += `<div class="payload-grid">
+                <div class="payload-field"><div class="payload-field-label">Compañía</div><div class="payload-field-value">${fmt(data.company?.text)}</div></div>
+                <div class="payload-field"><div class="payload-field-label">Desarrollo</div><div class="payload-field-value">${fmt(data.development?.text)}</div></div>
+                <div class="payload-field"><div class="payload-field-label">Ubicación</div><div class="payload-field-value">${fmt(data.location?.text)}</div></div>
+                <div class="payload-field"><div class="payload-field-label">Concepto</div><div class="payload-field-value">${fmt(data.concept?.text)}</div></div>
+                <div class="payload-field"><div class="payload-field-label">Fecha registro</div><div class="payload-field-value">${fmt(data.register_date)}</div></div>
+                <div class="payload-field"><div class="payload-field-label">Fecha contrato</div><div class="payload-field-value">${fmt(data.operation_date)}</div></div>
+            </div>`;
+            html += `<div class="payload-section-label"><i class="fas fa-dollar-sign"></i> Operación</div>`;
+            html += `<div class="payload-grid">
+                <div class="payload-field"><div class="payload-field-label">Precio de venta</div><div class="payload-field-value money">${fmtMoney(data.sale_price)}</div></div>
+                <div class="payload-field"><div class="payload-field-label">Tipo de comisión</div><div class="payload-field-value accent">${fmt(data.commission_type)}</div></div>
+                <div class="payload-field"><div class="payload-field-label">Estatus</div><div class="payload-field-value">${fmt(data.status)}</div></div>
+            </div>`;
+            if (data.participants?.managers?.length) {
+                html += `<div class="payload-section-label"><i class="fas fa-user-tie"></i> Gerentes</div>`;
+                data.participants.managers.forEach((m, i) => { html += `<div class="participant-card"><div class="participant-role"><i class="fas fa-hashtag"></i> Gerente ${i + 1}</div><div class="participant-row"><span class="participant-name">${m.name || m.user}</span><span class="participant-pct">${fmtPct(m.percentage)}</span><span class="participant-commission">${fmtMoney(m.commission)}</span></div></div>`; });
+            }
+            if (data.participants?.advisors?.length) {
+                html += `<div class="payload-section-label"><i class="fas fa-user"></i> Asesores</div>`;
+                data.participants.advisors.forEach((a, i) => { html += `<div class="participant-card"><div class="participant-role"><i class="fas fa-hashtag"></i> Asesor ${i + 1}</div><div class="participant-row"><span class="participant-name">${a.name || a.user}</span><span class="participant-pct">${fmtPct(a.percentage)}</span><span class="participant-commission">${fmtMoney(a.commission)}</span></div></div>`; });
+            }
+            body.innerHTML = html;
+            document.getElementById('payloadModal').classList.add('active');
+        }
+
+        function closePayloadModal() { document.getElementById('payloadModal').classList.remove('active'); pendingPayload = null; }
+
+        document.getElementById('confirmSaveBtn').addEventListener('click', async () => {
+            if (!pendingPayload) return;
+            if (isEditMode) {
+                await updateCommission(editId, pendingPayload);
+            } else{
+                await sendCommission(pendingPayload);
+            }
+            closePayloadModal();
+        });
+
+        async function sendCommission(data) {
+            try {
+                const response = await fetch('/api/comisiones/', {
+                    method:      'POST',
+                    headers:     { 'Content-Type': 'application/json' },
+                    credentials: 'include',   // ← envía la cookie → el servidor lee req.user.id
+                    body:        JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                console.log(result);
+
+                if (!response.ok) {
+                    showAlert('Error al guardar', result.message || 'No se pudo registrar la comisión.', 'error');
+                    return;
+                }
+
+                showAlert('¡Comisión registrada!', 'La comisión fue guardada exitosamente.', 'success');
+                resetFormSilently();
+
+            } catch (error) {
+                showAlert('Error de conexión', 'No se pudo conectar con el servidor. Intenta de nuevo.', 'error');
+            }
+        }
+
+        document.querySelectorAll('.novu-modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('active'); });
+        });
+    </script>
+
+    <script>
+        const apiCache = {};
+        const allData = { desarrollos: [], ubicaciones: [], expedientes: [] };
+
+        async function fetchFromAPI(endpoint) {
+            if (endpoint == "/v10/conceptos") {
+                const data = [{id:1,nombre:"Contrato"},{id:2,nombre:"Escritura"},{id:3,nombre:"Cancelación"}];
+                allData.conceptos = data;
+                return data;
+            }
+            if (apiCache[endpoint]) return apiCache[endpoint];
+            try {
+                const response = await fetch(`${endpoint}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json();
+                if (result.success && result.data) {
+                    let data = [];
+                    if (result.data.desarrollos) { data = result.data.desarrollos; allData.desarrollos = [...data]; }
+                    else if (result.data.companias) { data = result.data.companias; }
+                    else if (result.data.ubicaciones) { data = result.data.ubicaciones; allData.ubicaciones = [...data]; }
+                    else if (result.data.conceptos) { data = result.data.conceptos; allData.conceptos = [...data]; }
+                    else if (result.data.expedientes) { data = result.data.expedientes; allData.expedientes = [...data]; }
+                    else if (result.data && endpoint == "/api/users/by-role/Gerente") { data = result.data.map(user => ({ id: user._id, nombre: user.name })); }
+                    else if (result.data && endpoint == "/api/users/by-role/Asesor") { data = result.data.map(user => ({ id: user._id, nombre: user.name, manager_ids: user.manager_ids })); }
+                    apiCache[endpoint] = data;
+                    return data;
+                } else { throw new Error('Formato de respuesta inválido'); }
+            } catch (error) { console.error(`Error al obtener datos de ${endpoint}:`, error); throw error; }
+        }
+
+// Fuera de DOMContentLoaded — scope global
+const params         = new URLSearchParams(window.location.search);
+const editId         = params.get('edit');
+const fromContratoId = params.get('fromContrato');
+const isEditMode     = !!editId;
+const isFromContrato = !!fromContratoId;
+
+const CURRENT_USER = <%- JSON.stringify(user || {}) %>;
+
+document.addEventListener('DOMContentLoaded', async function() {
+    document.getElementById('fechaRegistro').valueAsDate = new Date();
+    initializeCustomSelects();
+    await loadAllSelectors(); // ← await aquí, esperar a que terminen TODAS las APIs
+
+    if (isEditMode) {
+        document.querySelector('h1').textContent = 'Editar Comisión';
+        document.querySelector('.btn-primary').innerHTML = '<i class="fas fa-save"></i> Guardar cambios';
+        await loadComisionForEdit(editId); // ← ahora allData ya está lleno
+    } else if (isFromContrato) {
+        document.querySelector('h1').textContent = 'Registrar Comisión de Escritura';
+        await loadComisionForEdit(fromContratoId, true);
+    } else {
+        const contratoC = allData.conceptos?.find(c => c.nombre && c.nombre.toLowerCase() === 'contrato');
+        if (contratoC) setSelectValue('concepto', String(contratoC.id));
+        const cSelect = document.querySelector('.custom-select[data-field="concepto"]');
+
+        if (CURRENT_USER && CURRENT_USER.roleName === 'Gerente') {
+            const manager1 = document.querySelector('.custom-select[data-field="gerente"][data-row="1"]');
+            if (manager1) {
+                const option = manager1.querySelector(`.select-option[data-value="${CURRENT_USER.id}"]`);
+                if (option) selectOptionSilent(manager1, option);
+            }
+        }
+    }
+    
+    await updatePercentageDefaults();
+
+    document.getElementById('fechaContrato').addEventListener('change', function() {
+        if (this.value) { clearFieldError('fechaContrato'); this.classList.remove('has-error'); this.classList.add('valid'); }
+    });
+    document.getElementById('salePrice').addEventListener('input', function() {
+        if (this.dataset.raw && parseInt(this.dataset.raw) > 0) { clearFieldError('salePrice'); this.classList.remove('has-error'); this.classList.add('valid'); }
+    });
+
+});
+
+        /// EDIDDIDIT
+async function loadComisionForEdit(comisionId, fromContratoMode = false) {
+  try {
+    const r = await fetch(`/api/comisiones/obtener/${comisionId}`, { credentials: 'include' });
+    const j = await r.json();
+    if (!j.success) { showAlert('Error', j.message, 'error'); return; }
+
+    const c            = j.data.comision;
+    const participantes = j.data.participantes; // por si también los necesitas
+
+    // ── Fechas ────────────────────────────────────────────────────────────────
+    if (!fromContratoMode) {
+      document.getElementById('fechaRegistro').value = c.register_date?.split('T')[0] || '';
+      document.getElementById('fechaContrato').value = c.operation_date?.split('T')[0] || '';
+      document.getElementById('fechaContrato').classList.add('valid');
+    }
+
+    // ── Precio ────────────────────────────────────────────────────────────────
+    const sp = document.getElementById('salePrice');
+    const rawPrice = Number(c.sale_price) || 0;
+    sp.dataset.raw = rawPrice;
+    sp.value = rawPrice ? '$' + rawPrice.toLocaleString('es-MX') : '';
+    sp.classList.add('valid');
+    if (fromContratoMode) {
+      sp.readOnly = true;
+      sp.style.opacity = '0.6';
+    }
+
+    // ── Concepto ──────────────────────────────────────────────────────────────
+    if (fromContratoMode) {
+      const escrituraC = allData.conceptos?.find(cn => cn.nombre && cn.nombre.toLowerCase() === 'escritura');
+      if (escrituraC) setSelectValue('concepto', String(escrituraC.id));
+    } else {
+      setSelectValue('concepto', String(c.concept?.id));
+    }
+    const cSelect = document.querySelector('.custom-select[data-field="concepto"]');
+
+    // ── Compañía ──────────────────────────────────────────────────────────────
+    setSelectValue('compania', String(c.company?.id));
+
+    // ── Desarrollo: poblar filtrado por compañía, luego setear ────────────────
+    const devsFiltrados = allData.desarrollos.filter(d => d.compania == c.company?.id);
+    populateSelect(document.querySelector('.custom-select[data-field="desarrollo"]'), devsFiltrados);
+    setSelectValue('desarrollo', String(c.development?.id));
+
+    // ── Ubicación: poblar filtrada por desarrollo, luego setear ───────────────
+    const locsFiltradas = allData.ubicaciones.filter(u => u.desarrollo == c.development?.id);
+    populateSelect(document.querySelector('.custom-select[data-field="ubicacion"]'), locsFiltradas);
+    setSelectValue('ubicacion', String(c.location?.id));
+
+    // ── Expediente ────────────────────────────────────────────────────────────
+    if (c.expediente_id) {
+      setSelectValue('expediente', String(c.expediente_id));
+    }
+
+    // Bloqueo adicional si fromContratoMode
+    if (fromContratoMode) {
+      ['compania', 'desarrollo', 'ubicacion', 'expediente'].forEach(f => {
+        const sel = document.querySelector(`.custom-select[data-field="${f}"]`);
+        if (sel) {
+          sel.style.pointerEvents = 'none';
+          sel.style.opacity = '0.6';
+        }
+      });
+    }
+
+    // ── Tipo de comisión ──────────────────────────────────────────────────────
+    if (c.commission_type === 'Multipunto') {
+      document.getElementById('mpCheckbox').checked = true;
+    }
+
+    // ── Participantes ─────────────────────────────────────────────────────────
+    const managers = c.participants?.managers || [];
+    const advisors = c.participants?.advisors || [];
+
+    const maxRows = Math.max(managers.length, advisors.length);
+    while (rowCounter < maxRows && rowCounter < 3) {
+      await addPersonnelRow();
+    }
+
+managers.forEach((m, i) => {
+  const uid = m.user?._id || m.user;  // si user es objeto, toma ._id
+  const rowNum = i + 1;
+  if (uid) setSelectValue('gerente', String(uid), rowNum);
+  const pctSel = document.querySelector(`.pct-select[data-field="pct-gerente"][data-row="${rowNum}"]`);
+  if (pctSel && m.percentage !== undefined && m.percentage !== null) { pctSel.value = m.percentage; pctSel.dataset.userEdited = 'true'; }
+});
+advisors.forEach((a, i) => {
+  const uid = a.user?._id || a.user;
+  const rowNum = i + 1;
+  if (uid) setSelectValue('asesor', String(uid), rowNum);
+  const pctSel = document.querySelector(`.pct-select[data-field="pct-asesor"][data-row="${rowNum}"]`);
+  if (pctSel && a.percentage !== undefined && a.percentage !== null) { pctSel.value = a.percentage; pctSel.dataset.userEdited = 'true'; }
+});
+
+  } catch(e) {
+    console.error(e);
+    showAlert('Error', 'No se pudo cargar la comisión para editar.', 'error');
+  }
+}
+
+
+// Setea un valor en un custom-select por data-value
+// Reemplaza setSelectValue por esta versión robusta
+function setSelectValue(field, value, row = null) {
+  if (!value) return;
+
+  const selector = row
+    ? `.custom-select[data-field="${field}"][data-row="${row}"]`
+    : `.custom-select[data-field="${field}"]`;
+  const el = document.querySelector(selector);
+  if (!el) return;
+
+  const strValue = String(value).trim();
+
+  // Buscar recorriendo en lugar de querySelector — evita problemas de tipo
+  const options = el.querySelectorAll('.select-option');
+  let found = null;
+  options.forEach(opt => {
+    if (String(opt.dataset.value).trim() === strValue) found = opt;
+  });
+
+  if (found) {
+    selectOptionSilent(el, found);
+    el.classList.add('valid');
+    el.classList.remove('has-error');
+  } else {
+    console.warn(`setSelectValue: no encontró opción para field="${field}" value="${strValue}"`);
+    // Listar opciones disponibles para diagnóstico
+    console.log(`Opciones disponibles en "${field}":`, 
+      [...options].map(o => o.dataset.value).join(', ')
+    );
+  }
+}
+        async function loadAllSelectors() {
+            const selectors = document.querySelectorAll('.custom-select[data-api]');
+            for (const selector of selectors) { await loadSelectorData(selector); }
+        }
+
+        async function loadSelectorData(selectorElement) {
+            const apiEndpoint = selectorElement.dataset.api;
+            const display = selectorElement.querySelector('.select-display');
+            const optionsContainer = selectorElement.querySelector('.select-options');
+            const arrow = selectorElement.querySelector('.select-arrow');
+            display.classList.add('loading');
+            display.textContent = 'Cargando...';
+            arrow.className = 'fas fa-spinner select-arrow';
+            optionsContainer.innerHTML = '<div class="loading-message"><i class="fas fa-spinner"></i>Cargando datos...</div>';
+            try {
+                const data = await fetchFromAPI(apiEndpoint);
+                display.classList.remove('loading');
+                const placeholder = selectorElement.querySelector('.select-search input').placeholder;
+                display.textContent = placeholder.replace('Buscar', 'Seleccionar');
+                arrow.className = 'fas fa-chevron-down select-arrow';
+                populateSelect(selectorElement, data);
+            } catch (error) {
+                display.classList.remove('loading');
+                display.textContent = 'Error al cargar';
+                arrow.className = 'fas fa-exclamation-circle select-arrow';
+                optionsContainer.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle"></i> Error al cargar los datos.</div>';
+            }
+        }
+
+        function populateSelect(selectorElement, data, autoSelect = null) {
+            const optionsContainer = selectorElement.querySelector('.select-options');
+            optionsContainer.innerHTML = '';
+            const field = selectorElement.dataset.field;
+            if (!data || data.length === 0) { optionsContainer.innerHTML = '<div class="no-results">No hay datos disponibles</div>'; return; }
+            data.forEach(item => {
+                const option = document.createElement('div');
+                option.className = 'select-option';
+                
+                if (field === 'expediente') {
+                    option.textContent = item.nombre; // Already formatted as [IdExpediente] - [Cliente.Nombre]
+                    option.dataset.clientName = item.cliente_nombre;
+                } else {
+                    option.textContent = item.nombre;
+                }
+                
+                option.dataset.value = item.id;
+                if (item.compania) option.dataset.compania = item.compania;
+                if (item.desarrollo) option.dataset.desarrollo = item.desarrollo;
+                option.addEventListener('click', function() { selectOption(selectorElement, this); });
+                optionsContainer.appendChild(option);
+            });
+            if (autoSelect) {
+                const optionToSelect = optionsContainer.querySelector(`[data-value="${autoSelect}"]`);
+                if (optionToSelect) selectOption(selectorElement, optionToSelect, true);
+            }
+        }
+
+        function selectOption(selectorElement, optionElement, isAutoSelect = false) {
+            const optionsContainer = selectorElement.querySelector('.select-options');
+            const display = selectorElement.querySelector('.select-display');
+            optionsContainer.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('selected'));
+            optionElement.classList.add('selected');
+            display.textContent = optionElement.textContent;
+            display.classList.remove('placeholder');
+            display.dataset.value = optionElement.dataset.value;
+            if (optionElement.dataset.compania) display.dataset.compania = optionElement.dataset.compania;
+            if (optionElement.dataset.desarrollo) display.dataset.desarrollo = optionElement.dataset.desarrollo;
+            if (optionElement.dataset.clientName) display.dataset.clientName = optionElement.dataset.clientName;
+            
+            if (isAutoSelect) {
+                display.classList.add('auto-selected');
+                const badge = document.createElement('span');
+                badge.className = 'auto-select-badge';
+                badge.innerHTML = '<i class="fas fa-magic"></i> Auto';
+                display.appendChild(badge);
+                setTimeout(() => { const b = display.querySelector('.auto-select-badge'); if (b) b.remove(); display.classList.remove('auto-selected'); }, 3000);
+            }
+            const arrow = document.createElement('i');
+            arrow.className = 'fas fa-chevron-down select-arrow';
+            display.appendChild(arrow);
+            closeAllSelects();
+
+            const field = selectorElement.dataset.field;
+            const row = selectorElement.dataset.row;
+            const errorKey = row ? `${field}-${row}` : field;
+            clearFieldError(errorKey);
+            selectorElement.classList.remove('has-error');
+            selectorElement.classList.add('valid');
+
+           if (field === 'compania') handleCompaniaChange(optionElement.dataset.value);
+            else if (field === 'concepto') {
+                const penaltyTargetContainer = document.getElementById('penaltyTargetContainer');
+                if (optionElement.textContent.trim().toLowerCase() === 'cancelación') {
+                    penaltyTargetContainer.style.display = 'block';
+                } else {
+                    penaltyTargetContainer.style.display = 'none';
+                }
+            }
+else if (field === 'desarrollo') handleDesarrolloChange(optionElement.dataset.value, isAutoSelect);
+else if (field === 'ubicacion') {
+    handleUbicacionChange(optionElement.dataset.desarrollo, isAutoSelect);
+    // Auto-rellenar precio de venta solo si está vacío
+    const salePriceEl = document.getElementById('salePrice');
+    const yaEscrito = salePriceEl.dataset.raw && parseInt(salePriceEl.dataset.raw) > 0;
+    // if (!yaEscrito) {
+        const ubicacionId = optionElement.dataset.value;
+        const ubicacion = allData.ubicaciones.find(u => u.id == ubicacionId);
+        if (ubicacion && ubicacion.importe_venta) {
+            salePriceEl.dataset.raw = ubicacion.importe_venta;
+            salePriceEl.value = '$' + parseInt(ubicacion.importe_venta).toLocaleString('es-MX');
+            clearFieldError('salePrice');
+            salePriceEl.classList.remove('has-error');
+            salePriceEl.classList.add('valid');
+        }
+    // }
+} else if (field === 'gerente') {
+    handleGerenteChange(optionElement.dataset.value, selectorElement.dataset.row);
+} else if (field === 'concepto') {
+    const penaltyTargetContainer = document.getElementById('penaltyTargetContainer');
+    if (optionElement.textContent.trim().toLowerCase() === 'cancelación') {
+        penaltyTargetContainer.style.display = 'block';
+    } else {
+        penaltyTargetContainer.style.display = 'none';
+    }
+}
+        }
+
+        function selectOptionSilent(selectorElement, optionElement, isAutoSelect = false) {
+            const optionsContainer = selectorElement.querySelector('.select-options');
+            const display = selectorElement.querySelector('.select-display');
+            optionsContainer.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('selected'));
+            optionElement.classList.add('selected');
+            display.textContent = optionElement.textContent;
+            display.classList.remove('placeholder');
+            display.dataset.value = optionElement.dataset.value;
+            if (optionElement.dataset.compania) display.dataset.compania = optionElement.dataset.compania;
+            if (optionElement.dataset.desarrollo) display.dataset.desarrollo = optionElement.dataset.desarrollo;
+            if (isAutoSelect) {
+                display.classList.add('auto-selected');
+                const badge = document.createElement('span');
+                badge.className = 'auto-select-badge';
+                badge.innerHTML = '<i class="fas fa-magic"></i> Auto';
+                display.appendChild(badge);
+                setTimeout(() => { const b = display.querySelector('.auto-select-badge'); if (b) b.remove(); display.classList.remove('auto-selected'); }, 3000);
+            }
+            const arrow = document.createElement('i');
+            arrow.className = 'fas fa-chevron-down select-arrow';
+            display.appendChild(arrow);
+            closeAllSelects();
+        }
+
+        function handleCompaniaChange(companiaId) {
+            const desarrollosSelector = document.querySelector('.custom-select[data-field="desarrollo"]');
+            const desarrollosFiltrados = allData.desarrollos.filter(d => d.compania == companiaId);
+            clearSelection('desarrollo'); clearSelection('ubicacion');
+            populateSelect(desarrollosSelector, desarrollosFiltrados);
+            populateSelect(document.querySelector('.custom-select[data-field="ubicacion"]'), []);
+        }
+
+        function handleDesarrolloChange(desarrolloId, isAutoSelect = false, preserveUbicacion = false) {
+            if (!isAutoSelect) {
+                const desarrollo = allData.desarrollos.find(d => d.id == desarrolloId);
+                if (desarrollo && desarrollo.compania) {
+                    const companiaSelector = document.querySelector('.custom-select[data-field="compania"]');
+                    const companiaOption = companiaSelector.querySelector(`[data-value="${desarrollo.compania}"]`);
+                    if (companiaOption && !companiaSelector.querySelector('.select-display').dataset.value) selectOption(companiaSelector, companiaOption, true);
+                }
+            }
+            const ubicacionesFiltradas = allData.ubicaciones.filter(u => u.desarrollo == desarrolloId);
+            const ubicacionesSelector = document.querySelector('.custom-select[data-field="ubicacion"]');
+            const ubicacionDisplay = ubicacionesSelector.querySelector('.select-display');
+            const ubicacionActual = ubicacionDisplay.dataset.value;
+            if (!preserveUbicacion) clearSelection('ubicacion');
+            populateSelect(ubicacionesSelector, ubicacionesFiltradas);
+            if (preserveUbicacion && ubicacionActual) {
+                const ubicacionOption = ubicacionesSelector.querySelector(`[data-value="${ubicacionActual}"]`);
+                if (ubicacionOption) selectOptionSilent(ubicacionesSelector, ubicacionOption);
+            }
+        }
+
+        function handleUbicacionChange(desarrolloId, isAutoSelect = false) {
+            if (!isAutoSelect && desarrolloId) {
+                const desarrollo = allData.desarrollos.find(d => d.id == desarrolloId);
+                if (desarrollo) {
+                    const desarrolloSelector = document.querySelector('.custom-select[data-field="desarrollo"]');
+                    const desarrolloDisplay = desarrolloSelector.querySelector('.select-display');
+                    if (!desarrolloDisplay.dataset.value || desarrolloDisplay.dataset.value != desarrollo.id) {
+                        if (desarrollo.compania) {
+                            const companiaSelector = document.querySelector('.custom-select[data-field="compania"]');
+                            const companiaOption = companiaSelector.querySelector(`[data-value="${desarrollo.compania}"]`);
+                            if (companiaOption) {
+                                selectOptionSilent(companiaSelector, companiaOption, true);
+                                populateSelect(document.querySelector('.custom-select[data-field="desarrollo"]'), allData.desarrollos.filter(d => d.compania == desarrollo.compania));
+                            }
+                        }
+                        const desarrolloOption = desarrolloSelector.querySelector(`[data-value="${desarrollo.id}"]`);
+                        if (desarrolloOption) {
+                            selectOptionSilent(desarrolloSelector, desarrolloOption, true);
+                            const ubicacionesFiltradas = allData.ubicaciones.filter(u => u.desarrollo == desarrollo.id);
+                            const ubicacionesSelector = document.querySelector('.custom-select[data-field="ubicacion"]');
+                            const ubicacionActual = ubicacionesSelector.querySelector('.select-display').dataset.value;
+                            populateSelect(ubicacionesSelector, ubicacionesFiltradas);
+                            if (ubicacionActual) {
+                                const ubicacionOption = ubicacionesSelector.querySelector(`[data-value="${ubicacionActual}"]`);
+                                if (ubicacionOption) selectOptionSilent(ubicacionesSelector, ubicacionOption);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function handleGerenteChange(gerenteId, row) {
+            const asesorSelector = document.querySelector(`.custom-select[data-field="asesor"][data-row="${row}"]`);
+            if (!asesorSelector) return;
+            const asesoresAll = apiCache['/api/users/by-role/Asesor'] || [];
+            const asesoresFiltrados = asesoresAll.filter(a => a.manager_ids && a.manager_ids.includes(gerenteId));
+            
+            const display = asesorSelector.querySelector('.select-display');
+            const placeholder = asesorSelector.querySelector('.select-search input').placeholder;
+            display.textContent = placeholder.replace('Buscar', 'Seleccionar');
+            display.classList.add('placeholder'); 
+            display.classList.remove('auto-selected');
+            delete display.dataset.value;
+            
+            const arrow = document.createElement('i');
+            arrow.className = 'fas fa-chevron-down select-arrow';
+            display.appendChild(arrow);
+            
+            asesorSelector.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('selected'));
+            populateSelect(asesorSelector, asesoresFiltrados);
+        }
+
+        function clearSelection(field) {
+            const selector = document.querySelector(`.custom-select[data-field="${field}"]`);
+            if (selector) {
+                const display = selector.querySelector('.select-display');
+                const placeholder = selector.querySelector('.select-search input').placeholder;
+                display.textContent = placeholder.replace('Buscar', 'Seleccionar');
+                display.classList.add('placeholder'); display.classList.remove('auto-selected');
+                delete display.dataset.value; delete display.dataset.compania; delete display.dataset.desarrollo;
+                const badge = display.querySelector('.auto-select-badge');
+                if (badge) badge.remove();
+                const arrow = document.createElement('i');
+                arrow.className = 'fas fa-chevron-down select-arrow';
+                display.appendChild(arrow);
+                selector.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('selected'));
+            }
+        }
+
+        function initializeCustomSelects() {
+            document.querySelectorAll('.custom-select:not(.initialized)').forEach(select => {
+                select.classList.add('initialized');
+                const display = select.querySelector('.select-display');
+                const dropdown = select.querySelector('.select-dropdown');
+                const searchInput = select.querySelector('.select-search input');
+                if (display && dropdown) {
+                    display.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (display.classList.contains('loading')) return;
+                        
+                        const wasActive = display.classList.contains('active');
+                        closeAllSelects();
+                        
+                        if (!wasActive) {
+                            dropdown.classList.add('active');
+                            display.classList.add('active');
+                            select.classList.add('active');
+                            
+                            const formGroup = select.closest('.form-group');
+                            if (formGroup) {
+                                formGroup.classList.add('active-dropdown-parent');
+                                formGroup.style.zIndex = '9999';
+                                formGroup.style.position = 'relative';
+                            }
+                            
+                            const personnelRow = select.closest('.personnel-row') || select.closest('.form-grid');
+                            if (personnelRow) {
+                                personnelRow.classList.add('active-dropdown-parent');
+                                personnelRow.style.zIndex = '9999';
+                                personnelRow.style.position = 'relative';
+                            }
+                            
+                            if (searchInput) searchInput.focus();
+                        }
+                    });
+                }
+                if (searchInput) {
+                    searchInput.addEventListener('input', function() {
+                        const searchTerm = this.value.toLowerCase();
+                        const options = select.querySelectorAll('.select-option');
+                        let hasResults = false;
+                        options.forEach(option => {
+                            if (option.classList.contains('filtered-out')) return;
+                            const text = option.textContent.toLowerCase();
+                            if (text.includes(searchTerm)) { option.classList.remove('hidden'); hasResults = true; }
+                            else option.classList.add('hidden');
+                        });
+                        let noResults = select.querySelector('.no-results');
+                        if (!hasResults && searchTerm) {
+                            if (!noResults) { noResults = document.createElement('div'); noResults.className = 'no-results'; noResults.innerHTML = '<i class="fas fa-search"></i> No se encontraron resultados'; dropdown.appendChild(noResults); }
+                        } else if (noResults) noResults.remove();
+                    });
+                }
+                if (dropdown) dropdown.addEventListener('click', (e) => e.stopPropagation());
+            });
+            document.removeEventListener('click', closeAllSelects);
+            document.addEventListener('click', closeAllSelects);
+        }
+
+        function closeAllSelects() {
+            document.querySelectorAll('.select-dropdown.active').forEach(dropdown => {
+                dropdown.classList.remove('active');
+                if (dropdown.previousElementSibling) dropdown.previousElementSibling.classList.remove('active');
+                
+                const select = dropdown.closest('.custom-select');
+                if (select) select.classList.remove('active');
+                
+                document.querySelectorAll('.active-dropdown-parent').forEach(el => {
+                    el.classList.remove('active-dropdown-parent');
+                    el.style.zIndex = '';
+                    if (!el.classList.contains('personnel-row')) el.style.position = '';
+                });
+                
+                const searchInput = dropdown.querySelector('.select-search input');
+                if (searchInput) { searchInput.value = ''; dropdown.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('hidden')); }
+                const noResults = dropdown.querySelector('.no-results');
+                if (noResults) noResults.remove();
+            });
+        }
+
+        function getSelectValue(fieldName, rowNumber = null) {
+            const selector = rowNumber
+                ? `.custom-select[data-field="${fieldName}"][data-row="${rowNumber}"]`
+                : `.custom-select[data-field="${fieldName}"]`;
+            const selectElement = document.querySelector(selector);
+            if (!selectElement) return null;
+            const display = selectElement.querySelector('.select-display');
+            return { id: display.dataset.value || '', text: display.classList.contains('placeholder') ? '' : display.textContent.replace('Auto', '').trim() };
+        }
+
+        function showFieldError(key) {
+            const el = document.querySelector(`.field-error[data-for="${key}"]`);
+            if (el) el.classList.add('visible');
+        }
+        function clearFieldError(key) {
+            const el = document.querySelector(`.field-error[data-for="${key}"]`);
+            if (el) el.classList.remove('visible');
+        }
+
+        function validateForm() {
+            let valid = true;
+            let firstInvalid = null;
+
+            ['compania', 'desarrollo', 'ubicacion', 'concepto', 'expediente'].forEach(field => {
+                const sel = document.querySelector(`.custom-select[data-field="${field}"]`);
+                const display = sel ? sel.querySelector('.select-display') : null;
+                if (!display || !display.dataset.value) {
+                    showFieldError(field);
+                    if (sel) { sel.classList.add('has-error'); if (!firstInvalid) firstInvalid = sel; }
+                    valid = false;
+                }
+            });
+
+            const fechaContrato = document.getElementById('fechaContrato');
+            if (!fechaContrato.value) {
+                showFieldError('fechaContrato');
+                fechaContrato.classList.add('has-error');
+                if (!firstInvalid) firstInvalid = fechaContrato;
+                valid = false;
+            }
+
+            const salePriceEl = document.getElementById('salePrice');
+            if (!salePriceEl.dataset.raw || parseInt(salePriceEl.dataset.raw) <= 0) {
+                showFieldError('salePrice');
+                salePriceEl.classList.add('has-error');
+                if (!firstInvalid) firstInvalid = salePriceEl;
+                valid = false;
+            }
+
+            document.querySelectorAll('.personnel-row').forEach((row, index) => {
+                const rowNum = index + 1;
+                const isFirstRow = rowNum === 1;
+                if (isFirstRow) {
+                    ['gerente', 'asesor'].forEach(field => {
+                        const sel = row.querySelector(`.custom-select[data-field="${field}"]`);
+                        const display = sel ? sel.querySelector('.select-display') : null;
+                        if (!display || !display.dataset.value) {
+                            showFieldError(`${field}-${rowNum}`);
+                            if (sel) { sel.classList.add('has-error'); if (!firstInvalid) firstInvalid = sel; }
+                            valid = false;
+                        }
+                    });
+                } else {
+                    ['gerente', 'asesor'].forEach(field => {
+                        const sel = row.querySelector(`.custom-select[data-field="${field}"]`);
+                        if (sel) { sel.classList.remove('has-error'); clearFieldError(`${field}-${rowNum}`); }
+                    });
+                }
+            });
+
+            if (!valid && firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            return valid;
+        }
+
+        let rowCounter = 1;
+
+        const mpCheckbox = document.getElementById('mpCheckbox');
+        mpCheckbox.addEventListener('change', function() { if (mpCheckbox.checked && rowCounter == 1) addPersonnelRow(); updatePercentageDefaults(); });
+
+        async function addPersonnelRow() {
+            if (rowCounter == 3) return;
+            rowCounter++;
+            const container = document.getElementById('personnelRows');
+            const newRow = document.createElement('div');
+            newRow.className = 'personnel-row';
+            newRow.innerHTML = `
+                <div class="row-number"><i class="fas fa-hashtag"></i> Fila ${rowCounter} <span style="font-size:0.75rem;color:#666;font-weight:400;margin-left:6px;">(campos opcionales)</span></div>
+                <div class="form-group">
+                    <label><i class="fas fa-user-tie"></i> Gerente <span style="font-size:0.72rem;color:#555;font-weight:500;text-transform:none;letter-spacing:0;">Opcional</span></label>
+                    <div class="participant-group">
+                        <div class="custom-select" data-field="gerente" data-row="${rowCounter}" data-api="/api/users/by-role/Gerente">
+                            <div class="select-display placeholder">Seleccionar gerente<i class="fas fa-chevron-down select-arrow"></i></div>
+                            <div class="select-dropdown"><div class="select-search"><input type="text" placeholder="Buscar gerente..."><i class="fas fa-search"></i></div><div class="select-options"></div></div>
+                        </div>
+                        <select class="pct-select" data-field="pct-gerente" data-row="${rowCounter}">
+                            <option value="0.012">1.2%</option><option value="0.01">1%</option><option value="0.009">0.9%</option><option value="0.008">0.8%</option><option value="0.006">0.6%</option><option value="0.005">0.5%</option><option value="0.0042">0.42%</option><option value="0.0036">0.36%</option><option value="0.0035">0.35%</option><option value="0.003">0.3%</option><option value="0.0028">0.28%</option><option value="0.0025">0.25%</option><option value="0.0024">0.24%</option><option value="0.0015">0.15%</option><option value="0.00125">0.125%</option><option value="0.001">0.1%</option><option value="0.00075">0.075%</option><option value="0.0005">0.05%</option><option value="0">0.0%</option><option value="custom">Otro...</option>
+                        </select>
+                        <input type="number" class="pct-custom-input" data-field="pct-custom-gerente" data-row="${rowCounter}" style="display:none;" placeholder="%" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> Asesor <span style="font-size:0.72rem;color:#555;font-weight:500;text-transform:none;letter-spacing:0;">Opcional</span></label>
+                    <div class="participant-group">
+                        <div class="custom-select" data-field="asesor" data-row="${rowCounter}" data-api="/api/users/by-role/Asesor">
+                            <div class="select-display placeholder">Seleccionar asesor<i class="fas fa-chevron-down select-arrow"></i></div>
+                            <div class="select-dropdown"><div class="select-search"><input type="text" placeholder="Buscar asesor..."><i class="fas fa-search"></i></div><div class="select-options"></div></div>
+                        </div>
+                        <select class="pct-select" data-field="pct-asesor" data-row="${rowCounter}">
+                            <option value="0.012">1.2%</option><option value="0.01">1%</option><option value="0.009">0.9%</option><option value="0.008">0.8%</option><option value="0.006">0.6%</option><option value="0.005">0.5%</option><option value="0.0042">0.42%</option><option value="0.0036">0.36%</option><option value="0.0035">0.35%</option><option value="0.003">0.3%</option><option value="0.0028">0.28%</option><option value="0.0025">0.25%</option><option value="0.0024">0.24%</option><option value="0.0015">0.15%</option><option value="0.00125">0.125%</option><option value="0.001">0.1%</option><option value="0.00075">0.075%</option><option value="0.0005">0.05%</option><option value="0">0.0%</option><option value="custom">Otro...</option>
+                        </select>
+                        <input type="number" class="pct-custom-input" data-field="pct-custom-asesor" data-row="${rowCounter}" style="display:none;" placeholder="%" step="0.01" min="0">
+                    </div>
+                </div>`;
+            container.appendChild(newRow);
+            initializeCustomSelects();
+            const newSelectors = newRow.querySelectorAll('.custom-select[data-api]');
+            for (const selector of newSelectors) await loadSelectorData(selector);
+            newRow.style.opacity = '0'; newRow.style.transform = 'translateY(-20px)';
+            setTimeout(() => { newRow.style.transition = 'all 0.4s ease'; newRow.style.opacity = '1'; newRow.style.transform = 'translateY(0)'; }, 10);
+            updatePercentageDefaults();
+        }
+
+        function deletePersonnelRow() {
+            const container = document.getElementById('personnelRows');
+            const rows = container.querySelectorAll('.personnel-row');
+            if (rows.length > 1) { rows[rows.length - 1].remove(); rowCounter--; }
+            updatePercentageDefaults();
+        }
+
+        function cancelForm() { document.getElementById('confirmModal').classList.add('active'); }
+
+        function resetFormSilently() {
+            document.getElementById('commissionForm').reset();
+            document.getElementById('fechaRegistro').valueAsDate = new Date();
+            document.querySelectorAll('.has-error').forEach(el => el.classList.remove('has-error'));
+            document.querySelectorAll('.valid').forEach(el => el.classList.remove('valid'));
+            document.querySelectorAll('.field-error.visible').forEach(el => el.classList.remove('visible'));
+            document.querySelectorAll('.select-display').forEach(display => {
+                const cs = display.closest('.custom-select');
+                if (!cs) return;
+                const placeholder = cs.querySelector('.select-search input').placeholder;
+                display.textContent = placeholder.replace('Buscar', 'Seleccionar');
+                display.classList.add('placeholder'); display.classList.remove('auto-selected');
+                delete display.dataset.value;
+                const arrow = document.createElement('i');
+                arrow.className = 'fas fa-chevron-down select-arrow';
+                display.appendChild(arrow);
+            });
+            populateSelect(document.querySelector('.custom-select[data-field="desarrollo"]'), allData.desarrollos);
+            populateSelect(document.querySelector('.custom-select[data-field="ubicacion"]'), allData.ubicaciones);
+        }
+
+        function formatSalePrice(input) {
+            let val = input.value.replace(/[^0-9]/g, '');
+            input.dataset.raw = val;
+            if (val) {
+                val = parseInt(val).toLocaleString('es-MX');
+                input.value = '$' + val;
+            } else {
+                input.value = '';
+            }
+        }
+
+
+        let cachedPorcentajes = null;
+        async function fetchPorcentajes() {
+            if (cachedPorcentajes) return cachedPorcentajes;
+            try {
+                const response = await fetch("/api/percentages/");
+                if (!response.ok) throw new Error("Respuesta no válida");
+                cachedPorcentajes = await response.json();
+                return cachedPorcentajes;
+            } catch (error) {
+                showAlert('Error de porcentajes', 'No se pudo obtener los porcentajes de comisión. El registro ha sido cancelado.', 'error');
+                return null;
+            }
+        }
+
+        async function updatePercentageDefaults() {
+            const porcentajes = await fetchPorcentajes();
+            if (!porcentajes || !porcentajes.data) return;
+            
+            const mp = document.getElementById('mpCheckbox').checked;
+            const commissionType = mp ? 'multipoint' : (rowCounter === 1 ? 'traditional' : 'shared');
+            const rates = porcentajes.data[commissionType];
+            
+            document.querySelectorAll('.personnel-row').forEach((row, index) => {
+                const rowNum = index + 1;
+                const managerKey = `manager${rowNum}`;
+                const advisorKey = `advisor${rowNum}`;
+                
+                const pctGerente = row.querySelector(`.pct-select[data-field="pct-gerente"][data-row="${rowNum}"]`);
+                if (pctGerente && rates[managerKey] !== undefined && !pctGerente.dataset.userEdited) {
+                    pctGerente.value = rates[managerKey];
+                }
+                
+                const pctAsesor = row.querySelector(`.pct-select[data-field="pct-asesor"][data-row="${rowNum}"]`);
+                if (pctAsesor && rates[advisorKey] !== undefined && !pctAsesor.dataset.userEdited) {
+                    pctAsesor.value = rates[advisorKey];
+                }
+            });
+        }
+        
+        // Listen to manual user changes to prevent overriding them later
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('pct-select')) {
+                e.target.dataset.userEdited = 'true';
+                const row = e.target.dataset.row;
+                const fieldSplit = e.target.dataset.field.split('-'); // pct-gerente -> ['pct', 'gerente']
+                const customInput = document.querySelector(`.pct-custom-input[data-field="pct-custom-${fieldSplit[1]}"][data-row="${row}"]`);
+                if (customInput) {
+                    if (e.target.value === 'custom') {
+                        customInput.style.display = 'block';
+                        customInput.focus();
+                    } else {
+                        customInput.style.display = 'none';
+                    }
+                }
+            }
+        });
+
+        async function buildPayLoad() {
+            const compania      = getSelectValue("compania");
+            const desarrollo    = getSelectValue("desarrollo");
+            const ubicacion     = getSelectValue("ubicacion");
+            const fechaRegistro = document.getElementById("fechaRegistro").value;
+            const concepto      = getSelectValue("concepto");
+            const fechaContrato = document.getElementById("fechaContrato").value;
+            const salePrice     = parseFloat(document.getElementById("salePrice").dataset.raw) || 0;
+
+            const mp            = document.getElementById('mpCheckbox').checked;
+            
+            const expedienteSelect = document.querySelector('.custom-select[data-field="expediente"] .select-display');
+            const expediente_id = expedienteSelect && expedienteSelect.dataset.value ? expedienteSelect.dataset.value : null;
+            const client_name = expedienteSelect && expedienteSelect.dataset.clientName ? expedienteSelect.dataset.clientName : null;
+
+            const commissionTypeES = mp ? 'Multipunto' : (rowCounter === 1 ? 'Tradicional' : 'Compartida');
+            const managers = [], advisors = [];
+            document.querySelectorAll('.personnel-row').forEach((row, index) => {
+                const rowNum = index + 1;
+                const manager = getSelectValue('gerente', rowNum);
+                const advisor = getSelectValue('asesor', rowNum);
+                
+                const pctGerenteSel = row.querySelector(`.pct-select[data-field="pct-gerente"][data-row="${rowNum}"]`);
+                const pctAsesorSel = row.querySelector(`.pct-select[data-field="pct-asesor"][data-row="${rowNum}"]`);
+                
+                let mgrPct = pctGerenteSel ? parseFloat(pctGerenteSel.value) : 0;
+                let advPct = pctAsesorSel ? parseFloat(pctAsesorSel.value) : 0;
+
+                if (pctGerenteSel && pctGerenteSel.value === 'custom') {
+                    const customInput = row.querySelector(`.pct-custom-input[data-field="pct-custom-gerente"][data-row="${rowNum}"]`);
+                    mgrPct = customInput && customInput.value ? parseFloat(customInput.value) / 100 : 0;
+                }
+                if (pctAsesorSel && pctAsesorSel.value === 'custom') {
+                    const customInput = row.querySelector(`.pct-custom-input[data-field="pct-custom-asesor"][data-row="${rowNum}"]`);
+                    advPct = customInput && customInput.value ? parseFloat(customInput.value) / 100 : 0;
+                }
+
+                if (manager && manager.id) managers.push({ user: manager.id, name:manager.text, percentage: mgrPct, commission: salePrice * mgrPct });
+                if (advisor && advisor.id) advisors.push({ user: advisor.id, name:advisor.text, percentage: advPct, commission: salePrice * advPct });
+            });
+            const isCancellation = concepto && concepto.text && concepto.text.toLowerCase() === 'cancelación';
+            let penaltyTarget = null;
+            if (isCancellation) {
+                const targetRadio = document.querySelector('input[name="penaltyTarget"]:checked');
+                penaltyTarget = targetRadio ? targetRadio.value : 'cliente';
+            }
+
+            return {
+                company: compania, development: desarrollo, location: ubicacion,
+                commission_type: commissionTypeES, register_date: fechaRegistro,
+                operation_date: fechaContrato, sale_price: salePrice, concept: concepto,
+                expediente_id: expediente_id, client_name: client_name,
+                status: "Pendiente", participants: { managers, advisors },
+                is_cancellation: isCancellation, penalty_target: penaltyTarget,
+                created_at: new Date(), updated_at: new Date()
+            };
+        }
+
+        // document.getElementById("commissionForm").addEventListener("submit", async (e) => {
+        //     e.preventDefault();
+        //     if (!validateForm()) return;
+        //     const data = await buildPayLoad();
+        //     if (!data) return;
+        //     showPayloadModal(data);
+        // });
+        // Reemplaza el addEventListener del submit existente
+document.getElementById('commissionForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!validateForm()) return;
+  const data = await buildPayLoad();
+  if (!data) return;
+
+//   if (isEditMode) {
+//     // En modo edición mostramos el mismo modal de confirmación
+//     // pero el botón "Confirmar y guardar" llama a PATCH en vez de POST
+//     document.getElementById('confirmSaveBtn').onclick = async () => {
+//       await updateCommission(editId, data);
+//       closePayloadModal();
+//     };
+//   } 
+    showPayloadModal(data);
+  
+
+});
+
+async function updateCommission(comisionId, data) {
+  try {
+    const r = await fetch(`/api/comisiones/editar/${comisionId}`, {
+      method:      'PATCH',
+      headers:     { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body:        JSON.stringify(data),
+    });
+    const j = await r.json();
+    if (!j.success) { showAlert('Error', j.message, 'error'); return; }
+
+    showAlert('¡Comisión actualizada!',
+      'Los cambios fueron guardados. El estatus y verificaciones fueron reiniciados.',
+      'success');
+
+    // Regresar al listado después de 1.5s
+    setTimeout(() => window.location.href = '/', 1500);
+
+  } catch(e) {
+    showAlert('Error de conexión', 'No se pudo conectar con el servidor.', 'error');
+  }
+}
+    </script>
+</div><!-- /.main-area -->
+</body>
+</html>

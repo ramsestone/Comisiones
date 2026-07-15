@@ -1,0 +1,61 @@
+<nav class="sidebar">
+  <a class="sidebar-brand" href="/comisiones">NO<span class="dot"></span>VU</a>
+  <div class="sidebar-section-label">Navegación</div>
+  <ul class="sidebar-nav">
+    <li>
+      <a href="/comisiones" class="<%= (typeof currentPage !== 'undefined' && currentPage === 'comisiones') ? 'active' : '' %>">
+        <i class="fas fa-layer-group"></i>
+        <span>Comisiones</span>
+      </a>
+    </li>
+
+    <% if (typeof user !== 'undefined' && user && user.roleName !== 'Asesor') { %>
+    <li>
+      <a href="/registrar-comision" class="<%= (typeof currentPage !== 'undefined' && currentPage === 'registrar-comision') ? 'active' : '' %>">
+        <i class="fas fa-file-circle-plus"></i>
+        <span>Nueva Comisión</span>
+      </a>
+    </li>
+    <% } %>
+
+    <li>
+      <a href="/historial-comisiones" class="<%= (typeof currentPage !== 'undefined' && currentPage === 'historial') ? 'active' : '' %>">
+        <i class="fas fa-history"></i>
+        <span>Historial</span>
+      </a>
+    </li>
+
+    <% if (typeof user !== 'undefined' && user && user.roleName !== 'Asesor') { %>
+    <li>
+      <a href="/kpis" class="<%= (typeof currentPage !== 'undefined' && currentPage === 'kpis') ? 'active' : '' %>">
+        <i class="fas fa-chart-pie"></i>
+        <span>Dashboard KPIs</span>
+      </a>
+    </li>
+    <% } %>
+
+    <% if (typeof user !== 'undefined' && user && user.roleName !== 'Asesor') { %>
+    <li>
+      <a href="/cartera-deudores" class="<%= (typeof currentPage !== 'undefined' && currentPage === 'cartera-deudores') ? 'active' : '' %>">
+        <i class="fas fa-wallet"></i>
+        <span>Cartera de Deudores</span>
+      </a>
+    </li>
+    <% } %>
+
+    <% if (typeof user !== 'undefined' && user && user.roleName === 'Administrador') { %>
+    <li>
+      <a href="/usuarios" class="<%= (typeof currentPage !== 'undefined' && currentPage === 'usuarios') ? 'active' : '' %>">
+        <i class="fas fa-users-cog"></i>
+        <span>Gestión de Usuarios</span>
+      </a>
+    </li>
+    <li>
+      <a href="/registrar-usuario" class="<%= (typeof currentPage !== 'undefined' && currentPage === 'registrar-usuario') ? 'active' : '' %>">
+        <i class="fas fa-user-plus"></i>
+        <span>Registrar Usuario</span>
+      </a>
+    </li>
+    <% } %>
+  </ul>
+</nav>

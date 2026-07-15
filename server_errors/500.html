@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>500 — Error interno del servidor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1e1e;
+      --bg2: #162828;
+      --green: #60e61a;
+      --green-glow: rgba(96,230,26,0.35);
+      --green-bright: #7af028;
+      --green-hover: #3a9010;
+      --white: #ffffff;
+      --muted: #8fada0;
+      --warn: #e8a020;
+      --warn-glow: rgba(232,160,32,0.3);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Starfield */
+    .stars {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      animation: twinkle var(--dur) ease-in-out infinite alternate;
+    }
+    @keyframes twinkle {
+      from { opacity: 0.2; transform: scale(1); }
+      to   { opacity: 1;   transform: scale(1.4); }
+    }
+
+    /* Light beam — orange tint for server error mood */
+    .beam {
+      position: fixed;
+      top: 0; right: 15%;
+      width: 260px;
+      height: 100vh;
+      background: linear-gradient(180deg, rgba(232,160,32,0.06) 0%, transparent 70%);
+      transform: skewX(-8deg);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Layout */
+    .container {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 3rem;
+      max-width: 1100px;
+      width: 90%;
+      padding: 2rem;
+    }
+
+    .left { flex: 1; }
+
+    /* Logo */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 3rem;
+    }
+    .logo-icon {
+      width: 40px; height: 40px;
+      border: 3px solid var(--green);
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin 3s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .logo-text { font-size: 1.4rem; font-weight: 900; color: var(--white); }
+    .logo-text span { color: var(--green); }
+
+    /* Main text */
+    .subtitle {
+      font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+      font-weight: 700;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+      animation: slideUp 0.7s ease both;
+    }
+    .big-number {
+      font-family: 'Space Mono', monospace;
+      font-size: clamp(6rem, 16vw, 11rem);
+      font-weight: 700;
+      line-height: 1;
+      color: var(--white);
+      text-shadow: 0 0 60px var(--warn-glow), 0 0 120px rgba(232,160,32,0.1);
+      animation: slideUp 0.7s 0.1s ease both;
+      letter-spacing: -4px;
+    }
+    .big-number span { color: var(--warn); }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .description {
+      font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+      color: var(--muted);
+      margin: 1.2rem 0 2.5rem;
+      line-height: 1.6;
+      max-width: 420px;
+      animation: slideUp 0.7s 0.2s ease both;
+    }
+
+    /* Status badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(232,160,32,0.12);
+      border: 1px solid rgba(232,160,32,0.4);
+      color: var(--warn);
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.3rem 0.9rem;
+      border-radius: 50px;
+      margin-bottom: 1rem;
+      animation: slideUp 0.7s ease both;
+    }
+    .badge-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--warn);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* Buttons */
+    .actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      animation: slideUp 0.7s 0.3s ease both;
+    }
+    .btn {
+      padding: 0.75rem 2rem;
+      border-radius: 50px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+      text-decoration: none;
+    }
+    .btn:hover { transform: translateY(-3px); }
+    .btn-primary {
+      background: var(--green);
+      color: var(--bg);
+      border: none;
+      box-shadow: 0 0 24px var(--green-glow);
+    }
+    .btn-primary:hover { box-shadow: 0 0 40px var(--green-glow); background: var(--green-hover); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--green);
+      border: 2px solid var(--green);
+    }
+
+    /* Illustration */
+    .right {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50%       { transform: translateY(-16px) rotate(1.5deg); }
+    }
+
+    .unicorn-wrap {
+      position: relative;
+      width: clamp(220px, 28vw, 360px);
+      height: clamp(220px, 28vw, 360px);
+    }
+
+    .glow-bubble {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 85%; height: 85%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(232,160,32,0.2) 0%, rgba(74,133,24,0.1) 60%, transparent 100%);
+      filter: blur(14px);
+    }
+
+    svg.unicorn {
+      position: relative;
+      z-index: 1;
+      width: 100%; height: 100%;
+    }
+
+    /* Smoke/steam particles */
+    .steam {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      animation: rise var(--sd) ease-in infinite;
+      pointer-events: none;
+    }
+    @keyframes rise {
+      0%   { transform: translateY(0) scale(1);   opacity: 0.6; }
+      100% { transform: translateY(-80px) scale(2); opacity: 0; }
+    }
+
+    /* Floating dots */
+    .dot {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @media (max-width: 700px) {
+      .container { flex-direction: column; text-align: center; }
+      .logo { justify-content: center; }
+      .badge { margin-left: auto; margin-right: auto; }
+      .description { margin-left: auto; margin-right: auto; }
+      .actions { justify-content: center; }
+      .right { order: -1; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+<div class="beam"></div>
+
+<div class="container">
+  <div class="left">
+    <div class="logo">
+      <!-- <div class="logo-icon"></div> -->
+      <div class="logo-text"><span>NO</span>VU</div>
+    </div>
+
+    <div class="badge"><div class="badge-dot"></div> Servidor caído</div>
+    <p class="subtitle">Error interno del servidor</p>
+    <div class="big-number">5<span>0</span>0</div>
+    <p class="description">
+      ¡Algo explotó en el servidor! Nuestro equipo ya está trabajando para solucionarlo.
+      Por favor, intenta nuevamente en unos minutos.
+    </p>
+
+    <div class="actions">
+      <a href="/" onclick="if (document.referrer) { history.back(); return false; }" 
+   class="btn btn-primary">
+  Volver
+      </a>
+      <a href="#" class="btn btn-secondary">Ver estado</a>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="unicorn-wrap" id="unicornWrap">
+      <div class="glow-bubble"></div>
+      <!-- SVG: Panicked unicorn with broken/smoking server -->
+      <svg class="unicorn" viewBox="0 0 320 370" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+        <!-- SERVER BOX (bottom) -->
+        <rect x="90" y="270" width="140" height="80" rx="12" fill="#1a3a2a"/>
+        <rect x="90" y="270" width="140" height="80" rx="12" stroke="#3a9010" stroke-width="2"/>
+        <!-- Server slots -->
+        <rect x="104" y="282" width="112" height="14" rx="4" fill="#0f2018"/>
+        <rect x="104" y="302" width="112" height="14" rx="4" fill="#0f2018"/>
+        <rect x="104" y="322" width="112" height="14" rx="4" fill="#0f2018"/>
+        <!-- Status lights -->
+        <circle cx="200" cy="289" r="4" fill="#e8a020"/>
+        <circle cx="200" cy="309" r="4" fill="#e74c3c"/>
+        <circle cx="200" cy="329" r="4" fill="#e74c3c"/>
+        <!-- Blink animation via inline -->
+        <circle cx="210" cy="289" r="3" fill="#e8a020" opacity="0.5"/>
+        <!-- Crack on server -->
+        <path d="M130 275 L140 285 L132 292 L145 305" stroke="#e8a020" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.7"/>
+
+        <!-- SMOKE from server top -->
+        <ellipse cx="145" cy="268" rx="7" ry="5" fill="#8fada0" opacity="0.3"/>
+        <ellipse cx="165" cy="263" rx="9" ry="6" fill="#8fada0" opacity="0.2"/>
+        <ellipse cx="180" cy="268" rx="6" ry="4" fill="#8fada0" opacity="0.25"/>
+
+        <!-- UNICORN BODY (spacesuit, panicked) -->
+        <!-- Body tilted slightly -->
+        <g transform="rotate(-6 160 200)">
+          <!-- Helmet bubble -->
+          <ellipse cx="160" cy="145" rx="82" ry="84" fill="#2a5a38" opacity="0.9"/>
+          <ellipse cx="160" cy="145" rx="74" ry="76" fill="#d6f0e0"/>
+          <!-- Helmet shine -->
+          <ellipse cx="138" cy="112" rx="18" ry="11" fill="white" opacity="0.3" transform="rotate(-20 138 112)"/>
+
+          <!-- Horn (crooked, stressed) -->
+          <polygon points="160,32 150,72 170,72" fill="#60e61a"/>
+          <polygon points="160,32 150,72 155,72" fill="#3d7010" opacity="0.6"/>
+          <ellipse cx="160" cy="34" rx="6" ry="4" fill="#e74c3c" transform="rotate(-10 160 34)"/>
+          <!-- Sweat drop on horn -->
+          <ellipse cx="172" cy="55" rx="4" ry="6" fill="#7af028" opacity="0.7" transform="rotate(20 172 55)"/>
+
+          <!-- Face -->
+          <ellipse cx="160" cy="150" rx="50" ry="48" fill="#f8f0dc"/>
+
+          <!-- Panicked wide eyes (X eyes for stress) -->
+          <!-- Left eye X -->
+          <line x1="130" y1="142" x2="142" y2="154" stroke="#2c3e50" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="142" y1="142" x2="130" y2="154" stroke="#2c3e50" stroke-width="3.5" stroke-linecap="round"/>
+          <!-- Right eye X -->
+          <line x1="168" y1="142" x2="180" y2="154" stroke="#2c3e50" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="180" y1="142" x2="168" y2="154" stroke="#2c3e50" stroke-width="3.5" stroke-linecap="round"/>
+
+          <!-- Worried brows -->
+          <path d="M126 134 Q135 126 144 132" stroke="#8b7355" stroke-width="3" stroke-linecap="round" fill="none"/>
+          <path d="M166 132 Q175 126 184 134" stroke="#8b7355" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+          <!-- Open mouth (shocked) -->
+          <ellipse cx="160" cy="170" rx="12" ry="9" fill="#c0846a"/>
+          <ellipse cx="160" cy="167" rx="12" ry="6" fill="#f8f0dc"/>
+
+          <!-- Cheeks blush (more pink from stress) -->
+          <ellipse cx="128" cy="162" rx="10" ry="6" fill="#f0a8a8" opacity="0.6"/>
+          <ellipse cx="192" cy="162" rx="10" ry="6" fill="#f0a8a8" opacity="0.6"/>
+
+          <!-- Sweat drops -->
+          <ellipse cx="108" cy="140" rx="4" ry="6" fill="#7af028" opacity="0.6" transform="rotate(-10 108 140)"/>
+          <ellipse cx="215" cy="135" rx="3" ry="5" fill="#7af028" opacity="0.5" transform="rotate(15 215 135)"/>
+
+          <!-- Ear / hair tufts -->
+          <ellipse cx="108" cy="128" rx="13" ry="17" fill="#3a9010" transform="rotate(-15 108 128)"/>
+          <ellipse cx="212" cy="128" rx="13" ry="17" fill="#3a9010" transform="rotate(15 212 128)"/>
+        </g>
+
+        <!-- Body spacesuit -->
+        <rect x="104" y="215" width="112" height="70" rx="28" fill="#dce8dc"/>
+        <ellipse cx="160" cy="218" rx="40" ry="13" fill="#b8d8b8"/>
+        <!-- Suit logo warning -->
+        <circle cx="160" cy="255" r="13" fill="#e8a020" opacity="0.9"/>
+        <text x="160" y="260" text-anchor="middle" font-size="14" font-weight="900" fill="white" font-family="monospace">!</text>
+
+        <!-- Arms (raised in panic) -->
+        <rect x="58" y="205" width="50" height="22" rx="11" fill="#dce8dc" transform="rotate(-40 58 205)"/>
+        <ellipse cx="45" cy="184" rx="13" ry="13" fill="#7af028"/>
+
+        <rect x="212" y="205" width="50" height="22" rx="11" fill="#dce8dc" transform="rotate(40 262 205)"/>
+        <ellipse cx="275" cy="184" rx="13" ry="13" fill="#7af028"/>
+
+        <!-- Legs -->
+        <rect x="118" y="278" width="32" height="10" rx="8" fill="#dce8dc"/>
+        <rect x="170" y="278" width="32" height="10" rx="8" fill="#dce8dc"/>
+
+      </svg>
+
+      <!-- Animated steam particles injected by JS -->
+    </div>
+  </div>
+</div>
+
+<script>
+  // Stars
+  const starsEl = document.getElementById('stars');
+  for (let i = 0; i < 120; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 3 + 1;
+    const colors = ['#ffffff','#7af028','#c8e88a','#e8a020'];
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      top:${Math.random()*100}%; left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      --dur:${1.5 + Math.random()*3}s;
+      animation-delay:${Math.random()*3}s;
+      opacity:${Math.random()*0.6+0.2};
+    `;
+    starsEl.appendChild(s);
+  }
+
+  // Floating dots
+  const dotColors = ['#60e61a','#7af028','#3a9010','#e8a020','#c8e88a'];
+  for (let i = 0; i < 18; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    const sz = Math.random()*10 + 4;
+    d.style.cssText = `
+      width:${sz}px; height:${sz}px;
+      top:${Math.random()*100}%; left:${Math.random()*100}%;
+      background:${dotColors[Math.floor(Math.random()*dotColors.length)]};
+      opacity:${Math.random()*0.5+0.3};
+    `;
+    document.body.appendChild(d);
+  }
+
+  // Steam particles above server
+  const wrap = document.getElementById('unicornWrap');
+  for (let i = 0; i < 6; i++) {
+    const p = document.createElement('div');
+    p.className = 'steam';
+    const sz = Math.random()*14 + 8;
+    p.style.cssText = `
+      width:${sz}px; height:${sz}px;
+      bottom: 28%; left: ${35 + Math.random()*30}%;
+      --sd:${1.2 + Math.random()*1.5}s;
+      animation-delay:${Math.random()*2}s;
+    `;
+    wrap.appendChild(p);
+  }
+
+  // Blink the warning lights on server
+  const svg = document.querySelector('svg.unicorn');
+  const lights = [
+    { cx: 200, cy: 309, color: '#e74c3c' },
+    { cx: 200, cy: 329, color: '#e74c3c' },
+  ];
+  // Animate via JS interval
+  let blink = false;
+  setInterval(() => {
+    blink = !blink;
+    document.querySelectorAll('.blink-light').forEach(el => {
+      el.setAttribute('opacity', blink ? '1' : '0.2');
+    });
+  }, 600);
+
+  // Mark blink lights in SVG
+  document.querySelectorAll('svg circle').forEach(c => {
+    if (c.getAttribute('fill') === '#e74c3c') c.classList.add('blink-light');
+  });
+</script>
+</body>
+</html>

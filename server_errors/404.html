@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>404 — Página no encontrada</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1e1e;
+      --bg2: #162828;
+      --cyan: #60e61a;
+      --cyan-glow: rgba(96,230,26,0.35);
+      --cyan-bright: #7af028;
+      --cyan-hover: #3a9010;
+      --white: #ffffff;
+      --muted: #8fada0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Starfield */
+    .stars {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      animation: twinkle var(--dur) ease-in-out infinite alternate;
+    }
+    @keyframes twinkle {
+      from { opacity: 0.2; transform: scale(1); }
+      to   { opacity: 1;   transform: scale(1.4); }
+    }
+
+    /* Light beam */
+    .beam {
+      position: fixed;
+      top: 0; right: 15%;
+      width: 260px;
+      height: 100vh;
+      background: linear-gradient(180deg, rgba(96,230,26,0.07) 0%, transparent 70%);
+      transform: skewX(-8deg);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Layout */
+    .container {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 3rem;
+      max-width: 1100px;
+      width: 90%;
+      padding: 2rem;
+    }
+
+    .left { flex: 1; }
+
+    /* Logo */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 3rem;
+    }
+    .logo-icon {
+      width: 40px; height: 40px;
+      border: 3px solid var(--cyan);
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: spin 3s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .logo-text {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--white);
+    }
+    .logo-text span { color: var(--cyan); }
+
+    /* Main text */
+    .subtitle {
+      font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+      font-weight: 700;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.25rem;
+      animation: slideUp 0.7s ease both;
+    }
+    .big-number {
+      font-family: 'Space Mono', monospace;
+      font-size: clamp(6rem, 16vw, 11rem);
+      font-weight: 700;
+      line-height: 1;
+      color: var(--white);
+      text-shadow: 0 0 60px var(--cyan-glow), 0 0 120px rgba(56,197,245,0.15);
+      animation: slideUp 0.7s 0.1s ease both;
+      letter-spacing: -4px;
+    }
+    .big-number span { color: var(--cyan); }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .description {
+      font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+      color: var(--muted);
+      margin: 1.2rem 0 2.5rem;
+      line-height: 1.6;
+      max-width: 420px;
+      animation: slideUp 0.7s 0.2s ease both;
+    }
+
+    /* Buttons */
+    .actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      animation: slideUp 0.7s 0.3s ease both;
+    }
+    .btn {
+      padding: 0.75rem 2rem;
+      border-radius: 50px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+    }
+    .btn:hover { transform: translateY(-3px); }
+    .btn-primary {
+      background: var(--cyan);
+      color: var(--bg);
+      border: none;
+      box-shadow: 0 0 24px var(--cyan-glow);
+    }
+    .btn-primary:hover { box-shadow: 0 0 40px var(--cyan-glow); background: var(--cyan-hover); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--cyan);
+      border: 2px solid var(--cyan);
+    }
+
+    /* Unicorn astronaut */
+    .right {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-18px); }
+    }
+
+    .unicorn-wrap {
+      position: relative;
+      width: clamp(220px, 28vw, 360px);
+      height: clamp(220px, 28vw, 360px);
+    }
+
+    /* Glow bubble behind */
+    .glow-bubble {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 85%; height: 85%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(74,133,24,0.5) 0%, rgba(74,133,24,0.1) 70%, transparent 100%);
+      filter: blur(10px);
+    }
+
+    svg.unicorn {
+      position: relative;
+      z-index: 1;
+      width: 100%; 
+      height: 100%;
+      filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+    }
+
+    /* Floating dots */
+    .dot {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @media (max-width: 700px) {
+      .container { flex-direction: column; text-align: center; }
+      .logo { justify-content: center; }
+      .description { margin-left: auto; margin-right: auto; }
+      .actions { justify-content: center; }
+      .right { order: -1; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+<div class="beam"></div>
+
+<div class="container">
+  <div class="left">
+    <div class="logo">
+      <!-- <div class="logo-icon"></div> -->
+      <div class="logo-text"><span>NO</span>VU</div>
+    </div>
+
+    <p class="subtitle">Error</p>
+    <div class="big-number">4<span>0</span>4<span style="font-size:0.55em"></span></div>
+    <p class="description">
+      ¡Houston, tenemos un problema! La página que buscas se perdió en el espacio. 
+      No se encontró ningún recurso en esta ruta.
+    </p>
+
+    <div class="actions">
+      <a href="/" onclick="if (document.referrer) { history.back(); return false; }" 
+   class="btn btn-primary">
+  Volver
+      </a>
+      <a href="#" class="btn btn-secondary">Reportar error</a>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="unicorn-wrap">
+      <div class="glow-bubble"></div>
+      <!-- SVG Unicorn Astronaut -->
+      <svg class="unicorn" viewBox="0 0 300 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Helmet bubble -->
+        <ellipse cx="152" cy="145" rx="88" ry="90" fill="#2a6040" opacity="0.9"/>
+        <ellipse cx="152" cy="145" rx="80" ry="82" fill="#d6f0e0"/>
+        <!-- Helmet shine -->
+        <ellipse cx="130" cy="110" rx="20" ry="12" fill="white" opacity="0.35" transform="rotate(-20 130 110)"/>
+
+        <!-- Horn -->
+        <polygon points="152,28 144,72 160,72" fill="#38c5f5"/>
+        <polygon points="152,28 144,72 148,72" fill="#2aa8d8" opacity="0.6"/>
+        <!-- Horn tip red cap -->
+        <ellipse cx="152" cy="30" rx="7" ry="4" fill="#e74c3c" transform="rotate(-10 152 30)"/>
+
+        <!-- Face -->
+        <ellipse cx="152" cy="152" rx="52" ry="50" fill="#f8f0dc"/>
+        <!-- Eyes -->
+        <ellipse cx="135" cy="148" rx="7" ry="7.5" fill="#2c3e50"/>
+        <ellipse cx="169" cy="148" rx="7" ry="7.5" fill="#2c3e50"/>
+        <!-- Eye shine -->
+        <circle cx="138" cy="145" r="2.5" fill="white"/>
+        <circle cx="172" cy="145" r="2.5" fill="white"/>
+        <!-- Confused brow -->
+        <path d="M127 136 Q135 130 143 136" stroke="#8b7355" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M161 136 Q169 132 177 137" stroke="#8b7355" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <!-- Mouth slightly open -->
+        <path d="M143 168 Q152 175 161 168" stroke="#8b7355" stroke-width="2" stroke-linecap="round" fill="none"/>
+        <!-- Cheeks blush -->
+        <ellipse cx="126" cy="162" rx="9" ry="5" fill="#f0a8a8" opacity="0.5"/>
+        <ellipse cx="178" cy="162" rx="9" ry="5" fill="#f0a8a8" opacity="0.5"/>
+
+        <!-- Ear / hair tufts green -->
+        <ellipse cx="102" cy="130" rx="14" ry="18" fill="#3a9010" transform="rotate(-15 102 130)"/>
+        <ellipse cx="202" cy="130" rx="14" ry="18" fill="#3a9010" transform="rotate(15 202 130)"/>
+
+        <!-- Body (spacesuit) -->
+        <rect x="100" y="218" width="104" height="95" rx="30" fill="#dce8dc"/>
+        <!-- Suit collar ring -->
+        <ellipse cx="152" cy="222" rx="42" ry="14" fill="#b8d8b8"/>
+        <!-- Suit logo -->
+        <circle cx="152" cy="265" r="14" fill="#3a9010" opacity="0.8"/>
+        <path d="M146 265 A6 6 0 1 1 146 265.01" stroke="white" stroke-width="3" fill="none" stroke-dasharray="20 5"/>
+
+        <!-- Left arm -->
+        <rect x="62" y="228" width="40" height="24" rx="12" fill="#dce8dc" transform="rotate(20 62 228)"/>
+        <ellipse cx="60" cy="258" rx="14" ry="14" fill="#7af028"/><!-- glove -->
+
+        <!-- Right arm -->
+        <rect x="200" y="228" width="40" height="24" rx="12" fill="#dce8dc" transform="rotate(-20 240 228)"/>
+        <ellipse cx="242" cy="258" rx="14" ry="14" fill="#7af028"/><!-- glove -->
+
+        <!-- Legs -->
+        <rect x="112" y="305" width="35" height="45" rx="15" fill="#dce8dc"/>
+        <rect x="155" y="305" width="35" height="45" rx="15" fill="#dce8dc"/>
+        <!-- Boots -->
+        <ellipse cx="129" cy="348" rx="20" ry="11" fill="#7af028"/>
+        <ellipse cx="172" cy="348" rx="20" ry="11" fill="#7af028"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Generate stars
+  const starsEl = document.getElementById('stars');
+  for (let i = 0; i < 120; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 3 + 1;
+    const colors = ['#ffffff','#7af028','#c8e88a','#60e61a'];
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      top:${Math.random()*100}%; left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      --dur:${1.5 + Math.random()*3}s;
+      animation-delay:${Math.random()*3}s;
+      opacity:${Math.random()*0.6+0.2};
+    `;
+    starsEl.appendChild(s);
+  }
+
+  // Colored floating dots (like reference image)
+  const dotColors = ['#60e61a','#7af028','#3a9010','#c8e88a','#a8d870'];
+  for (let i = 0; i < 18; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    const sz = Math.random()*10 + 4;
+    d.style.cssText = `
+      width:${sz}px; height:${sz}px;
+      top:${Math.random()*100}%; left:${Math.random()*100}%;
+      background:${dotColors[Math.floor(Math.random()*dotColors.length)]};
+      opacity:${Math.random()*0.5+0.3};
+    `;
+    document.body.appendChild(d);
+  }
+</script>
+</body>
+</html>

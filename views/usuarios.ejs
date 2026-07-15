@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" type="image/svg+xml" href="/img/bill-icon.svg">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestión de Usuarios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/styles/layout.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0f1e1e;
+      --surface:  #162828;
+      --border:   rgba(96,230,26,0.15);
+      --border-md:rgba(96,230,26,0.3);
+      --text-1:   #ffffff;
+      --text-2:   #8fada0;
+      --text-3:   rgba(143,173,160,0.55);
+      --green-bg: rgba(96,230,26,0.15);
+      --green-tx: #7af028;
+      --red-bg:   rgba(231,76,60,0.12);
+      --red-tx:   #e74c3c;
+      --blue-bg:  rgba(56,197,245,0.12);
+      --blue-tx:  #38c5f5;
+      --radius:   10px;
+      --font: 'Nunito', sans-serif;
+    }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-1);
+      font-size: 14px;
+      min-height: 100vh;
+    }
+    
+    .main-area { background: var(--bg); }
+    .app-header { background: rgba(15,30,30,0.98); }
+
+    .page { width: 90%; max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* Header */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 15px; }
+    .page-title { font-size: 20px; font-weight: 600; color: var(--text-1); }
+    .page-subtitle { font-size: 13px; color: var(--text-2); margin-top: 3px; }
+    
+    .btn-add { background: linear-gradient(135deg, #60e61a, #3a9010); color: #fff; padding: 10px 16px; border-radius: var(--radius); text-decoration: none; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; border: none; cursor: pointer; transition: transform 0.2s; }
+    .btn-add:hover { transform: translateY(-2px); }
+
+    /* Search */
+    .search-box { position: relative; margin-bottom: 1.5rem; }
+    .search-box i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 16px; }
+    .search-box input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 30px; padding: 12px 16px 12px 38px; color: var(--text-1); font-size: 14px; font-family: var(--font); outline: none; transition: border-color .2s; }
+    .search-box input:focus { border-color: var(--green-tx); }
+
+    /* Users List */
+    .user-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; display: flex; align-items: center; padding: 14px 16px; gap: 15px; transition: background .15s; }
+    .user-card:hover { background: rgba(255,255,255,0.03); }
+    .user-card.inactive { opacity: 0.6; }
+
+    .avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; background: var(--blue-bg); color: var(--blue-tx); }
+    
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 15px; font-weight: 700; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; }
+    .user-email { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+    
+    .badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; font-weight: 700; text-transform: uppercase; border: 1px solid transparent; }
+    .badge-admin { background: var(--red-bg); color: var(--red-tx); border-color: var(--red-tx); }
+    .badge-director { background: var(--amber-bg); color: var(--amber-tx); border-color: var(--amber-tx); }
+    .badge-gerente { background: var(--blue-bg); color: var(--blue-tx); border-color: var(--blue-tx); }
+    .badge-asesor { background: var(--green-bg); color: var(--green-tx); border-color: var(--green-tx); }
+    .badge-inactive { background: var(--surface); color: var(--text-3); border-color: var(--text-3); }
+
+    .user-actions { display: flex; gap: 8px; }
+    .btn-action { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-2); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; }
+    .btn-action:hover { color: var(--text-1); background: var(--border); }
+    .btn-action.delete:hover { color: var(--red-tx); border-color: var(--red-tx); background: var(--red-bg); }
+    .btn-action.activate:hover { color: var(--green-tx); border-color: var(--green-tx); background: var(--green-bg); }
+
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 1000; opacity: 0; transition: opacity .3s; }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    .modal-content { background: var(--bg); border: 1px solid var(--border-md); border-radius: 16px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform .3s; }
+    .modal-overlay.show .modal-content { transform: translateY(0); }
+    
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-title { font-size: 18px; font-weight: 700; color: var(--text-1); }
+    .modal-close { background: none; border: none; color: var(--text-3); font-size: 20px; cursor: pointer; transition: color .2s; }
+    .modal-close:hover { color: var(--text-1); }
+
+    .form-group { margin-bottom: 15px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+    .form-input, .form-select { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text-1); font-family: var(--font); font-size: 14px; outline: none; transition: border-color .2s; }
+    .form-input:focus, .form-select:focus { border-color: var(--green-tx); }
+
+    .checkbox-wrap { display: flex; align-items: center; gap: 8px; margin-top: 10px; cursor: pointer; }
+    .checkbox-wrap input { width: 16px; height: 16px; cursor: pointer; }
+    .checkbox-label { font-size: 14px; color: var(--text-1); }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 25px; }
+    .btn { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; }
+    .btn-secondary { background: var(--surface); color: var(--text-2); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); color: var(--text-1); }
+    .btn-primary { background: var(--green-tx); color: #000; }
+    .btn-primary:hover { filter: brightness(1.1); }
+
+    /* Alert */
+    .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; font-weight: 600; display: none; }
+    .alert.show { display: block; }
+    .alert.success { background: var(--green-bg); color: var(--green-tx); border: 1px solid var(--border-md); }
+    .alert.error { background: var(--red-bg); color: var(--red-tx); border: 1px solid rgba(231,76,60,0.3); }
+
+    .loading-state { text-align: center; padding: 40px; color: var(--text-3); font-size: 16px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+    .loading-state i { font-size: 24px; color: var(--green-tx); }
+    .accordion-content.show { display: block !important; }
+    .fa-chevron-down.rotate { transform: rotate(180deg); }
+  </style>
+</head>
+<body>
+
+<%- include('partials/sidebar') %>
+<div class="main-area">
+<%- include('partials/header') %>
+
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Gestión de Usuarios</h1>
+      <p class="page-subtitle">Administra los accesos y roles del sistema.</p>
+    </div>
+    <a href="/registrar-usuario" class="btn-add">
+      <i class="fas fa-user-plus"></i> Añadir Usuario
+    </a>
+  </div>
+
+  <div id="alertBox" class="alert"></div>
+
+  <div class="search-box">
+    <i class="fas fa-search"></i>
+    <input type="text" id="searchInput" placeholder="Buscar por nombre, correo o rol..." />
+  </div>
+
+  <div id="usersList">
+    <div class="loading-state">
+      <i class="fas fa-circle-notch fa-spin"></i>
+      <span>Cargando usuarios...</span>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Modal Edit User -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">Editar Usuario</h2>
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="editForm">
+      <input type="hidden" id="editId" />
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label class="form-label">Nombre Completo</label>
+          <input type="text" class="form-input" id="editName" required />
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Correo Electrónico</label>
+          <input type="email" class="form-input" id="editEmail" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nombre de Usuario</label>
+          <input type="text" class="form-input" id="editUsername" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Teléfono</label>
+          <input type="tel" class="form-input" id="editPhone" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Rol</label>
+          <select class="form-select" id="editRole" required>
+            <option value="">Cargando roles...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tipo de Sangre</label>
+          <select class="form-select" id="editBloodType">
+            <option value="">Seleccionar tipo</option>
+            <option value="O+">O+</option><option value="O-">O-</option>
+            <option value="A+">A+</option><option value="A-">A-</option>
+            <option value="B+">B+</option><option value="B-">B-</option>
+            <option value="AB+">AB+</option><option value="AB-">AB-</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="editManagerGroup" style="display: none; grid-column: 1 / -1;">
+          <label class="form-label">Gerente(s) Asignado(s)</label>
+          <div id="editManagersContainer" style="display: flex; flex-direction: column; gap: 10px; max-height: 200px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 15px;">
+             <span style="color: var(--text-2); font-size: 0.9rem;">Cargando gerentes...</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Fecha de Nacimiento</label>
+          <input type="date" class="form-input" id="editBirthDate" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Contacto Emergencia</label>
+          <input type="text" class="form-input" id="editEmergencyName" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Teléfono Emergencia</label>
+          <input type="tel" class="form-input" id="editEmergencyPhone" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nueva Contraseña (Opcional)</label>
+          <input type="password" class="form-input" id="editPassword" placeholder="En blanco = sin cambios" />
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 15px;">
+        <label class="form-label">Foto de Perfil</label>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <div id="editPicturePreview" class="avatar" style="width: 50px; height: 50px; font-size: 18px; flex-shrink: 0;">?</div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+            <input type="file" class="form-input" id="editPicture" accept="image/*" />
+            <button type="button" class="btn btn-secondary" id="btnDeletePicture" style="color: var(--red-tx); border-color: rgba(231,76,60,0.3); background: rgba(231,76,60,0.1); width: fit-content; padding: 6px 12px; font-size: 12px;" onclick="deleteProfilePicture()">
+              <i class="fas fa-trash" style="margin-right: 4px;"></i> Eliminar foto de perfil
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <label class="checkbox-wrap" style="margin-top: 15px;">
+        <input type="checkbox" id="editActive" />
+        <span class="checkbox-label">Cuenta activa en el sistema</span>
+      </label>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnSave">Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  let usersData = [];
+  let rolesData = [];
+
+  // Init
+  async function init() {
+    await loadRoles();
+    await loadUsers();
+  }
+
+  function showAlert(msg, type='success') {
+    const ab = document.getElementById('alertBox');
+    ab.textContent = msg;
+    ab.className = `alert show ${type}`;
+    setTimeout(() => { ab.classList.remove('show'); }, 4000);
+  }
+
+  async function loadRoles() {
+    try {
+      const res = await fetch('/api/roles', { credentials: 'include' });
+      const json = await res.json();
+      if (json.success) {
+        rolesData = json.data.roles;
+        const sel = document.getElementById('editRole');
+        sel.innerHTML = '<option value="">Selecciona un rol</option>';
+        rolesData.forEach(r => {
+          sel.innerHTML += `<option value="${r._id}">${r.name}</option>`;
+        });
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadUsers() {
+    try {
+      const res = await fetch('/api/users', { credentials: 'include' });
+      const json = await res.json();
+      if (json.success) {
+        usersData = json.data;
+        renderUsers(usersData);
+      } else {
+        document.getElementById('usersList').innerHTML = `<div class="loading-state"><i class="fas fa-exclamation-triangle" style="color:var(--red-tx)"></i><span>Error al cargar usuarios</span></div>`;
+      }
+    } catch(e) {
+      console.error(e);
+      document.getElementById('usersList').innerHTML = `<div class="loading-state"><i class="fas fa-exclamation-triangle" style="color:var(--red-tx)"></i><span>Error de red</span></div>`;
+    }
+  }
+
+  function renderUsers(list) {
+    const container = document.getElementById('usersList');
+    container.innerHTML = '';
+    
+    if (list.length === 0) {
+      container.innerHTML = `<div class="loading-state"><i class="fas fa-users-slash"></i><span>No hay usuarios registrados</span></div>`;
+      return;
+    }
+
+    const admins = [];
+    const directors = [];
+    const gerentes = [];
+    const asesores = [];
+    const others = [];
+
+    list.forEach(u => {
+        const roleName = u.role?.name || '';
+        if (roleName === 'Administrador') admins.push(u);
+        else if (roleName === 'Director') directors.push(u);
+        else if (roleName === 'Gerente') gerentes.push(u);
+        else if (roleName === 'Asesor') asesores.push(u);
+        else others.push(u);
+    });
+
+    let html = '';
+
+    const renderCard = (u, isSubItem = false) => {
+      const name = u.name || 'Desconocido';
+      const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      const roleName = u.role?.name || 'Sin rol';
+      
+      let badgeClass = 'badge-asesor';
+      if (roleName === 'Administrador') badgeClass = 'badge-admin';
+      if (roleName === 'Director') badgeClass = 'badge-director';
+      if (roleName === 'Gerente') badgeClass = 'badge-gerente';
+      
+      const isInactive = u.active === false;
+      const cardClass = isInactive ? 'user-card inactive' : 'user-card';
+      const marginClass = isSubItem ? 'style="margin-left: 30px; margin-top: 5px; background: rgba(0,0,0,0.15);"' : '';
+      const statusBadge = isInactive ? `<span class="badge badge-inactive">Inactivo</span>` : '';
+
+      const avatarHtml = u.picture 
+        ? `<img src="${u.picture}" class="avatar" style="object-fit: cover;" alt="Avatar" />`
+        : `<div class="avatar">${initials}</div>`;
+
+      return `
+        <div class="${cardClass}" ${marginClass}>
+          ${avatarHtml}
+          <div class="user-info">
+            <div class="user-name">
+              ${name}
+              <span class="badge ${badgeClass}">${roleName}</span>
+              ${statusBadge}
+            </div>
+            <div class="user-email"><i class="fas fa-envelope" style="margin-right:4px"></i>${u.email}</div>
+          </div>
+          <div class="user-actions">
+            <button class="btn-action edit" onclick='openEditModal(${JSON.stringify(u).replace(/'/g, "&apos;")})' title="Editar usuario">
+              <i class="fas fa-pen"></i>
+            </button>
+            ${isInactive 
+              ? `<button class="btn-action activate" onclick="toggleActive('${u._id}', true)" title="Reactivar usuario"><i class="fas fa-user-check"></i></button>`
+              : `<button class="btn-action delete" onclick="toggleActive('${u._id}', false)" title="Desactivar usuario"><i class="fas fa-user-times"></i></button>`
+            }
+          </div>
+        </div>
+      `;
+    };
+
+    if (admins.length > 0) {
+        html += `<h3 style="margin: 20px 0 10px; color: var(--text-2); font-size: 13px; text-transform: uppercase;">Administradores</h3>`;
+        admins.forEach(u => html += renderCard(u));
+    }
+    if (directors.length > 0) {
+        html += `<h3 style="margin: 20px 0 10px; color: var(--text-2); font-size: 13px; text-transform: uppercase;">Directores</h3>`;
+        directors.forEach(u => html += renderCard(u));
+    }
+    if (others.length > 0) {
+        html += `<h3 style="margin: 20px 0 10px; color: var(--text-2); font-size: 13px; text-transform: uppercase;">Otros</h3>`;
+        others.forEach(u => html += renderCard(u));
+    }
+
+    if (gerentes.length > 0) {
+        html += `<h3 style="margin: 20px 0 10px; color: var(--text-2); font-size: 13px; text-transform: uppercase;">Gerentes (Equipos)</h3>`;
+        gerentes.forEach(g => {
+            const myAsesores = asesores.filter(a => a.manager_ids && a.manager_ids.includes(g._id));
+            
+            html += `
+            <div class="accordion-item" style="margin-bottom: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;">
+                <div class="accordion-header" style="padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(255,255,255,0.02);" onclick="this.nextElementSibling.classList.toggle('show'); this.querySelector('.fa-chevron-down').classList.toggle('rotate');">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        ${g.picture ? `<img src="${g.picture}" class="avatar" style="width:36px;height:36px;flex-shrink:0;object-fit:cover;" />` : `<div class="avatar" style="width:36px;height:36px;flex-shrink:0;">${g.name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()}</div>`}
+                        <div>
+                            <div style="font-weight: 700; color: #fff;">${g.name} <span class="badge badge-gerente" style="margin-left:5px;">Gerente</span></div>
+                            <div style="font-size: 12px; color: var(--text-2); margin-top:2px;"><i class="fas fa-users"></i> ${myAsesores.length} asesores asignados</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn-action edit" onclick='event.stopPropagation(); openEditModal(${JSON.stringify(g).replace(/'/g, "&apos;")})'><i class="fas fa-pen"></i></button>
+                        ${g.active === false ? `<button class="btn-action activate" onclick="event.stopPropagation(); toggleActive('${g._id}', true)"><i class="fas fa-user-check"></i></button>` : `<button class="btn-action delete" onclick="event.stopPropagation(); toggleActive('${g._id}', false)"><i class="fas fa-user-times"></i></button>`}
+                        <i class="fas fa-chevron-down" style="color: var(--text-2); transition: transform 0.3s; margin-left: 5px;"></i>
+                    </div>
+                </div>
+                <div class="accordion-content" style="padding: 0 10px 10px; display: none;">
+                    ${myAsesores.map(a => renderCard(a, true)).join('')}
+                    ${myAsesores.length === 0 ? `<div style="padding: 15px; text-align: center; color: var(--text-3); font-size: 12px;">No hay asesores asignados a este gerente</div>` : ''}
+                </div>
+            </div>`;
+        });
+    }
+
+    const unassignedAsesores = asesores.filter(a => !a.manager_ids || a.manager_ids.length === 0);
+    if (unassignedAsesores.length > 0) {
+        html += `
+            <div class="accordion-item" style="margin-bottom: 10px; background: rgba(231,76,60,0.05); border: 1px solid rgba(231,76,60,0.2); border-radius: var(--radius); overflow: hidden;">
+                <div class="accordion-header" style="padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="this.nextElementSibling.classList.toggle('show'); this.querySelector('.fa-chevron-down').classList.toggle('rotate');">
+                    <div style="font-weight: 700; color: #fff; display: flex; align-items: center;"><i class="fas fa-exclamation-triangle" style="color: var(--red-tx); margin-right: 8px;"></i> Asesores sin Gerente</div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span style="font-size: 12px; color: var(--text-2);">${unassignedAsesores.length} asesores</span>
+                        <i class="fas fa-chevron-down" style="color: var(--text-2); transition: transform 0.3s;"></i>
+                    </div>
+                </div>
+                <div class="accordion-content" style="padding: 0 10px 10px; display: none;">
+                    ${unassignedAsesores.map(a => renderCard(a, true)).join('')}
+                </div>
+            </div>`;
+    }
+
+    container.innerHTML = html;
+  }
+
+  // Buscador
+  document.getElementById('searchInput').addEventListener('input', e => {
+    const term = e.target.value.toLowerCase();
+    const filtered = usersData.filter(u => {
+      return (u.name || '').toLowerCase().includes(term) ||
+             (u.email || '').toLowerCase().includes(term) ||
+             (u.role?.name || '').toLowerCase().includes(term);
+    });
+    renderUsers(filtered);
+  });
+
+  // Modal
+  const modal = document.getElementById('editModal');
+  
+  async function handleEditRoleChange(roleId) {
+     const role = rolesData.find(r => r._id === roleId);
+     const managerGroup = document.getElementById('editManagerGroup');
+     const container = document.getElementById('editManagersContainer');
+     if (role && role.name === 'Asesor') {
+         managerGroup.style.display = 'block';
+         if (container.innerHTML.includes('Cargando')) {
+             try {
+                const res = await fetch('/api/users/by-role/Gerente');
+                const result = await res.json();
+                if(result.success) {
+                   container.innerHTML = '';
+                   result.data.forEach(m => {
+                       const lbl = document.createElement('label');
+                       lbl.style.display = 'flex';
+                       lbl.style.alignItems = 'center';
+                       lbl.style.gap = '10px';
+                       lbl.style.cursor = 'pointer';
+                       const inp = document.createElement('input');
+                       inp.type = 'checkbox';
+                       inp.name = 'edit_manager_ids';
+                       inp.value = m._id;
+                       inp.style.cursor = 'pointer';
+                       inp.style.width = '18px';
+                       inp.style.height = '18px';
+                       inp.style.accentColor = '#60e61a';
+                       const span = document.createElement('span');
+                       span.className = 'checkbox-label';
+                       span.style.color = '#fff';
+                       span.style.fontSize = '0.95rem';
+                       span.textContent = m.name;
+                       lbl.appendChild(inp);
+                       lbl.appendChild(span);
+                       container.appendChild(lbl);
+                   });
+                }
+             } catch(e) {}
+         }
+     } else {
+         managerGroup.style.display = 'none';
+     }
+  }
+
+  document.getElementById('editRole').addEventListener('change', (e) => handleEditRoleChange(e.target.value));
+
+  async function openEditModal(user) {
+    document.getElementById('editId').value = user._id;
+    document.getElementById('editName').value = user.name || '';
+    document.getElementById('editEmail').value = user.email || '';
+    document.getElementById('editUsername').value = user.username || '';
+    document.getElementById('editPhone').value = user.phone || '';
+    document.getElementById('editBloodType').value = user.blood_type || '';
+    
+    // Formatting birth_date if exists
+    if (user.birth_date) {
+        document.getElementById('editBirthDate').value = new Date(user.birth_date).toISOString().split('T')[0];
+    } else {
+        document.getElementById('editBirthDate').value = '';
+    }
+
+    document.getElementById('editEmergencyName').value = user.emergency_contact_name || '';
+    document.getElementById('editEmergencyPhone').value = user.emergency_contact_phone || '';
+
+    if (user.role && user.role._id) {
+      document.getElementById('editRole').value = user.role._id;
+      await handleEditRoleChange(user.role._id);
+      if (user.role.name === 'Asesor' && user.manager_ids) {
+          document.querySelectorAll('input[name="edit_manager_ids"]').forEach(cb => {
+              cb.checked = user.manager_ids.includes(cb.value);
+          });
+      }
+    } else {
+      document.getElementById('editRole').value = '';
+      document.getElementById('editManagerGroup').style.display = 'none';
+    }
+    document.getElementById('editPassword').value = '';
+    document.getElementById('editActive').checked = user.active !== false;
+
+    // Picture preview
+    const preview = document.getElementById('editPicturePreview');
+    const btnDelete = document.getElementById('btnDeletePicture');
+    if (user.picture) {
+      preview.innerHTML = `<img src="${user.picture}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" />`;
+      btnDelete.style.display = 'inline-flex';
+    } else {
+      const name = user.name || '?';
+      const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      preview.innerHTML = initials;
+      btnDelete.style.display = 'none';
+    }
+    document.getElementById('editPicture').value = '';
+    
+    modal.classList.add('show');
+  }
+
+  function closeModal() {
+    modal.classList.remove('show');
+  }
+
+  document.getElementById('editPicture').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const preview = document.getElementById('editPicturePreview');
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" />`;
+      }
+      reader.readAsDataURL(file);
+    } else {
+      // Revert to original if cancelled? 
+      // But actually if they just click cancel, file input might clear.
+      // Let's just leave the preview as is, or recalculate from initials
+    }
+  });
+
+  document.getElementById('editForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const id = document.getElementById('editId').value;
+    
+    const formData = new FormData();
+    formData.append('name', document.getElementById('editName').value);
+    formData.append('email', document.getElementById('editEmail').value);
+    formData.append('username', document.getElementById('editUsername').value);
+    formData.append('phone', document.getElementById('editPhone').value);
+    formData.append('blood_type', document.getElementById('editBloodType').value);
+    const bd = document.getElementById('editBirthDate').value;
+    if (bd) formData.append('birth_date', bd);
+    formData.append('emergency_contact_name', document.getElementById('editEmergencyName').value);
+    formData.append('emergency_contact_phone', document.getElementById('editEmergencyPhone').value);
+    formData.append('role', document.getElementById('editRole').value);
+    formData.append('active', document.getElementById('editActive').checked);
+
+    if (document.getElementById('editManagerGroup').style.display === 'block') {
+        const selected = document.querySelectorAll('input[name="edit_manager_ids"]:checked');
+        if (selected.length === 0) {
+            formData.append('manager_ids', '');
+        } else {
+            selected.forEach(cb => formData.append('manager_ids', cb.value));
+        }
+    } else {
+        formData.append('manager_ids', '');
+    }
+
+    const pwd = document.getElementById('editPassword').value;
+    if (pwd.trim() !== '') formData.append('password', pwd);
+
+    const pictureFile = document.getElementById('editPicture').files[0];
+    if (pictureFile) {
+        formData.append('picture', pictureFile);
+    }
+
+    const btn = document.getElementById('btnSave');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    try {
+      const res = await fetch('/api/users/' + id, {
+        method: 'PUT',
+        body: formData
+      });
+      const json = await res.json();
+      if (json.success) {
+        showAlert('Usuario guardado correctamente', 'success');
+        if (json.data && json.data.isSelf) {
+          updateHeaderAvatar(json.data);
+        }
+        closeModal();
+        await loadUsers();
+      } else {
+        showAlert(json.message || 'Error al guardar', 'error');
+      }
+    } catch(err) {
+      showAlert('Error de red', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar Cambios';
+    }
+  });
+
+  async function toggleActive(id, state) {
+    const actionTxt = state ? 'reactivar' : 'desactivar';
+    if (!confirm(`¿Estás seguro de que deseas ${actionTxt} este usuario?`)) return;
+
+    try {
+      let res;
+      if (state) {
+        // Para reactivar, usamos PUT
+        res = await fetch('/api/users/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ active: true })
+        });
+      } else {
+        // Para desactivar, usamos DELETE (eliminación lógica)
+        res = await fetch('/api/users/' + id, { method: 'DELETE' });
+      }
+      
+      const json = await res.json();
+      if (json.success) {
+        showAlert(`Usuario ${actionTxt}do correctamente`, 'success');
+        await loadUsers();
+      } else {
+        showAlert(json.message || `Error al ${actionTxt}`, 'error');
+      }
+    } catch(err) {
+      showAlert('Error de red', 'error');
+    }
+  }
+
+  async function deleteProfilePicture() {
+    const id = document.getElementById('editId').value;
+    if (!id) return;
+
+    if (!confirm("¿Estás seguro de que deseas eliminar esta foto de perfil permanentemente?")) return;
+
+    const btnDelete = document.getElementById('btnDeletePicture');
+    const oldText = btnDelete.innerHTML;
+    btnDelete.disabled = true;
+    btnDelete.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+
+    try {
+      const res = await fetch('/api/users/' + id + '/picture', { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        showAlert('Foto eliminada correctamente', 'success');
+        if (json.data && json.data.isSelf) {
+          updateHeaderAvatar(json.data);
+        }
+        
+        // Update preview to initials
+        const name = document.getElementById('editName').value || '?';
+        const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+        document.getElementById('editPicturePreview').innerHTML = initials;
+        
+        // Hide delete button
+        btnDelete.style.display = 'none';
+
+        await loadUsers();
+      } else {
+        showAlert(json.message || 'Error al eliminar foto', 'error');
+      }
+    } catch (err) {
+      showAlert('Error de red', 'error');
+    } finally {
+      btnDelete.disabled = false;
+      btnDelete.innerHTML = oldText;
+    }
+  }
+
+  function updateHeaderAvatar(data) {
+    const headerAvatarEl = document.querySelector('.app-header-avatar');
+    if (!headerAvatarEl) return;
+    
+    if (data.picture) {
+      if (headerAvatarEl.tagName.toLowerCase() === 'div') {
+        const img = document.createElement('img');
+        img.src = data.picture;
+        img.alt = "Avatar";
+        img.className = "app-header-avatar";
+        img.style.objectFit = "cover";
+        headerAvatarEl.parentNode.replaceChild(img, headerAvatarEl);
+      } else {
+        headerAvatarEl.src = data.picture;
+      }
+    } else {
+      const name = data.name || '?';
+      const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      
+      if (headerAvatarEl.tagName.toLowerCase() === 'img') {
+        const div = document.createElement('div');
+        div.className = "app-header-avatar";
+        div.textContent = initials;
+        headerAvatarEl.parentNode.replaceChild(div, headerAvatarEl);
+      } else {
+        headerAvatarEl.textContent = initials;
+      }
+    }
+  }
+
+  init();
+</script>
+
+</body>
+</html>

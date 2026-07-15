@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" type="image/svg+xml" href="/img/bill-icon.svg">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comisiones</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/styles/layout.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1e1e;
+      --surface:  #162828;
+      --border:   rgba(96,230,26,0.15);
+      --border-md:rgba(96,230,26,0.3);
+      --text-1:   #ffffff;
+      --text-2:   #8fada0;
+      --text-3:   rgba(143,173,160,0.55);
+      --accent:   #7af028;
+      --green-bg: rgba(96,230,26,0.15);
+      --green-tx: #7af028;
+      --green-br: rgba(96,230,26,0.35);
+      --amber-bg: rgba(240,165,0,0.12);
+      --amber-tx: #f0a500;
+      --amber-br: rgba(240,165,0,0.3);
+      --red-bg:   rgba(231,76,60,0.12);
+      --red-tx:   #e74c3c;
+      --red-br:   rgba(231,76,60,0.3);
+      --blue-bg:  rgba(56,197,245,0.12);
+      --blue-tx:  #38c5f5;
+      --blue-br:  rgba(56,197,245,0.3);
+      --gray-bg:  rgba(143,173,160,0.08);
+      --gray-tx:  #8fada0;
+      --gray-br:  rgba(143,173,160,0.25);
+      --radius:   10px;
+      --radius-sm:6px;
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--text-1);
+      min-height: 100vh;
+    }
+
+    .main-area { background: var(--bg); }
+    .app-header { background: rgba(15,30,30,0.98); }
+
+    /* ── Botón nueva comisión ── */
+    .btn-new, .btn-export {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 500;
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+      transition: opacity .15s;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn-new {
+      border: 1px solid var(--green-tx);
+      background: var(--green-tx);
+      color: #000;
+      font-weight: 700;
+    }
+    .btn-new:hover { 
+      opacity: .9; 
+      background: var(--green-bg); 
+      color: var(--green-tx); 
+    }
+    .btn-export {
+      border: 1px solid var(--green-br);
+      background: var(--green-bg);
+      color: var(--green-tx);
+    }
+    .btn-new:hover, .btn-export:hover { opacity: .8; }
+    .btn-new i, .btn-export i { font-size: 14px; }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.35);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(2px);
+      animation: fadeIn .15s ease;
+    }
+    @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 300px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.1);
+      animation: slideUp .18s ease;
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(10px) }
+      to   { opacity:1; transform:translateY(0) }
+    }
+    .modal-icon {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--red-bg);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+    }
+    .modal-icon i { font-size: 20px; color: var(--red-tx); }
+    .modal h3 { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+    .modal p  { font-size: 13px; color: var(--text-2); line-height: 1.6; margin-bottom: 20px; }
+    .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    .mbtn {
+      padding: 7px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500;
+      border: 1px solid var(--border-md);
+      background: transparent;
+      color: var(--text-1);
+      cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+      transition: background .12s;
+    }
+    .mbtn:hover { background: var(--bg); }
+    .mbtn-danger {
+      background: var(--red-tx);
+      color: #fff;
+      border-color: var(--red-tx);
+    }
+    .mbtn-danger:hover { filter: brightness(1.1); }
+    .mbtn-danger:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+    .mbtn-danger .spinner-sm {
+      width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+
+    /* ── Layout ── */
+    .page { width: 90%; margin: 0 auto; padding: 2rem 1.5rem; }
+    .page-header {
+      display: flex; align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 1.75rem;
+      gap: 12px; flex-wrap: wrap;
+    }
+    .page-title { font-size: 20px; font-weight: 500; }
+    .page-count { font-size: 13px; color: var(--text-2); }
+
+    /* ── Estado ── */
+    .state-msg {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--text-2);
+      font-size: 14px;
+    }
+    .state-msg i { font-size: 36px; display: block; margin-bottom: 10px; color: var(--text-3); }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+      animation: fadeUp .25s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .card-head {
+      padding: 1.1rem 1.25rem .9rem;
+      display: flex; align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-loc { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 500; }
+    .card-dev { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+    /* head right: badge + gerente actions */
+    .card-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .btn-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-md);
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-2);
+      transition: all .15s;
+      font-size: 15px;
+    }
+    .btn-icon:hover { background: var(--bg); color: var(--text-1); border-color: var(--border-md); }
+    .btn-icon.edit:hover  { background: var(--blue-bg);  color: var(--blue-tx);  border-color: var(--blue-br); }
+    .btn-icon.delete:hover{ background: var(--red-bg);   color: var(--red-tx);   border-color: var(--red-br); }
+
+    /* ── Badge ── */
+    .badge {
+      font-size: 11px; font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+    .b-pv { background: var(--amber-bg); color: var(--amber-tx); border-color: var(--amber-br); }
+    .b-v  { background: var(--blue-bg);  color: var(--blue-tx);  border-color: var(--blue-br);  }
+    .b-pa { background: var(--amber-bg); color: var(--amber-tx); border-color: var(--amber-br); }
+    .b-ap { background: var(--green-bg); color: var(--green-tx); border-color: var(--green-br); }
+    .b-pp { background: var(--blue-bg);  color: var(--blue-tx);  border-color: var(--blue-br);  }
+    .b-pg { background: var(--green-bg); color: var(--green-tx); border-color: var(--green-br); }
+    .b-co { background: var(--red-bg);   color: var(--red-tx);   border-color: var(--red-br);   }
+    .b-ca { background: var(--gray-bg);  color: var(--gray-tx);  border-color: var(--gray-br);  }
+
+    /* ── Meta grid ── */
+    .card-meta {
+      padding: .9rem 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .meta-item .lbl { font-size: 11px; color: var(--text-3); margin-bottom: 2px; }
+    .meta-item .val { font-size: 13px; font-weight: 500; }
+
+    /* ── Banner corrección ── */
+    .corr-banner {
+      margin: .75rem 1.25rem 0;
+      padding: 8px 12px;
+      background: var(--red-bg);
+      border: 1px solid var(--red-br);
+      border-radius: var(--radius-sm);
+      font-size: 12px; color: var(--red-tx);
+      display: flex; gap: 8px; align-items: flex-start;
+    }
+    .corr-banner i { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Participantes ── */
+    .participants-section { padding: .75rem 1.25rem 1rem; }
+    .participants-label {
+      font-size: 11px; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 8px;
+    }
+    .p-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      margin-bottom: 6px; gap: 8px;
+    }
+    .p-left  { display: flex; align-items: center; gap: 10px; }
+    .p-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 500; flex-shrink: 0;
+    }
+    .p-avatar.asesor  { background: var(--blue-bg);  color: var(--blue-tx); }
+    .p-avatar.gerente { background: var(--amber-bg); color: var(--amber-tx); }
+    .p-name { font-size: 13px; font-weight: 500; }
+    .p-role { font-size: 11px; color: var(--text-2); }
+    .p-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .p-amount { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text-2); }
+
+    .btn-verify {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 500;
+      padding: 4px 10px; border-radius: 20px;
+      border: 1px solid var(--border-md);
+      background: var(--surface);
+      cursor: pointer; color: var(--text-2);
+      transition: all .15s; white-space: nowrap;
+    }
+    .btn-verify:hover:not(:disabled) {
+      border-color: var(--green-tx);
+      color: var(--green-tx);
+      background: var(--green-bg);
+    }
+    .btn-verify.verified {
+      border-color: var(--green-br);
+      background: var(--green-bg);
+      color: var(--green-tx);
+      cursor: default;
+    }
+    .btn-verify i { font-size: 13px; }
+
+    .p-verified { font-size: 11px; display: flex; align-items: center; gap: 4px; }
+    .p-verified.yes { color: var(--green-tx); }
+    .p-verified.no  { color: var(--text-3); }
+
+    /* ── Acciones card ── */
+    .card-actions {
+      padding: .75rem 1.25rem 1rem;
+      display: flex; gap: 8px; flex-wrap: wrap;
+      border-top: 1px solid var(--border);
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 500;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-md);
+      background: transparent;
+      cursor: pointer; color: var(--text-1);
+      transition: background .15s, border-color .15s;
+      font-family: 'Nunito', sans-serif;
+    }
+    .btn:hover { background: var(--bg); }
+    .btn i { font-size: 15px; }
+    .btn-green { color: var(--green-tx); border-color: var(--green-br); }
+    .btn-green:hover { background: var(--green-bg); }
+    .btn-amber { color: var(--amber-tx); border-color: var(--amber-br); }
+    .btn-amber:hover { background: var(--amber-bg); }
+
+    /* ── Filtros ── */
+    .filter-bar {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 1.25rem;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .filter-search-wrap { position: relative; flex: 1; min-width: 200px; }
+    .filter-search-wrap i {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--text-3); font-size: 12px; pointer-events: none;
+    }
+    .filter-search-wrap input {
+      width: 100%; padding: 7px 10px 7px 28px;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 13px; font-family: 'Nunito', sans-serif;
+      color: var(--text-1); background: var(--bg); outline: none;
+      transition: border-color .15s;
+    }
+    .filter-search-wrap input:focus { border-color: var(--border-md); }
+    .filter-select {
+      padding: 7px 10px; border: 1px solid var(--blue-br);
+      border-radius: var(--radius-sm); font-size: 13px;
+      font-family: 'Nunito', sans-serif; color: var(--blue-tx);
+      background: var(--blue-bg); outline: none; cursor: pointer;
+      transition: all .15s; min-width: 145px;
+    }
+    .filter-select:hover, .filter-select:focus { 
+      border-color: var(--blue-tx); 
+      background: var(--bg); 
+      color: var(--text-1); 
+    }
+    .filter-select option {
+      background: var(--bg);
+      color: var(--text-1);
+    }
+    .filter-clear {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 500; padding: 7px 12px;
+      border-radius: var(--radius-sm); border: 1px solid var(--red-br);
+      background: var(--red-bg); color: var(--red-tx);
+      cursor: pointer; font-family: 'Nunito', sans-serif;
+      transition: opacity .15s; white-space: nowrap;
+    }
+    .filter-clear:hover { opacity: .8; }
+    .filter-clear.hidden { display: none; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--text-2);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem; right: 1.5rem;
+      background: #1c3030; color: #fff;
+      border: 1px solid rgba(96,230,26,0.3);
+      font-size: 13px;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+      z-index: 999; max-width: 280px;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ── Starfield + Beam + Dots ── */
+    .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .star  { position: absolute; border-radius: 50%; animation: twinkle var(--dur) ease-in-out infinite alternate; }
+    @keyframes twinkle { from { opacity: 0.2; transform: scale(1); } to { opacity: 1; transform: scale(1.4); } }
+    .beam  { position: fixed; top: 0; right: 15%; width: 260px; height: 100vh; background: linear-gradient(180deg, rgba(96,230,26,0.07) 0%, transparent 70%); transform: skewX(-8deg); pointer-events: none; z-index: 0; }
+  </style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+<div class="beam"></div>
+
+<%- include('partials/sidebar') %>
+<div class="main-area">
+<%- include('partials/header') %>
+
+<!-- Page -->
+<main class="page">
+  <div class="page-header">
+    <h1 class="page-title" id="page-title">Comisiones</h1>
+    <a href="/registrar-comision" class="btn-new" id="btnNew" style="display:none">
+      <i class="ti ti-plus"></i>
+      Nueva comisión
+    </a>
+    <button class="btn-export" id="btnExport" style="display:none" onclick="exportCSV()">
+      <i class="ti ti-download"></i>
+      Exportar CSV
+    </button>
+    <span class="page-count" id="page-count"></span>
+    
+  </div>
+  
+  <!-- Filtros -->
+  <div class="filter-bar" id="filterBar" style="display:none">
+    <div class="filter-search-wrap">
+      <i class="fas fa-search"></i>
+      <input type="text" id="filterSearch" placeholder="Buscar ubicación, desarrollo, participante…">
+    </div>
+    <select class="filter-select" id="filterStatus">
+      <option value="">Todos los estados</option>
+      <option value="Pendiente Verificacion">Pendiente verificación</option>
+      <option value="Verificada">Verificada</option>
+      <option value="Pendiente Aprobacion">Pendiente aprobación</option>
+      <option value="Aprobada">Aprobada</option>
+      <option value="Pendiente Pago">Pendiente pago</option>
+      <option value="Pagada">Pagada</option>
+      <option value="Correccion">Corrección</option>
+      <option value="Cancelada">Cancelada</option>
+    </select>
+    <select class="filter-select" id="filterCompany"><option value="">Todas las empresas</option></select>
+    <select class="filter-select" id="filterDev"><option value="">Todos los desarrollos</option></select>
+    <select class="filter-select" id="filterConcept"><option value="">Todos los conceptos</option></select>
+    
+    <div style="display: flex; gap: 8px; align-items: center; background: var(--surface); padding: 0 10px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+      <span style="font-size: 12px; color: var(--text-2);">Desde:</span>
+      <input type="date" class="filter-select" id="filterFrom" style="border: none; background: transparent; padding: 5px 0;">
+      <span style="font-size: 12px; color: var(--text-2);">Hasta:</span>
+      <input type="date" class="filter-select" id="filterTo" style="border: none; background: transparent; padding: 5px 0;">
+      <button class="mbtn" id="btnFilterDate" style="padding: 4px 8px; font-size: 11px;">Buscar</button>
+    </div>
+
+    <button class="filter-clear hidden" id="filterClear"><i class="fas fa-times"></i> Limpiar</button>
+  </div>
+
+  <div id="list"></div>
+</main>
+
+<div id="toast"></div>
+</div><!-- /.main-area -->
+
+<script>
+const $ = id => document.getElementById(id);
+
+function fmt(n) {
+  const val = Number(n);
+  return (val < 0 ? '-' : '') + '$' + Math.abs(val).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtPct(n) {
+  return Number(n || 0).toLocaleString('es-MX', { style: 'percent', minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
+}
+function initials(name) {
+  return (name || '').split(' ').slice(0,2).map(w => w[0]).join('').toUpperCase();
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+let USER = null;
+let DATA = [];
+const FILTERS = { search: '', status: '', company: '', dev: '', concept: '' };
+
+function getFiltered() {
+  return DATA.filter(c => {
+    if (FILTERS.status) {
+      const sName = (c.status?.name || '').trim().toLowerCase();
+      const fName = FILTERS.status.trim().toLowerCase();
+      if (sName !== fName) return false;
+    }
+    if (FILTERS.company && (c.company?.text    || '') !== FILTERS.company) return false;
+    if (FILTERS.dev     && (c.development?.text || '') !== FILTERS.dev)    return false;
+    if (FILTERS.concept && (c.concept?.text || c.concept || '') !== FILTERS.concept) return false;
+    if (FILTERS.search) {
+      const hay = [
+        c.location?.text, c.development?.text, c.company?.text,
+        ...(c.participantes || []).map(p => p.usuario?.name || ''),
+      ].join(' ').toLowerCase();
+      if (!hay.includes(FILTERS.search)) return false;
+    }
+    return true;
+  });
+}
+
+function updateFilterClear() {
+  const active = FILTERS.search || FILTERS.status || FILTERS.company || FILTERS.dev || FILTERS.concept || $('filterFrom').value || $('filterTo').value;
+  $('filterClear').classList.toggle('hidden', !active);
+}
+
+const STATUS_MAP = {
+  'Pendiente Verificacion': { cls: 'b-pv', label: 'Pendiente verificación' },
+  'Verificada':             { cls: 'b-v',  label: 'Verificada'             },
+  'Pendiente Aprobacion':   { cls: 'b-pa', label: 'Pendiente aprobación'   },
+  'Aprobada':               { cls: 'b-ap', label: 'Aprobada'               },
+  'Pendiente Pago':         { cls: 'b-pp', label: 'Pendiente pago'         },
+  'Pagada':                 { cls: 'b-pg', label: 'Pagada'                 },
+  'Correccion':             { cls: 'b-co', label: 'Corrección'             },
+  'Cancelada':              { cls: 'b-ca', label: 'Cancelada'              },
+};
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    const j = await r.json();
+    if (!j.success) { showError('Sesión no válida. Inicia sesión.'); return; }
+    USER = j.data.user;
+  } catch(e) {
+    showError('No se pudo conectar con el servidor.');
+    return;
+  }
+
+
+  // Mostrar "Nueva comisión" para Gerente, Director y Administrador
+  const rolesConAcceso = ['Gerente', 'Director', 'Administrador'];
+  if (rolesConAcceso.includes(USER.roleName)) {
+    $('btnNew').style.display = 'flex';
+  }
+
+  if (['Director', 'Administrador'].includes(USER.roleName)) {
+    $('btnExport').style.display = 'flex';
+  }
+
+  const isLimitado = ['Asesor', 'Gerente'].includes(USER.roleName);
+  $('page-title').textContent = isLimitado ? 'Mis comisiones' : 'Todas las comisiones';
+  await loadComisiones(isLimitado);
+}
+
+// ── Logout ─────────────────────────────────────────────────────────────────────
+function showLogoutModal() {
+  if (document.getElementById('logoutModal')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'logoutModal';
+  overlay.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-icon"><i class="ti ti-logout"></i></div>
+      <h3>Cerrar sesión</h3>
+      <p>¿Seguro que quieres salir? Tu sesión se cerrará y tendrás que volver a iniciar.</p>
+      <div class="modal-btns">
+        <button class="mbtn" onclick="closeLogoutModal()">Cancelar</button>
+        <button class="mbtn mbtn-danger" id="confirmLogoutBtn" onclick="doLogout()">Cerrar sesión</button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeLogoutModal(); });
+  document.body.appendChild(overlay);
+}
+
+function closeLogoutModal() {
+  const m = document.getElementById('logoutModal');
+  if (m) m.remove();
+}
+
+async function doLogout() {
+  const btn = $('confirmLogoutBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Saliendo…';
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  } catch(e) { /* limpiamos igual */ }
+  finally {
+  window.location.href = "/"
+}
+  
+  closeLogoutModal();
+  USER = null; DATA = [];
+  $('av').textContent    = '';
+  $('uname').textContent = '—';
+  $('urole').textContent = '—';
+  $('btnLogout').style.display = 'none';
+  $('btnNew').style.display    = 'none';
+  $('page-count').textContent  = '';
+  showError('Sesión cerrada. <a href="/login" style="color:var(--text-1);font-weight:500">Volver a iniciar sesión →</a>');
+} 
+
+// ── Comisiones ────────────────────────────────────────────────────────────────
+async function loadComisiones(misComisiones) {
+  $('list').innerHTML = `<div class="state-msg"><div class="spinner"></div>Cargando comisiones…</div>`;
+  let url = misComisiones ? '/api/comisiones/mis-comisiones' : '/api/comisiones';
+  
+  const fromDate = $('filterFrom') ? $('filterFrom').value : '';
+  const toDate = $('filterTo') ? $('filterTo').value : '';
+  if (fromDate || toDate) {
+    const params = new URLSearchParams();
+    if (fromDate) params.append('from', fromDate);
+    if (toDate) params.append('to', toDate);
+    url += '?' + params.toString();
+  }
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    const j = await r.json();
+    if (!j.success) { showError(j.message); return; }
+    DATA = j.data.filas || j.data.comisiones || j.data || [];
+    populateFilterDropdowns();
+    $('filterBar').style.display = 'flex';
+    render();
+  } catch(e) {
+    showError('Error al obtener las comisiones.');
+  }
+}
+
+function populateFilterDropdowns() {
+  const companies    = [...new Set(DATA.map(c => c.company?.text).filter(Boolean))].sort();
+  const developments = [...new Set(DATA.map(c => c.development?.text).filter(Boolean))].sort();
+  const concepts     = [...new Set(DATA.map(c => c.concept?.text || c.concept).filter(Boolean))].sort();
+  const selC = $('filterCompany');
+  const selD = $('filterDev');
+  const selConcept = $('filterConcept');
+  // Limpiar opciones previas salvo el primer "Todas"
+  while (selC.options.length > 1) selC.remove(1);
+  while (selD.options.length > 1) selD.remove(1);
+  while (selConcept.options.length > 1) selConcept.remove(1);
+  companies.forEach(n => { const o = document.createElement('option'); o.value = o.textContent = n; selC.appendChild(o); });
+  developments.forEach(n => { const o = document.createElement('option'); o.value = o.textContent = n; selD.appendChild(o); });
+  concepts.forEach(n => { const o = document.createElement('option'); o.value = o.textContent = n; selConcept.appendChild(o); });
+}
+
+function render() {
+  const filtered = getFiltered();
+  $('page-count').textContent = DATA.length !== filtered.length
+    ? `${filtered.length} de ${DATA.length} comisiones`
+    : `${DATA.length} comisión${DATA.length !== 1 ? 'es' : ''}`;
+  if (!filtered.length) {
+    $('list').innerHTML = DATA.length
+      ? `<div class="state-msg"><i class="ti ti-search"></i>Sin resultados para los filtros aplicados</div>`
+      : `<div class="state-msg"><i class="ti ti-inbox"></i>Sin comisiones para mostrar</div>`;
+    return;
+  }
+  $('list').innerHTML = filtered.map(cardHTML).join('');
+}
+
+function cardHTML(c) {
+  const st = STATUS_MAP[c.status?.name] || { cls: 'b-v', label: c.status?.name || '—' };
+  
+  const isCancelacion = (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci');
+
+  const isCreador = c.created_by === USER.id;
+  const isAdmin = USER.roleName === 'Administrador';
+  
+  let gerenteActions = '';
+  if (isCreador || isAdmin) {
+    gerenteActions += `<button class="btn-icon edit"   title="Editar"   onclick="editarComision('${c._id}')"><i class="ti ti-pencil"></i></button>\n`;
+  }
+  if (isCreador) {
+    gerenteActions += `    <button class="btn-icon delete" title="Eliminar" onclick="eliminarComision('${c._id}', '${c.location?.text}')"><i class="ti ti-trash"></i></button>\n`;
+  }
+
+  let dispTotal = c.total_commission;
+  if (isCancelacion && c.total_commission === 0 && c.participantes) {
+    const totalPct = c.participantes.reduce((sum, p) => sum + (p.percentage || 0), 0);
+    dispTotal = -(c.sale_price * totalPct);
+  }
+
+  const partRows = (c.participantes || []).map(p => {
+    const isMe = p.usuario?._id === USER.id;
+    let rightHtml;
+    
+    const dispAmount = (isCancelacion && p.commission_amount === 0) 
+      ? -(c.sale_price * (p.percentage || 0)) 
+      : p.commission_amount;
+
+    if (isMe && c.status?.name === 'Pendiente Verificacion') {
+      rightHtml = `
+        <span class="p-amount">${fmt(dispAmount)} (${fmtPct(p.percentage)})</span>
+        <button class="btn-verify ${p.verification ? 'verified' : ''}"
+          onclick="verificar('${c._id}')"
+          ${p.verification ? 'disabled' : ''}>
+          <i class="ti ${p.verification ? 'ti-circle-check' : 'ti-circle'}"></i>
+          ${p.verification ? 'Verificado' : 'Verificar'}
+        </button>`;
+    } else {
+      rightHtml = `
+        <span class="p-amount">${fmt(dispAmount)} (${fmtPct(p.percentage)})</span>
+        <span class="p-verified ${p.verification ? 'yes' : 'no'}">
+          <i class="ti ${p.verification ? 'ti-circle-check' : 'ti-circle'}" style="font-size:13px"></i>
+          ${p.verification ? 'Verificado' : 'Pendiente'}
+        </span>`;
+    }
+    return `
+      <div class="p-row">
+        <div class="p-left">
+          <div class="p-avatar ${p.role_in_comision}">${initials(p.usuario?.name)}</div>
+          <div>
+            <div class="p-name">${p.usuario?.name || '—'}${isMe ? ' <span style="font-size:10px;color:var(--text-3)">(tú)</span>' : ''}</div>
+            <div class="p-role">${p.role_in_comision}</div>
+          </div>
+        </div>
+        <div class="p-right">${rightHtml}</div>
+      </div>`;
+  }).join('');
+
+  const corrBanner = c.correction_comments
+    ? `<div class="corr-banner"><i class="ti ti-alert-triangle"></i><span>${c.correction_comments}</span></div>`
+    : '';
+
+  let actions = '';
+  const sName = c.status?.name;
+  if (USER.roleName === 'Director' && sName === 'Pendiente Aprobacion') {
+    actions = `
+      <button class="btn btn-green" onclick="aprobar('${c._id}','aprobar')"><i class="ti ti-circle-check"></i>Aprobar</button>
+      <button class="btn btn-amber" onclick="pedirCorreccion('${c._id}')"><i class="ti ti-alert-circle"></i>Corregir</button>`;
+  }
+  if (USER.roleName === 'Administrador' && sName === 'Pendiente Pago') {
+    actions = `
+      <button class="btn btn-green" onclick="pagar('${c._id}')"><i class="ti ti-cash"></i>Marcar como pagada</button>
+      <button class="btn btn-amber" onclick="pedirCorreccion('${c._id}')"><i class="ti ti-alert-circle"></i>Corregir</button>`;
+  }
+
+  return `
+    <div class="card" id="card-${c._id}">
+      <div class="card-head">
+        <div>
+          <div class="card-loc">${c.location?.text || '—'}</div>
+          <div class="card-dev">${c.development?.text || ''} · ${c.company?.text || ''}</div>
+        </div>
+        <div class="card-head-right">
+          ${gerenteActions}
+          <span class="badge ${st.cls}">${st.label}</span>
+        </div>
+      </div>
+      <div class="card-meta">
+       <div class="meta-item"><div class="lbl">Cliente</div><div class="val">${c.client_name || '—'}</div></div>
+<div class="meta-item"><div class="lbl">Tipo</div><div class="val">${c.commission_type || '—'}</div></div>
+<div class="meta-item"><div class="lbl">Concepto</div><div class="val">${c.concept?.text || '—'}</div></div>
+<div class="meta-item"><div class="lbl">Precio venta</div><div class="val">${fmt(c.sale_price)}</div></div>
+<div class="meta-item"><div class="lbl">${isCancelacion ? 'Descomisión total' : 'Comisión total'}</div><div class="val" ${isCancelacion ? 'style="color: var(--red-tx);"' : ''}>${fmt(dispTotal)}</div></div>
+<div class="meta-item"><div class="lbl">Fecha operación</div><div class="val">${fmtDate(c.operation_date)}</div></div>
+      </div>
+      ${corrBanner}
+      <div class="participants-section">
+        <div class="participants-label">Participantes</div>
+        ${partRows}
+      </div>
+      ${actions ? `<div class="card-actions">${actions}</div>` : ''}
+    </div>`;
+}
+
+// ── Acciones Gerente ──────────────────────────────────────────────────────────
+function editarComision(comisionId) {
+  // TODO: redirigir a /editar-comision/:id
+  
+  window.location.href = `/registrar-comision?edit=${comisionId}`;
+
+  // alert(`Editar comisión: ${comisionId}`);
+}
+
+
+function eliminarComision(comisionId, locationText) {
+  console.log(comisionId);
+  // Crear modal de confirmación
+  if (document.getElementById('deleteModal')) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'deleteModal';
+  overlay.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-icon" style="background:var(--red-bg)">
+        <i class="ti ti-trash" style="color:var(--red-tx)"></i>
+      </div>
+      <h3>Eliminar comisión</h3>
+      <p>¿Seguro que quieres eliminar <strong>${locationText}</strong>?
+         Esta acción no se puede deshacer y eliminará también a todos sus participantes.</p>
+      <div class="modal-btns">
+        <button class="mbtn" onclick="closeDeleteModal()">Cancelar</button>
+        <button class="mbtn mbtn-danger" id="confirmDeleteBtn" onclick="doEliminar('${comisionId}')">
+          Eliminar
+        </button>
+      </div>
+    </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeDeleteModal(); });
+  document.body.appendChild(overlay);
+}
+
+function closeDeleteModal() {
+  const m = document.getElementById('deleteModal');
+  if (m) m.remove();
+}
+
+async function doEliminar(comisionId) {
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = true;
+  btn.textContent = 'Eliminando…';
+
+  try {
+    const r = await fetch(`/api/comisiones/eliminar/${comisionId}`, {
+      method:      'DELETE',
+      credentials: 'include',
+    });
+    const j = await r.json();
+
+    closeDeleteModal();
+
+    if (!j.success) {
+      toast(j.message);
+      return;
+    }
+
+    DATA = DATA.filter(r => r.comision_id?.toString() !== comisionId &&
+                            r._id?.toString()       !== comisionId);
+    render();
+    toast('Comisión eliminada correctamente');
+
+  } catch(e) {
+    closeDeleteModal();
+    toast('Error al eliminar la comisión');
+  }
+}
+
+// ── Acciones comisiones ───────────────────────────────────────────────────────
+async function verificar(comisionId) {
+  try {
+    const r = await fetch(`/api/comisiones/${comisionId}/verificar`, { method:'PATCH', credentials:'include' });
+    const j = await r.json();
+    toast(j.message);
+    if (j.success) await reloadComision(comisionId);
+  } catch(e) { toast('Error al verificar'); }
+}
+
+async function aprobar(comisionId, accion, correction_comments = null) {
+  const body = { accion };
+  if (correction_comments) body.correction_comments = correction_comments;
+  try {
+    const r = await fetch(`/api/comisiones/${comisionId}/aprobar`, {
+      method:'PATCH', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    toast(j.message);
+    if (j.success) await reloadComision(comisionId);
+  } catch(e) { toast('Error al procesar'); }
+}
+
+async function pagar(comisionId) {
+  try {
+    const r = await fetch(`/api/comisiones/${comisionId}/pagar`, { method:'PATCH', credentials:'include' });
+    const j = await r.json();
+    toast(j.message);
+    if (j.success) await reloadComision(comisionId);
+  } catch(e) { toast('Error al marcar como pagada'); }
+}
+
+function pedirCorreccion(comisionId) {
+  const comentario = prompt('Indica el motivo de la corrección:');
+  if (!comentario) return;
+  aprobar(comisionId, 'correccion', comentario);
+}
+
+async function reloadComision() {
+  const isLimitado = ['Asesor', 'Gerente'].includes(USER.roleName);
+  await loadComisiones(isLimitado);
+}
+
+function showError(msg) {
+  $('list').innerHTML = `<div class="state-msg"><i class="ti ti-alert-circle"></i>${msg}</div>`;
+}
+
+// ── Exportar CSV ──────────────────────────────────────────────────────────────
+function exportCSV() {
+  const filtered = getFiltered();
+  const escape = v => {
+    const s = String(v ?? '');
+    return (s.includes(',') || s.includes('"') || s.includes('\n'))
+      ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const headers = [
+    'Desarrollo','Fecha','Concepto','Contrato (Fecha)','Vendedor',
+    'referencia','Cliente','Casa (Ubicación)','Precio (de venta)',
+    '% Comisión','Comisión'
+  ];
+  const lines = [headers.map(escape).join(',')];
+  
+  for (const c of filtered) {
+    if (c.participantes && c.participantes.length > 0) {
+      for (const p of c.participantes) {
+        lines.push([
+          escape(c.development?.text || c.development || ''),
+          escape(c.register_date ? new Date(c.register_date).toLocaleDateString('es-MX') : ''),
+          escape(c.concept?.text || c.concept || ''),
+          escape(c.operation_date ? new Date(c.operation_date).toLocaleDateString('es-MX') : ''),
+          escape(p.usuario?.name || ''),
+          escape(c.expediente_id || ''), // referencia
+          escape(c.client_name || ''),
+          escape(c.location?.text || ''),
+          escape(c.sale_price ?? ''),
+          escape(p.percentage != null ? (p.percentage * 100).toFixed(2) + '%' : ''),
+          escape(p.commission_amount != null ? Number(p.commission_amount).toFixed(2) : '')
+        ].join(','));
+      }
+    } else {
+      lines.push([
+          escape(c.development?.text || c.development || ''),
+          escape(c.register_date ? new Date(c.register_date).toLocaleDateString('es-MX') : ''),
+          escape(c.concept?.text || c.concept || ''),
+          escape(c.operation_date ? new Date(c.operation_date).toLocaleDateString('es-MX') : ''),
+          '', // Vendedor
+          escape(c.expediente_id || ''), // referencia
+          escape(c.client_name || ''),
+          escape(c.location?.text || ''),
+          escape(c.sale_price ?? ''),
+          '', // % Comisión
+          ''  // Comisión
+      ].join(','));
+    }
+  }
+
+  const csvContent = '\uFEFF' + lines.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const date = new Date().toISOString().slice(0, 10);
+  a.download = `comisiones-filtradas-${date}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Event listeners filtros ───────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  $('filterSearch').addEventListener('input', function() {
+    FILTERS.search = this.value.toLowerCase().trim();
+    updateFilterClear(); render();
+  });
+  $('filterStatus').addEventListener('change', function() {
+    FILTERS.status = this.value;
+    updateFilterClear(); render();
+  });
+  $('filterCompany').addEventListener('change', function() {
+    FILTERS.company = this.value;
+    updateFilterClear(); render();
+  });
+  $('filterDev').addEventListener('change', function() {
+    FILTERS.dev = this.value;
+    updateFilterClear(); render();
+  });
+  $('filterConcept').addEventListener('change', function() {
+    FILTERS.concept = this.value;
+    updateFilterClear(); render();
+  });
+  $('filterClear').addEventListener('click', () => {
+    FILTERS.search = FILTERS.status = FILTERS.company = FILTERS.dev = FILTERS.concept = '';
+    $('filterSearch').value  = '';
+    $('filterStatus').value  = '';
+    $('filterCompany').value = '';
+    $('filterDev').value     = '';
+    $('filterConcept').value = '';
+    
+    // Si habían fechas, recargar del servidor sin fechas
+    const hadDates = $('filterFrom').value || $('filterTo').value;
+    $('filterFrom').value = '';
+    $('filterTo').value   = '';
+    
+    updateFilterClear(); 
+    
+    if (hadDates) {
+      reloadComision();
+    } else {
+      render();
+    }
+  });
+
+  $('btnFilterDate').addEventListener('click', () => {
+    updateFilterClear();
+    reloadComision();
+  });
+});
+
+
+
+init();
+
+(function() {
+  const starsEl = document.getElementById('stars');
+  const colors = ['#ffffff','#7af028','#c8e88a','#60e61a'];
+  for (let i = 0; i < 120; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 3 + 1;
+    s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*colors.length)]};--dur:${1.5+Math.random()*3}s;animation-delay:${Math.random()*3}s;opacity:${Math.random()*0.6+0.2};`;
+    starsEl.appendChild(s);
+  }
+})();
+</script>
+</body>
+</html>

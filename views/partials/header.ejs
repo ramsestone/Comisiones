@@ -1,0 +1,178 @@
+<header class="app-header">
+  <span class="app-header-title"><%= typeof title !== 'undefined' ? title : '' %></span>
+  <div class="app-header-user">
+
+    <!-- ── Buzón de notificaciones ── -->
+    <div class="notif-wrap" id="notifWrap">
+      <button class="notif-bell" id="notifBtn" onclick="toggleNotifPanel()" title="Notificaciones">
+        <i class="fas fa-bell"></i>
+        <span class="notif-badge" id="notifBadge"></span>
+      </button>
+
+      <div class="notif-panel" id="notifPanel">
+        <div class="notif-panel-head">
+          <span class="notif-panel-title">Notificaciones</span>
+          <button class="notif-mark-all" onclick="markAllRead()">Marcar leídas</button>
+        </div>
+        <div class="notif-list" id="notifList">
+          <div class="notif-loading"><i class="fas fa-circle-notch fa-spin"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Usuario ── -->
+    <% if (typeof user !== 'undefined' && user) { %>
+      <% if (user.picture) { %>
+        <img src="<%= user.picture %>" alt="Avatar" class="app-header-avatar" style="object-fit: cover;" />
+      <% } else { %>
+        <div class="app-header-avatar">
+          <%= user.name ? user.name.trim().split(/\s+/).slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase() : '?' %>
+        </div>
+      <% } %>
+      <div class="app-header-info">
+        <p><%= user.name %></p>
+        <span><%= user.roleName %></span>
+      </div>
+    <% } %>
+
+    <button class="btn-logout" onclick="(async()=>{ await fetch('/logout',{method:'POST',credentials:'include'}); window.location.href='/'; })()">
+      <i class="fas fa-sign-out-alt"></i>
+      Salir
+    </button>
+  </div>
+</header>
+
+<script>
+(function () {
+  // ── Helpers ──────────────────────────────────────────────────────
+  function timeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)  return 'ahora';
+    if (m < 60) return 'hace ' + m + 'm';
+    const h = Math.floor(m / 60);
+    if (h < 24) return 'hace ' + h + 'h';
+    return 'hace ' + Math.floor(h / 24) + 'd';
+  }
+
+  // ── Render ───────────────────────────────────────────────────────
+  function renderNotifs(notifs) {
+    const list  = document.getElementById('notifList');
+    const badge = document.getElementById('notifBadge');
+    const unread = notifs.filter(function(n){ return !n.read; }).length;
+
+    badge.textContent = unread > 9 ? '9+' : (unread || '');
+    badge.classList.toggle('visible', unread > 0);
+
+    if (!notifs.length) {
+      list.innerHTML = '<div class="notif-empty"><i class="fas fa-inbox"></i><span>Sin notificaciones</span></div>';
+      return;
+    }
+
+    list.innerHTML = notifs.map(function(n) {
+      const link = n.link || '/comisiones';
+      return '<div class="notif-item' + (n.read ? ' read' : '') + '" data-id="' + n._id + '" data-link="' + link + '" onclick="handleNotifClick(this)">' +
+        '<span class="notif-dot"></span>' +
+        '<div class="notif-body">' +
+          '<p class="notif-msg">' + n.message + '</p>' +
+          '<span class="notif-time">' + timeAgo(n.created_at) + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── Carga ────────────────────────────────────────────────────────
+  async function loadNotifs() {
+    try {
+      const r = await fetch('/api/notificaciones', { credentials: 'include' });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j.success) renderNotifs(j.data || []);
+    } catch(e) {}
+  }
+
+  // ── Panel toggle ─────────────────────────────────────────────────
+  window.toggleNotifPanel = function() {
+    const panel = document.getElementById('notifPanel');
+    const isOpen = panel.classList.contains('open');
+    panel.classList.toggle('open', !isOpen);
+    if (!isOpen) loadNotifs();
+  };
+
+  // ── Cerrar al hacer click fuera ──────────────────────────────────
+  document.addEventListener('click', function(e) {
+    var wrap = document.getElementById('notifWrap');
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById('notifPanel').classList.remove('open');
+    }
+  });
+
+  // ── Marcar una como leída ────────────────────────────────────────
+  window.handleNotifClick = async function(el) {
+    if (!el.classList.contains('read')) {
+      el.classList.add('read');
+      var badge = document.getElementById('notifBadge');
+      var unread = document.querySelectorAll('.notif-item:not(.read)').length;
+      badge.textContent = unread > 9 ? '9+' : (unread || '');
+      badge.classList.toggle('visible', unread > 0);
+      try {
+        await fetch('/api/notificaciones/' + el.dataset.id + '/read', {
+          method: 'PATCH', credentials: 'include'
+        });
+      } catch(e) {}
+    }
+    
+    if (el.dataset.link) {
+      window.location.href = el.dataset.link;
+    }
+  };
+
+  // ── Marcar todas como leídas ─────────────────────────────────────
+  window.markAllRead = function() {
+    document.querySelectorAll('.notif-item:not(.read)').forEach(function(el) {
+      el.classList.add('read');
+    });
+    document.getElementById('notifBadge').textContent = '';
+    document.getElementById('notifBadge').classList.remove('visible');
+    fetch('/api/notificaciones/read-all', { method: 'PATCH', credentials: 'include' });
+  };
+
+  // ── Carga inicial (sólo badge) ───────────────────────────────────
+  loadNotifs();
+})();
+</script>
+<script>
+  (function() {
+    function checkMidnightA() {
+      const now = new Date();
+      if (now.getHours() === 0 && now.getMinutes() === 0) {
+        if (!document.getElementById('midnight-a-overlay')) {
+          const overlay = document.createElement('div');
+          overlay.id = 'midnight-a-overlay';
+          overlay.style.position = 'fixed';
+          overlay.style.top = '0';
+          overlay.style.left = '0';
+          overlay.style.width = '100vw';
+          overlay.style.height = '100vh';
+          overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+          overlay.style.color = 'var(--accent, #7af028)';
+          overlay.style.display = 'flex';
+          overlay.style.alignItems = 'center';
+          overlay.style.justifyContent = 'center';
+          overlay.style.fontSize = '80vh';
+          overlay.style.fontWeight = 'bold';
+          overlay.style.zIndex = '999999';
+          overlay.style.fontFamily = 'sans-serif';
+          overlay.innerText = 'A';
+          overlay.onclick = function() { overlay.remove(); };
+          document.body.appendChild(overlay);
+        }
+      } else {
+        const overlay = document.getElementById('midnight-a-overlay');
+        if (overlay) overlay.remove();
+      }
+    }
+    setInterval(checkMidnightA, 30000);
+    checkMidnightA();
+  })();
+</script>
