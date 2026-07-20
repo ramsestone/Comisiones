@@ -301,17 +301,19 @@ router.get('/historial', authenticate, async (req, res) => {
           locationText: locText,
           contrato:    null,
           escritura:   null,
+          bono:        null,
         });
       }
       const g = groups.get(key);
       const fase = { _id: c._id.toString(), operation_date: c.operation_date, sale_price: c.sale_price, total_commission: c.total_commission, participantes: c.participantes };
       const concept = String(c.concept?.text ?? c.concept ?? '').toLowerCase();
       if (concept.includes('escritura')) { if (!g.escritura) g.escritura = fase; }
+      else if (concept.includes('bono')) { if (!g.bono) g.bono = fase; }
       else                               { if (!g.contrato) g.contrato = fase; }
     }
 
     // Grupos con al menos una fase pagada
-    const result = [...groups.values()].filter(g => g.contrato || g.escritura);
+    const result = [...groups.values()].filter(g => g.contrato || g.escritura || g.bono);
     return res.json({ success: true, data: result });
 
   } catch (error) {
@@ -887,6 +889,34 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
+    // ── 3.5 Asignar comisión al Director (0.10%) ──────────────────────────────
+    if (participants.managers && participants.managers.length > 0) {
+      const directorIds = await getUserIdsByRole(db, 'Director');
+      for (const directorId of directorIds) {
+        const pctDirector = 0.001; // 0.10%
+        let commAmountDirector = sale_price * pctDirector;
+        if (is_cancellation) {
+          commAmountDirector = -Math.abs(commAmountDirector);
+        } else {
+          commAmountDirector = Math.abs(commAmountDirector);
+        }
+        
+        participanteDocs.push({
+          comision_id:         null,
+          user:                directorId,
+          role_in_comision:    'director',
+          percentage:          pctDirector,
+          commission_amount:   commAmountDirector,
+          adjusted_commission: null,
+          verification:        false,
+          status:              statusInicial._id,
+          correction_comments: null,
+          created_at:          now,
+          updated_at:          now,
+        });
+      }
+    }
+
     // ── 4. Calcular comisión total ────────────────────────────────────────────
     const total_commission = participanteDocs.reduce(
       (sum, p) => sum + p.commission_amount, 0
@@ -1135,7 +1165,7 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
     const {
       company, development, location, concept,
       commission_type, sale_price, operation_date,
-      register_date, client_name, participants,
+      register_date, client_name, participants, is_cancellation
     } = req.body;
 
     // ── 1.5 Validar si ya existe una comisión con la misma ubicación y concepto ─
@@ -1217,6 +1247,34 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
         success: false, data: null,
         message: validationError.message, error: null,
       });
+    }
+
+    // ── 3.5 Asignar comisión al Director (0.10%) ──────────────────────────────
+    if (participants.managers && participants.managers.length > 0) {
+      const directorIds = await getUserIdsByRole(db, 'Director');
+      for (const directorId of directorIds) {
+        const pctDirector = 0.001; // 0.10%
+        let commAmountDirector = sale_price * pctDirector;
+        if (is_cancellation) {
+          commAmountDirector = -Math.abs(commAmountDirector);
+        } else {
+          commAmountDirector = Math.abs(commAmountDirector);
+        }
+        
+        participanteDocs.push({
+          comision_id:         new ObjectId(id),
+          user:                directorId,
+          role_in_comision:    'director',
+          percentage:          pctDirector,
+          commission_amount:   commAmountDirector,
+          adjusted_commission: null,
+          verification:        false,
+          status:              statusInicial._id,
+          correction_comments: null,
+          created_at:          now,
+          updated_at:          now,
+        });
+      }
     }
 
     const total_commission = participanteDocs.reduce(

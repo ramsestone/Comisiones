@@ -303,7 +303,7 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label><i class="fas fa-calendar-check"></i> Fecha contrato/escritura <span class="req">*</span></label>
+                            <label><i class="fas fa-calendar-check"></i> Fecha de operación <span class="req">*</span></label>
                             <input type="date" id="fechaContrato">
                             <div class="field-error" data-for="fechaContrato"><i class="fas fa-exclamation-circle"></i> Por favor selecciona la fecha de contrato.</div>
                         </div>
@@ -541,7 +541,7 @@
 
         async function fetchFromAPI(endpoint) {
             if (endpoint == "/v10/conceptos") {
-                const data = [{id:1,nombre:"Contrato"},{id:2,nombre:"Escritura"},{id:3,nombre:"Cancelación"}];
+                const data = [{id:1,nombre:"Contrato"},{id:2,nombre:"Escritura"},{id:3,nombre:"Cancelación"},{id:4,nombre:"Bono"}];
                 allData.conceptos = data;
                 return data;
             }

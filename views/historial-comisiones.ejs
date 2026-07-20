@@ -15,7 +15,7 @@
       --green:#60e61a;--green-glow:rgba(96,230,26,0.3);--green-bright:#7af028;
       --white:#ffffff;--muted:#8fada0;
       --amber:#f0a500;--blue:#38c5f5;--red:#e74c3c;--teal:#10b981;
-      --contrato:#38c5f5;--escritura:#7af028;
+      --contrato:#38c5f5;--escritura:#7af028;--bono:#f0a500;
     }
 
     body {
@@ -45,6 +45,7 @@
     .sum-pill strong{font-family:'Space Mono',monospace;font-size:1rem;color:var(--white);}
     .sum-pill.c-contrato strong{color:var(--contrato);}
     .sum-pill.c-escritura strong{color:var(--escritura);}
+    .sum-pill.c-bono strong{color:var(--bono);}
     .sum-pill.c-total strong{color:var(--green-bright);}
 
     /* CONTROLS */
@@ -99,9 +100,11 @@
     .phase-pill{display:flex;align-items:center;gap:5px;padding:0.28rem 0.7rem;border-radius:100px;font-size:0.65rem;font-weight:900;letter-spacing:0.05em;text-transform:uppercase;}
     .phase-pill.contrato{background:rgba(56,197,245,0.1);border:1px solid rgba(56,197,245,0.3);color:var(--contrato);}
     .phase-pill.escritura{background:rgba(122,240,40,0.1);border:1px solid rgba(122,240,40,0.3);color:var(--escritura);}
+    .phase-pill.bono{background:rgba(240,165,0,0.1);border:1px solid rgba(240,165,0,0.3);color:var(--bono);}
     .phase-dot{width:6px;height:6px;border-radius:50%;}
     .phase-pill.contrato .phase-dot{background:var(--contrato);}
     .phase-pill.escritura .phase-dot{background:var(--escritura);}
+    .phase-pill.bono .phase-dot{background:var(--bono);}
     .loc-total{text-align:right;flex-shrink:0;}
     .loc-total-label{font-size:0.62rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;}
     .loc-total-amt{font-family:'Space Mono',monospace;font-size:0.92rem;color:var(--white);font-weight:700;margin-top:1px;}
@@ -111,18 +114,23 @@
     /* PHASES */
     .phases-body{max-height:0;overflow:hidden;transition:max-height 0.45s cubic-bezier(0.4,0,0.2,1);}
     .location-block.open .phases-body{max-height:1400px;}
-    .phases-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+    .phases-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:0;}
     .phase-col{padding:1.2rem 1.4rem;position:relative;}
     .phase-col.contrato-col{border-right:1px solid rgba(56,197,245,0.1);}
+    .phase-col.escritura-col{border-right:1px solid rgba(122,240,40,0.1);}
+    .phase-col.bono-col{border-right:1px solid rgba(240,165,0,0.1);}
     .phase-col-header{display:flex;align-items:center;gap:8px;margin-bottom:1rem;padding-bottom:0.7rem;border-bottom:1px solid;}
     .contrato-col .phase-col-header{border-color:rgba(56,197,245,0.15);}
     .escritura-col .phase-col-header{border-color:rgba(122,240,40,0.15);}
+    .bono-col .phase-col-header{border-color:rgba(240,165,0,0.15);}
     .phase-col-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.72rem;flex-shrink:0;}
     .contrato-col .phase-col-icon{background:rgba(56,197,245,0.12);color:var(--contrato);}
     .escritura-col .phase-col-icon{background:rgba(122,240,40,0.12);color:var(--escritura);}
+    .bono-col .phase-col-icon{background:rgba(240,165,0,0.12);color:var(--bono);}
     .phase-col-title{font-weight:900;font-size:0.88rem;}
     .contrato-col .phase-col-title{color:var(--contrato);}
     .escritura-col .phase-col-title{color:var(--escritura);}
+    .bono-col .phase-col-title{color:var(--bono);}
     .phase-col-date{font-size:0.68rem;color:var(--muted);margin-top:1px;font-weight:600;}
     .phase-price-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding:0.6rem 0.8rem;border-radius:10px;background:var(--bg3);}
     .phase-price-label{font-size:0.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;}
@@ -130,6 +138,7 @@
     .phase-commission-total{font-size:0.7rem;font-weight:700;margin-top:2px;}
     .contrato-col .phase-commission-total{color:var(--contrato);}
     .escritura-col .phase-commission-total{color:var(--escritura);}
+    .bono-col .phase-commission-total{color:var(--bono);}
 
     /* PARTICIPANTS */
     .p-list{display:flex;flex-direction:column;gap:8px;}
@@ -149,6 +158,7 @@
     .p-amt{font-family:'Space Mono',monospace;font-size:0.8rem;font-weight:700;}
     .contrato-col .p-amt{color:var(--contrato);}
     .escritura-col .p-amt{color:var(--escritura);}
+    .bono-col .p-amt{color:var(--bono);}
 
     /* TOTALS ROW */
     .loc-totals-row{display:flex;gap:0;border-top:1px solid rgba(96,230,26,0.1);}
@@ -158,9 +168,11 @@
     .ltc-val{font-family:'Space Mono',monospace;font-size:0.88rem;font-weight:700;margin-top:1px;}
     .ltc-val.c{color:var(--contrato);}
     .ltc-val.e{color:var(--escritura);}
+    .ltc-val.b{color:var(--bono);}
     .ltc-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;}
     .ltc-icon.c{background:rgba(56,197,245,0.1);color:var(--contrato);}
     .ltc-icon.e{background:rgba(122,240,40,0.1);color:var(--escritura);}
+    .ltc-icon.b{background:rgba(240,165,0,0.1);color:var(--bono);}
 
     /* ESTADO */
     .list-loading{display:flex;align-items:center;justify-content:center;gap:12px;padding:3rem;color:var(--green);font-weight:700;font-size:0.9rem;}
@@ -380,9 +392,11 @@ function buildParticipants(participantes) {
 function buildPhaseCol(fase, tipo, loc) {
   if (!fase) fase = {};
   const isC   = tipo === 'contrato';
-  const cls   = isC ? 'contrato-col' : 'escritura-col';
-  const label = isC ? 'Contrato' : 'Escritura';
-  const icon  = isC ? 'fas fa-file-signature' : 'fas fa-stamp';
+  const isE   = tipo === 'escritura';
+  const isB   = tipo === 'bono';
+  const cls   = isC ? 'contrato-col' : (isE ? 'escritura-col' : 'bono-col');
+  const label = isC ? 'Contrato' : (isE ? 'Escritura' : 'Bono');
+  const icon  = isC ? 'fas fa-file-signature' : (isE ? 'fas fa-stamp' : 'fas fa-gift');
   const total = phaseTotal(fase);
 
   let contentHtml = '';
@@ -430,7 +444,8 @@ function buildPhaseCol(fase, tipo, loc) {
 function buildLocationBlock(loc, idx) {
   const cTotal = phaseTotal(loc.contrato);
   const eTotal = phaseTotal(loc.escritura);
-  const grand  = cTotal + eTotal;
+  const bTotal = phaseTotal(loc.bono);
+  const grand  = cTotal + eTotal + bTotal;
   const locText = loc.locationText || '';
 
   const block = document.createElement('div');
@@ -447,6 +462,7 @@ function buildLocationBlock(loc, idx) {
       <div class="loc-phases">
         <div class="phase-pill contrato"><div class="phase-dot"></div>Contrato</div>
         <div class="phase-pill escritura"><div class="phase-dot"></div>Escritura</div>
+        ${loc.bono ? '<div class="phase-pill bono"><div class="phase-dot"></div>Bono</div>' : ''}
       </div>
       <div class="loc-total">
         <div class="loc-total-label">Total comisiones</div>
@@ -458,6 +474,7 @@ function buildLocationBlock(loc, idx) {
       <div class="phases-grid">
         ${buildPhaseCol(loc.contrato, 'contrato', loc)}
         ${buildPhaseCol(loc.escritura, 'escritura', loc)}
+        ${loc.bono ? buildPhaseCol(loc.bono, 'bono', loc) : ''}
       </div>
       <div class="loc-totals-row">
         <div class="loc-total-cell">
@@ -468,6 +485,12 @@ function buildLocationBlock(loc, idx) {
           <div class="ltc-icon e"><i class="fas fa-stamp"></i></div>
           <div><div class="ltc-label">Total Escritura</div><div class="ltc-val e">${fmt(eTotal)}</div></div>
         </div>
+        ${loc.bono ? `
+        <div class="loc-total-cell" style="border-left:1px solid rgba(96,230,26,0.08);">
+          <div class="ltc-icon b"><i class="fas fa-gift"></i></div>
+          <div><div class="ltc-label">Total Bono</div><div class="ltc-val b">${fmt(bTotal)}</div></div>
+        </div>
+        ` : ''}
       </div>
     </div>`;
   return block;
