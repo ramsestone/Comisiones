@@ -6,6 +6,9 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const ejsLayouts = require('express-ejs-layouts');
 const { injectUserLocals } = require('./JWT/authCookies');
+const cron = require('node-cron');
+const { syncEKData } = require('./services/ekSyncService');
+
 
 const app = express();
 
@@ -83,5 +86,19 @@ const PORT = process.env.PORT || 3000;
 connectDatabase().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    
+    // Iniciar tarea cron para sincronización de EK
+    cron.schedule('0 * * * *', async () => {
+      try {
+        const v10Router = require('./routes/v10Router');
+        const pool = v10Router.getPool ? v10Router.getPool() : null;
+        if (pool && app.locals.mongoClient) {
+          const db = app.locals.mongoClient.db('Commission-Management');
+          await syncEKData(pool, db);
+        }
+      } catch (err) {
+        console.error('Error en cron job de EK:', err);
+      }
+    });
   });
 });

@@ -747,7 +747,8 @@ function setSelectValue(field, value, row = null) {
 }
         async function loadAllSelectors() {
             const selectors = document.querySelectorAll('.custom-select[data-api]');
-            for (const selector of selectors) { await loadSelectorData(selector); }
+            const promises = Array.from(selectors).map(selector => loadSelectorData(selector));
+            await Promise.all(promises);
         }
 
         async function loadSelectorData(selectorElement) {

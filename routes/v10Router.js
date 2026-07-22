@@ -6,6 +6,34 @@ const router = express.Router();
 
 // Config conexión
 const port = parseInt(process.env.EK_PORT, 10);
+const { syncEKData } = require('../services/ekSyncService');
+
+async function queryWithFallback(sqlQuery, mongoCollection, timeoutMs, req) {
+  return new Promise(async (resolve, reject) => {
+    let timer = setTimeout(() => {
+      reject(new Error('SQL Timeout'));
+    }, timeoutMs);
+
+    try {
+      if (!pool) throw new Error('SQL Pool no conectado');
+      const result = await pool.request().query(sqlQuery);
+      clearTimeout(timer);
+      resolve(result.recordset);
+    } catch (err) {
+      clearTimeout(timer);
+      reject(err);
+    }
+  }).catch(async (err) => {
+    console.error(`[Fallback] SQL Falló para ${mongoCollection}: ${err.message}. Usando caché local.`);
+    const db = req.app.locals.mongoClient.db('Commission-Management');
+    const cachedData = await db.collection(mongoCollection).find({}).toArray();
+    return cachedData.map(doc => {
+      const { _id, ...rest } = doc;
+      return rest;
+    });
+  });
+}
+
 const config = {
   user: process.env.EK_USER,
   password: process.env.EK_PASS,
@@ -13,7 +41,15 @@ const config = {
   database: process.env.EK_DATABASE,
   options: {
     encrypt: false,
-    trustServerCertificate: true
+    trustServerCertificate: true,
+    connectTimeout: 60000 // Aumentado a 60 segundos por inestabilidad de VPN
+  },
+  connectionTimeout: 60000,
+  requestTimeout: 60000,
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000
   },
   port: port
 };
@@ -27,6 +63,8 @@ async function connectDB() {
     console.log('V10 SQL conectado');
   } catch (err) {
     console.error('V10 Error DB:', err.message);
+    console.log('Reintentando conexión a SQL en 30 segundos...');
+    setTimeout(connectDB, 30000); // Reintentar en caso de fallo por VPN
   }
 }
 
@@ -45,16 +83,26 @@ router.get('/version', async (req, res) => {
   }
 });
 
+// Sincronización manual de EK a Mongo
+router.post('/sync', async (req, res) => {
+  try {
+    const db = req.app.locals.mongoClient.db('Commission-Management');
+    const result = await syncEKData(pool, db);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error en sincronización manual', error: err.message });
+  }
+});
 
 router.get('/companias', async (req, res) => {
   try {
-    const result = await pool.request().query('SELECT Id as id, Nombre as nombre FROM Companias');
+    const recordset = await queryWithFallback('SELECT Id as id, Nombre as nombre FROM Companias', 'ek_companias', 15000, req);
 
     res.status(200).json({
       success: true,
       message: "Compañías obtenidas correctamente",
       data: {
-        companias: result.recordset
+        companias: recordset
       }
     });
 
@@ -71,13 +119,13 @@ router.get('/companias', async (req, res) => {
 // Consulta genérica
 router.get('/desarrollos', async (req, res) => {
   try {
-    const result = await pool.request().query('SELECT Id as id, Descripcion as nombre, IdCompania as compania FROM scv_Desarrollos');
+    const recordset = await queryWithFallback('SELECT Id as id, Descripcion as nombre, IdCompania as compania FROM scv_Desarrollos', 'ek_desarrollos', 15000, req);
 
     res.status(200).json({
       success: true,
       message: "Desarrollos obtenidos correctamente",
       data: {
-        desarrollos: result.recordset
+        desarrollos: recordset
       }
     });
 
@@ -96,13 +144,13 @@ router.get('/desarrollos', async (req, res) => {
 router.get('/ubicaciones', async (req, res) => {
 
   try {
-    const result = await pool.request().query("SELECT ubi.Nombre as nombre, ubi.IdDesarrollo as desarrollo, ubi.Id as id, vta.importe as importe_venta FROM scv_ubicaciones ubi INNER JOIN scv_Ventas_Ubicaciones vta_ubi ON ubi.Id = vta_ubi.IdUbicacion INNER JOIN uvw_SCV_Ventas vta ON vta_ubi.IdVenta = vta.ID WHERE vta.[Estatus.Nombre] = 'Activo' AND vta.[EstatusVenta.Nombre] <> 'CANCELADO';");
+    const recordset = await queryWithFallback("SELECT ubi.Nombre as nombre, ubi.IdDesarrollo as desarrollo, ubi.Id as id, vta.importe as importe_venta FROM scv_ubicaciones ubi INNER JOIN scv_Ventas_Ubicaciones vta_ubi ON ubi.Id = vta_ubi.IdUbicacion INNER JOIN uvw_SCV_Ventas vta ON vta_ubi.IdVenta = vta.ID WHERE vta.[Estatus.Nombre] = 'Activo' AND vta.[EstatusVenta.Nombre] <> 'CANCELADO';", 'ek_ubicaciones', 30000, req);
 
     res.status(200).json({
       success: true,
       message: "Ubicaciones obtenidas correctamente",
       data: {
-        ubicaciones: result.recordset
+        ubicaciones: recordset
       }
     });
 
@@ -117,13 +165,13 @@ router.get('/ubicaciones', async (req, res) => {
 });
 router.get('/expedientes', async (req, res) => {
   try {
-    const result = await pool.request().query("SELECT IdExpediente as id, CONCAT(IdExpediente, ' - ', [Cliente.Nombre]) as nombre, [Cliente.Nombre] as cliente_nombre FROM uvw_SCV_Ventas WHERE IdExpediente IS NOT NULL AND [Cliente.Nombre] IS NOT NULL");
+    const recordset = await queryWithFallback("SELECT IdExpediente as id, CONCAT(IdExpediente, ' - ', [Cliente.Nombre]) as nombre, [Cliente.Nombre] as cliente_nombre FROM uvw_SCV_Ventas WHERE IdExpediente IS NOT NULL AND [Cliente.Nombre] IS NOT NULL", 'ek_expedientes', 30000, req);
 
     res.status(200).json({
       success: true,
       message: "Expedientes obtenidos correctamente",
       data: {
-        expedientes: result.recordset
+        expedientes: recordset
       }
     });
 
@@ -138,3 +186,4 @@ router.get('/expedientes', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.getPool = () => pool;
