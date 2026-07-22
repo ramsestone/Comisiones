@@ -144,7 +144,7 @@ router.get('/desarrollos', async (req, res) => {
 router.get('/ubicaciones', async (req, res) => {
 
   try {
-    const recordset = await queryWithFallback("SELECT ubi.Nombre as nombre, ubi.IdDesarrollo as desarrollo, ubi.Id as id, vta.importe as importe_venta FROM scv_ubicaciones ubi INNER JOIN scv_Ventas_Ubicaciones vta_ubi ON ubi.Id = vta_ubi.IdUbicacion INNER JOIN uvw_SCV_Ventas vta ON vta_ubi.IdVenta = vta.ID WHERE vta.[Estatus.Nombre] = 'Activo' AND vta.[EstatusVenta.Nombre] <> 'CANCELADO';", 'ek_ubicaciones', 30000, req);
+    const recordset = await queryWithFallback("SELECT ubi.Nombre as nombre, ubi.IdDesarrollo as desarrollo, ubi.Id as id, vta.importe as importe_venta, vta.[EstatusVenta.Nombre] as estatus_venta FROM scv_ubicaciones ubi INNER JOIN scv_Ventas_Ubicaciones vta_ubi ON ubi.Id = vta_ubi.IdUbicacion INNER JOIN uvw_SCV_Ventas vta ON vta_ubi.IdVenta = vta.ID WHERE vta.[Estatus.Nombre] = 'Activo';", 'ek_ubicaciones', 30000, req);
 
     res.status(200).json({
       success: true,

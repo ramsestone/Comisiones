@@ -870,6 +870,10 @@ else if (field === 'ubicacion') {
     } else {
         penaltyTargetContainer.style.display = 'none';
     }
+    const desarrolloVal = getSelectValue('desarrollo');
+    if (desarrolloVal && desarrolloVal.id) {
+        handleDesarrolloChange(desarrolloVal.id, false, true);
+    }
 }
         }
 
@@ -914,7 +918,14 @@ else if (field === 'ubicacion') {
                     if (companiaOption && !companiaSelector.querySelector('.select-display').dataset.value) selectOption(companiaSelector, companiaOption, true);
                 }
             }
-            const ubicacionesFiltradas = allData.ubicaciones.filter(u => u.desarrollo == desarrolloId);
+            const conceptoVal = getSelectValue('concepto');
+            const isCancellation = conceptoVal && conceptoVal.text.toLowerCase() === 'cancelación';
+            const ubicacionesFiltradas = allData.ubicaciones.filter(u => {
+                if (u.desarrollo != desarrolloId) return false;
+                const estatus = u.estatus_venta ? u.estatus_venta.trim().toUpperCase() : '';
+                if (isCancellation) return estatus === 'CANCELADO';
+                return estatus !== 'CANCELADO';
+            });
             const ubicacionesSelector = document.querySelector('.custom-select[data-field="ubicacion"]');
             const ubicacionDisplay = ubicacionesSelector.querySelector('.select-display');
             const ubicacionActual = ubicacionDisplay.dataset.value;
@@ -923,6 +934,7 @@ else if (field === 'ubicacion') {
             if (preserveUbicacion && ubicacionActual) {
                 const ubicacionOption = ubicacionesSelector.querySelector(`[data-value="${ubicacionActual}"]`);
                 if (ubicacionOption) selectOptionSilent(ubicacionesSelector, ubicacionOption);
+                else clearSelection('ubicacion');
             }
         }
 
@@ -944,7 +956,14 @@ else if (field === 'ubicacion') {
                         const desarrolloOption = desarrolloSelector.querySelector(`[data-value="${desarrollo.id}"]`);
                         if (desarrolloOption) {
                             selectOptionSilent(desarrolloSelector, desarrolloOption, true);
-                            const ubicacionesFiltradas = allData.ubicaciones.filter(u => u.desarrollo == desarrollo.id);
+                            const conceptoVal = getSelectValue('concepto');
+                            const isCancellation = conceptoVal && conceptoVal.text.toLowerCase() === 'cancelación';
+                            const ubicacionesFiltradas = allData.ubicaciones.filter(u => {
+                                if (u.desarrollo != desarrollo.id) return false;
+                                const estatus = u.estatus_venta ? u.estatus_venta.trim().toUpperCase() : '';
+                                if (isCancellation) return estatus === 'CANCELADO';
+                                return estatus !== 'CANCELADO';
+                            });
                             const ubicacionesSelector = document.querySelector('.custom-select[data-field="ubicacion"]');
                             const ubicacionActual = ubicacionesSelector.querySelector('.select-display').dataset.value;
                             populateSelect(ubicacionesSelector, ubicacionesFiltradas);

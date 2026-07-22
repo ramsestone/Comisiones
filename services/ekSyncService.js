@@ -21,7 +21,7 @@ async function syncEKData(pool, db) {
         console.log(`✅ Desarrollos sincronizados: ${res.recordset.length}`);
       })(),
       (async () => {
-        const res = await pool.request().query("SELECT ubi.Nombre as nombre, ubi.IdDesarrollo as desarrollo, ubi.Id as id, vta.importe as importe_venta FROM scv_ubicaciones ubi INNER JOIN scv_Ventas_Ubicaciones vta_ubi ON ubi.Id = vta_ubi.IdUbicacion INNER JOIN uvw_SCV_Ventas vta ON vta_ubi.IdVenta = vta.ID WHERE vta.[Estatus.Nombre] = 'Activo' AND vta.[EstatusVenta.Nombre] <> 'CANCELADO';");
+        const res = await pool.request().query("SELECT ubi.Nombre as nombre, ubi.IdDesarrollo as desarrollo, ubi.Id as id, vta.importe as importe_venta, vta.[EstatusVenta.Nombre] as estatus_venta FROM scv_ubicaciones ubi INNER JOIN scv_Ventas_Ubicaciones vta_ubi ON ubi.Id = vta_ubi.IdUbicacion INNER JOIN uvw_SCV_Ventas vta ON vta_ubi.IdVenta = vta.ID WHERE vta.[Estatus.Nombre] = 'Activo';");
         await upsertToMongo(db, 'ek_ubicaciones', res.recordset);
         console.log(`✅ Ubicaciones sincronizadas: ${res.recordset.length}`);
       })(),
