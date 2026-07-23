@@ -12,6 +12,17 @@ const DB_NAME = 'roles_usuarios';
 
 const toDecimal = (value) => Decimal128.fromString(value.toString());
 
+// ── Helpers de permisos ───────────────────────────────────────────────────────
+function hideDirectorData(comisiones, roleName) {
+  if (['Director', 'Administrador'].includes(roleName)) return;
+  const arr = Array.isArray(comisiones) ? comisiones : [comisiones];
+  arr.forEach(c => {
+    if (c.participantes && Array.isArray(c.participantes)) {
+      c.participantes = c.participantes.filter(p => p.role_in_comision !== 'director');
+    }
+  });
+}
+
 // ── Helpers de notificaciones ─────────────────────────────────────────────────
 async function notify(db, userIds, message, now = new Date()) {
   const ids = (Array.isArray(userIds) ? userIds : [userIds]).filter(Boolean);
@@ -188,6 +199,8 @@ router.get('/mis-comisiones', authenticate, async (req, res) => {
       ])
       .toArray();
 
+    hideDirectorData(comisiones, req.user.roleName);
+
     return res.status(200).json({
       success: true,
       data:    comisiones,
@@ -278,6 +291,8 @@ router.get('/historial', authenticate, async (req, res) => {
       },
       { $sort: { operation_date: -1 } },
     ]).toArray();
+
+    hideDirectorData(comisiones, req.user.roleName);
 
     // Normalizar campo que puede ser string u objeto { id, text }
     const txt = v => {
@@ -1103,6 +1118,8 @@ router.get('/', authenticate, async (req, res) => {
       .collection('comisiones-ubicaciones')
       .aggregate(aggregatePipeline)
       .toArray();
+
+    hideDirectorData(comisiones, req.user.roleName);
 
     return res.status(200).json({
       success: true,
