@@ -81,6 +81,18 @@
         .select-option:hover { background: rgba(96, 230, 26, 0.15); }
         .select-option.selected { background: rgba(96, 230, 26, 0.25); color: #60e61a; font-weight: 600; }
         .select-option.hidden, .select-option.filtered-out { display: none; }
+        .select-group-label {
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #60e61a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(30, 30, 30, 0.9);
+            margin-top: 5px;
+        }
+        .select-group-label:first-child { margin-top: 0; }
         .no-results, .loading-message, .error-message { padding: 20px; text-align: center; font-size: 0.9rem; }
         .no-results { color: #666; }
         .loading-message { color: #60e61a; }
@@ -780,7 +792,8 @@ function setSelectValue(field, value, row = null) {
             optionsContainer.innerHTML = '';
             const field = selectorElement.dataset.field;
             if (!data || data.length === 0) { optionsContainer.innerHTML = '<div class="no-results">No hay datos disponibles</div>'; return; }
-            data.forEach(item => {
+            
+            const createOptionElement = (item) => {
                 const option = document.createElement('div');
                 option.className = 'select-option';
                 
@@ -795,8 +808,44 @@ function setSelectValue(field, value, row = null) {
                 if (item.compania) option.dataset.compania = item.compania;
                 if (item.desarrollo) option.dataset.desarrollo = item.desarrollo;
                 option.addEventListener('click', function() { selectOption(selectorElement, this); });
-                optionsContainer.appendChild(option);
-            });
+                return option;
+            };
+
+            if (field === 'ubicacion') {
+                const extrasPrefixes = ['BOG-', 'ME-', 'GR-', 'CH-', 'M-', 'BOD-', 'BODEGA'];
+                const extras = [];
+                const normales = [];
+                
+                data.forEach(item => {
+                    const name = item.nombre ? item.nombre.trim().toUpperCase() : '';
+                    if (extrasPrefixes.some(prefix => name.startsWith(prefix))) {
+                        extras.push(item);
+                    } else {
+                        normales.push(item);
+                    }
+                });
+
+                if (normales.length > 0) {
+                    const groupNormales = document.createElement('div');
+                    groupNormales.className = 'select-group-label';
+                    groupNormales.innerHTML = '<i class="fas fa-home" style="margin-right: 5px;"></i> Unidades';
+                    optionsContainer.appendChild(groupNormales);
+                    normales.forEach(item => optionsContainer.appendChild(createOptionElement(item)));
+                }
+
+                if (extras.length > 0) {
+                    const groupExtras = document.createElement('div');
+                    groupExtras.className = 'select-group-label';
+                    groupExtras.innerHTML = '<i class="fas fa-box-open" style="margin-right: 5px;"></i> Extras';
+                    optionsContainer.appendChild(groupExtras);
+                    extras.forEach(item => optionsContainer.appendChild(createOptionElement(item)));
+                }
+            } else {
+                data.forEach(item => {
+                    optionsContainer.appendChild(createOptionElement(item));
+                });
+            }
+
             if (autoSelect) {
                 const optionToSelect = optionsContainer.querySelector(`[data-value="${autoSelect}"]`);
                 if (optionToSelect) selectOption(selectorElement, optionToSelect, true);
@@ -853,12 +902,16 @@ else if (field === 'ubicacion') {
     // if (!yaEscrito) {
         const ubicacionId = optionElement.dataset.value;
         const ubicacion = allData.ubicaciones.find(u => u.id == ubicacionId);
+        console.log("Selected Ubicacion:", ubicacionId, ubicacion);
         if (ubicacion && ubicacion.importe_venta) {
+            console.log("Filling sale price with:", ubicacion.importe_venta);
             salePriceEl.dataset.raw = ubicacion.importe_venta;
             salePriceEl.value = '$' + parseInt(ubicacion.importe_venta).toLocaleString('es-MX');
             clearFieldError('salePrice');
             salePriceEl.classList.remove('has-error');
             salePriceEl.classList.add('valid');
+        } else {
+            console.log("No importe_venta found for ubicacion");
         }
     // }
 } else if (field === 'gerente') {
@@ -1063,6 +1116,25 @@ else if (field === 'ubicacion') {
                             if (text.includes(searchTerm)) { option.classList.remove('hidden'); hasResults = true; }
                             else option.classList.add('hidden');
                         });
+                        
+                        // Handle group labels visibility based on search results
+                        const groups = select.querySelectorAll('.select-group-label');
+                        groups.forEach(group => {
+                            let next = group.nextElementSibling;
+                            let hasVisible = false;
+                            while(next && !next.classList.contains('select-group-label')) {
+                                if (next.classList.contains('select-option') && !next.classList.contains('hidden')) {
+                                    hasVisible = true;
+                                }
+                                next = next.nextElementSibling;
+                            }
+                            if (hasVisible) {
+                                group.style.display = 'block';
+                            } else {
+                                group.style.display = 'none';
+                            }
+                        });
+
                         let noResults = select.querySelector('.no-results');
                         if (!hasResults && searchTerm) {
                             if (!noResults) { noResults = document.createElement('div'); noResults.className = 'no-results'; noResults.innerHTML = '<i class="fas fa-search"></i> No se encontraron resultados'; dropdown.appendChild(noResults); }

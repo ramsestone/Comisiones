@@ -794,25 +794,7 @@ router.post('/', authenticate, async (req, res) => {
       }
     }
 
-    // ── 1.8 Liberar ubicación previa si es cancelación ───────────────────────
-    if (is_cancellation && location && location.id) {
-      const statusCancelada = await db.collection('estatus').findOne({ name: 'Cancelada' });
-      if (statusCancelada) {
-         const comisionesAnteriores = await db.collection('comisiones-ubicaciones')
-            .find({ 'location.id': location.id, status: { $ne: statusCancelada._id } }).toArray();
-         if (comisionesAnteriores.length > 0) {
-            const idsAnteriores = comisionesAnteriores.map(c => c._id);
-            await db.collection('comisiones-ubicaciones').updateMany(
-               { _id: { $in: idsAnteriores } },
-               { $set: { status: statusCancelada._id, updated_at: new Date() } }
-            );
-            await db.collection('comisiones-participantes').updateMany(
-               { comision_id: { $in: idsAnteriores } },
-               { $set: { status: statusCancelada._id, updated_at: new Date() } }
-            );
-         }
-      }
-    }
+    // ── 1.8 (Eliminado) Ya no se cambian comisiones previas a 'Cancelada' ───────
 
     const typeMap = {
       Tradicional: 'traditional',
@@ -982,6 +964,7 @@ router.post('/', authenticate, async (req, res) => {
             total_amount: toDecimal(sale_price * p.percentage),
             remaining_balance: toDecimal(sale_price * p.percentage),
             status: 'active',
+            comision_id: comisionId,
             created_by: created_by,
             created_at: now,
             updated_at: now,
@@ -1182,7 +1165,8 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
     const {
       company, development, location, concept,
       commission_type, sale_price, operation_date,
-      register_date, client_name, participants, is_cancellation
+      register_date, client_name, participants, is_cancellation,
+      penalty_target
     } = req.body;
 
     // ── 1.5 Validar si ya existe una comisión con la misma ubicación y concepto ─
@@ -1321,6 +1305,38 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
 
     await db.collection('comisiones-participantes')
       .insertMany(participanteDocs);
+
+    // ── 5.5 Sincronizar Cartera y Billetera ───────────────────────────────────
+    // 1. Borrar todas las transacciones de pago (walletTransactions) de esta comisión
+    await db.collection('walletTransactions').deleteMany({ comision_id: new ObjectId(id) });
+
+    // 2. Borrar las deudas (debts) previas asociadas a esta comisión
+    await db.collection('debts').deleteMany({
+      $or: [
+        { comision_id: new ObjectId(id) },
+        // Fallback for old debts before we added comision_id:
+        { description: `Penalización por cancelación - ${comision.location?.text || comision.location?.id}` }
+      ]
+    });
+
+    // 3. Si sigue siendo cancelación a miembros, regenerar las deudas con los nuevos montos
+    if (is_cancellation && penalty_target === 'miembros') {
+        const debtsToInsert = participanteDocs.map(p => ({
+            user_id: p.user,
+            type: 'penalty',
+            description: `Penalización por cancelación - ${location.text || location.id}`,
+            total_amount: toDecimal(sale_price * p.percentage),
+            remaining_balance: toDecimal(sale_price * p.percentage),
+            status: 'active',
+            comision_id: new ObjectId(id),
+            created_by: new ObjectId(req.user.id),
+            created_at: now,
+            updated_at: now,
+        }));
+        if (debtsToInsert.length > 0) {
+            await db.collection('debts').insertMany(debtsToInsert);
+        }
+    }
 
     // ── 6. Notificar a cada participante ──────────────────────────────────────
     await notify(db, participanteDocs.map(p => p.user),

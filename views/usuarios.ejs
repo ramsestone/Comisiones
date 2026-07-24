@@ -304,7 +304,7 @@
     }
   }
 
-  function renderUsers(list) {
+  function renderUsers(list, isSearch = false) {
     const container = document.getElementById('usersList');
     container.innerHTML = '';
     
@@ -404,10 +404,10 @@
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <button class="btn-action edit" onclick='event.stopPropagation(); openEditModal(${JSON.stringify(g).replace(/'/g, "&apos;")})'><i class="fas fa-pen"></i></button>
                         ${g.active === false ? `<button class="btn-action activate" onclick="event.stopPropagation(); toggleActive('${g._id}', true)"><i class="fas fa-user-check"></i></button>` : `<button class="btn-action delete" onclick="event.stopPropagation(); toggleActive('${g._id}', false)"><i class="fas fa-user-times"></i></button>`}
-                        <i class="fas fa-chevron-down" style="color: var(--text-2); transition: transform 0.3s; margin-left: 5px;"></i>
+                        <i class="fas fa-chevron-down ${isSearch ? 'rotate' : ''}" style="color: var(--text-2); transition: transform 0.3s; margin-left: 5px;"></i>
                     </div>
                 </div>
-                <div class="accordion-content" style="padding: 0 10px 10px; display: none;">
+                <div class="accordion-content ${isSearch ? 'show' : ''}" style="padding: 0 10px 10px; ${isSearch ? 'display: block;' : 'display: none;'}">
                     ${myAsesores.map(a => renderCard(a, true)).join('')}
                     ${myAsesores.length === 0 ? `<div style="padding: 15px; text-align: center; color: var(--text-3); font-size: 12px;">No hay asesores asignados a este gerente</div>` : ''}
                 </div>
@@ -423,10 +423,10 @@
                     <div style="font-weight: 700; color: #fff; display: flex; align-items: center;"><i class="fas fa-exclamation-triangle" style="color: var(--red-tx); margin-right: 8px;"></i> Asesores sin Gerente</div>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <span style="font-size: 12px; color: var(--text-2);">${unassignedAsesores.length} asesores</span>
-                        <i class="fas fa-chevron-down" style="color: var(--text-2); transition: transform 0.3s;"></i>
+                        <i class="fas fa-chevron-down ${isSearch ? 'rotate' : ''}" style="color: var(--text-2); transition: transform 0.3s;"></i>
                     </div>
                 </div>
-                <div class="accordion-content" style="padding: 0 10px 10px; display: none;">
+                <div class="accordion-content ${isSearch ? 'show' : ''}" style="padding: 0 10px 10px; ${isSearch ? 'display: block;' : 'display: none;'}">
                     ${unassignedAsesores.map(a => renderCard(a, true)).join('')}
                 </div>
             </div>`;
@@ -435,15 +435,44 @@
     container.innerHTML = html;
   }
 
-  // Buscador
   document.getElementById('searchInput').addEventListener('input', e => {
     const term = e.target.value.toLowerCase();
-    const filtered = usersData.filter(u => {
-      return (u.name || '').toLowerCase().includes(term) ||
-             (u.email || '').toLowerCase().includes(term) ||
-             (u.role?.name || '').toLowerCase().includes(term);
+    
+    if (!term) {
+      return renderUsers(usersData);
+    }
+
+    const matchedUsers = new Set();
+
+    // First pass: find direct matches
+    usersData.forEach(u => {
+      if ((u.name || '').toLowerCase().includes(term) ||
+          (u.email || '').toLowerCase().includes(term) ||
+          (u.role?.name || '').toLowerCase().includes(term)) {
+        matchedUsers.add(u);
+      }
     });
-    renderUsers(filtered);
+
+    // Second pass: include gerentes of matched asesores, AND include asesores of matched gerentes
+    const finalSet = new Set(matchedUsers);
+    
+    matchedUsers.forEach(u => {
+      // If an Asesor matched, add their Gerente(s)
+      if (u.role?.name === 'Asesor' && u.manager_ids) {
+        u.manager_ids.forEach(mgrId => {
+          const mgr = usersData.find(user => user._id === mgrId);
+          if (mgr) finalSet.add(mgr);
+        });
+      }
+      
+      // If a Gerente matched, add their Asesores
+      if (u.role?.name === 'Gerente') {
+        const theirAsesores = usersData.filter(user => user.role?.name === 'Asesor' && user.manager_ids && user.manager_ids.includes(u._id));
+        theirAsesores.forEach(a => finalSet.add(a));
+      }
+    });
+
+    renderUsers(Array.from(finalSet), true);
   });
 
   // Modal

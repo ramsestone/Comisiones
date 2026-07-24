@@ -673,6 +673,7 @@ function cardHTML(c) {
   const st = STATUS_MAP[c.status?.name] || { cls: 'b-v', label: c.status?.name || '—' };
   
   const isCancelacion = (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci');
+  let dispTotal = 0;
 
   const isCreador = c.created_by === USER.id;
   const isAdmin = USER.roleName === 'Administrador';
@@ -685,19 +686,18 @@ function cardHTML(c) {
     gerenteActions += `    <button class="btn-icon delete" title="Eliminar" onclick="eliminarComision('${c._id}', '${c.location?.text}')"><i class="ti ti-trash"></i></button>\n`;
   }
 
-  let dispTotal = c.total_commission;
-  if (isCancelacion && c.total_commission === 0 && c.participantes) {
-    const totalPct = c.participantes.reduce((sum, p) => sum + (p.percentage || 0), 0);
-    dispTotal = -(c.sale_price * totalPct);
-  }
-
   const partRows = (c.participantes || []).map(p => {
+    // Only show Director to Director/Admin
+    if (p.role_in_comision === 'director' && !['Director', 'Administrador'].includes(USER.roleName)) return '';
+
     const isMe = p.usuario?._id === USER.id;
     let rightHtml;
     
     const dispAmount = (isCancelacion && p.commission_amount === 0) 
       ? -(c.sale_price * (p.percentage || 0)) 
       : p.commission_amount;
+      
+    dispTotal += dispAmount;
 
     if (isMe && c.status?.name === 'Pendiente Verificacion') {
       rightHtml = `
