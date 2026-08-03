@@ -816,6 +816,17 @@ function setSelectValue(field, value, row = null) {
             const field = selectorElement.dataset.field;
             if (!data || data.length === 0) { optionsContainer.innerHTML = '<div class="no-results">No hay datos disponibles</div>'; return; }
             
+            const seen = new Set();
+            data = data.filter(item => {
+                if (item && item.id && !seen.has(item.id)) {
+                    seen.add(item.id);
+                    return true;
+                } else if (item && !item.id) {
+                    return true;
+                }
+                return false;
+            });
+            
             const createOptionElement = (item) => {
                 const option = document.createElement('div');
                 option.className = 'select-option';
@@ -910,7 +921,8 @@ function setSelectValue(field, value, row = null) {
            if (field === 'compania') handleCompaniaChange(optionElement.dataset.value);
             else if (field === 'concepto') {
                 const penaltyTargetContainer = document.getElementById('penaltyTargetContainer');
-                if (optionElement.textContent.trim().toLowerCase() === 'cancelación') {
+                const isCancelacion = optionElement.textContent.trim().toLowerCase() === 'cancelación';
+                if (isCancelacion) {
                     penaltyTargetContainer.style.display = 'block';
                 } else {
                     penaltyTargetContainer.style.display = 'none';
@@ -919,28 +931,43 @@ function setSelectValue(field, value, row = null) {
                 if (desarrolloVal && desarrolloVal.id) {
                     handleDesarrolloChange(desarrolloVal.id, false, true);
                 }
-            }
-            else if (field === 'desarrollo') handleDesarrolloChange(optionElement.dataset.value, isAutoSelect);
-            else if (field === 'ubicacion') {
-                handleUbicacionChange(optionElement.dataset.desarrollo, isAutoSelect);
-                // Auto-rellenar precio de venta solo si está vacío
-                const salePriceEl = document.getElementById('salePrice');
-                const yaEscrito = salePriceEl.dataset.raw && parseInt(salePriceEl.dataset.raw) > 0;
-                // if (!yaEscrito) {
-                    const ubicacionId = optionElement.dataset.value;
-                    const ubicacion = allData.ubicaciones.find(u => u.id == ubicacionId);
-                    console.log("Selected Ubicacion:", ubicacionId, ubicacion);
+                
+                // Actualizar el precio de venta si hay una ubicacion seleccionada
+                const ubicacionVal = getSelectValue('ubicacion');
+                if (ubicacionVal && ubicacionVal.id) {
+                    const salePriceEl = document.getElementById('salePrice');
+                    const ubicacion = isCancelacion 
+                        ? (allData.ubicaciones.find(u => u.id == ubicacionVal.id && u.estatus_venta === 'CANCELADO') || allData.ubicaciones.find(u => u.id == ubicacionVal.id))
+                        : (allData.ubicaciones.find(u => u.id == ubicacionVal.id && u.estatus_venta !== 'CANCELADO') || allData.ubicaciones.find(u => u.id == ubicacionVal.id));
+                    
                     if (ubicacion && ubicacion.importe_venta) {
-                        console.log("Filling sale price with:", ubicacion.importe_venta);
                         salePriceEl.dataset.raw = ubicacion.importe_venta;
                         salePriceEl.value = '$' + parseInt(ubicacion.importe_venta).toLocaleString('es-MX');
                         clearFieldError('salePrice');
                         salePriceEl.classList.remove('has-error');
                         salePriceEl.classList.add('valid');
-                    } else {
-                        console.log("No importe_venta found for ubicacion");
                     }
-                // }
+                }
+            }
+            else if (field === 'desarrollo') handleDesarrolloChange(optionElement.dataset.value, isAutoSelect);
+            else if (field === 'ubicacion') {
+                handleUbicacionChange(optionElement.dataset.desarrollo, isAutoSelect);
+                const salePriceEl = document.getElementById('salePrice');
+                const ubicacionId = optionElement.dataset.value;
+                const conceptoVal = getSelectValue('concepto');
+                const isCancellation = conceptoVal && conceptoVal.text.toLowerCase() === 'cancelación';
+                
+                const ubicacion = isCancellation 
+                    ? (allData.ubicaciones.find(u => u.id == ubicacionId && u.estatus_venta === 'CANCELADO') || allData.ubicaciones.find(u => u.id == ubicacionId))
+                    : (allData.ubicaciones.find(u => u.id == ubicacionId && u.estatus_venta !== 'CANCELADO') || allData.ubicaciones.find(u => u.id == ubicacionId));
+                
+                if (ubicacion && ubicacion.importe_venta) {
+                    salePriceEl.dataset.raw = ubicacion.importe_venta;
+                    salePriceEl.value = '$' + parseInt(ubicacion.importe_venta).toLocaleString('es-MX');
+                    clearFieldError('salePrice');
+                    salePriceEl.classList.remove('has-error');
+                    salePriceEl.classList.add('valid');
+                }
             } else if (field === 'gerente') {
                 handleGerenteChange(optionElement.dataset.value, selectorElement.dataset.row);
             }
@@ -987,7 +1014,14 @@ function setSelectValue(field, value, row = null) {
                     if (companiaOption && !companiaSelector.querySelector('.select-display').dataset.value) selectOption(companiaSelector, companiaOption, true);
                 }
             }
-            const ubicacionesFiltradas = allData.ubicaciones.filter(u => u.desarrollo == desarrolloId);
+            const seen = new Set();
+            const ubicacionesFiltradas = allData.ubicaciones.filter(u => {
+                if (u.desarrollo == desarrolloId && !seen.has(u.id)) {
+                    seen.add(u.id);
+                    return true;
+                }
+                return false;
+            });
             const ubicacionesSelector = document.querySelector('.custom-select[data-field="ubicacion"]');
             const ubicacionDisplay = ubicacionesSelector.querySelector('.select-display');
             const ubicacionActual = ubicacionDisplay.dataset.value;
@@ -1018,7 +1052,14 @@ function setSelectValue(field, value, row = null) {
                         const desarrolloOption = desarrolloSelector.querySelector(`[data-value="${desarrollo.id}"]`);
                         if (desarrolloOption) {
                             selectOptionSilent(desarrolloSelector, desarrolloOption, true);
-                            const ubicacionesFiltradas = allData.ubicaciones.filter(u => u.desarrollo == desarrollo.id);
+                            const seen = new Set();
+                            const ubicacionesFiltradas = allData.ubicaciones.filter(u => {
+                                if (u.desarrollo == desarrollo.id && !seen.has(u.id)) {
+                                    seen.add(u.id);
+                                    return true;
+                                }
+                                return false;
+                            });
                             const ubicacionesSelector = document.querySelector('.custom-select[data-field="ubicacion"]');
                             const ubicacionActual = ubicacionesSelector.querySelector('.select-display').dataset.value;
                             populateSelect(ubicacionesSelector, ubicacionesFiltradas);
