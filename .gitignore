@@ -7,3 +7,4 @@ test-mongo.js
 public/uploads/
 Ejemplos/
 test-query.js
+bin/*

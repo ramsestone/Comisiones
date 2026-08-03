@@ -149,7 +149,6 @@ router.get('/ubicaciones', async (req, res) => {
       FROM scv_ubicaciones ubi 
       INNER JOIN scv_Ventas_Ubicaciones vta_ubi ON ubi.Id = vta_ubi.IdUbicacion 
       INNER JOIN uvw_SCV_Ventas vta ON vta_ubi.IdVenta = vta.ID 
-      WHERE vta.[Estatus.Nombre] = 'Activo'
       UNION ALL
       SELECT ubi.Nombre as nombre, ubi.IdDesarrollo as desarrollo, ubi.Id as id, TRY_CAST(REPLACE(monto.Valor, ',', '') AS DECIMAL(18,2)) as importe_venta, vta.[EstatusVenta.Nombre] as estatus_venta 
       FROM scv_ubicaciones ubi 
@@ -164,8 +163,7 @@ router.get('/ubicaciones', async (req, res) => {
         ORDER BY pcv_monto.IdCampoOpcion ASC
       ) monto
       INNER JOIN uvw_SCV_Ventas vta ON vta.IdExpediente = pcv_nombre.IdRegistro 
-      WHERE vta.[Estatus.Nombre] = 'Activo' 
-        AND (pcv_nombre.Valor LIKE 'BOG-%' OR pcv_nombre.Valor LIKE 'BOD-%' OR pcv_nombre.Valor LIKE 'BODEGA-%' OR pcv_nombre.Valor LIKE 'ME-%' OR pcv_nombre.Valor LIKE 'GR-%' OR pcv_nombre.Valor LIKE 'CH-%' OR pcv_nombre.Valor LIKE 'M-%')
+      WHERE (pcv_nombre.Valor LIKE 'BOG-%' OR pcv_nombre.Valor LIKE 'BOD-%' OR pcv_nombre.Valor LIKE 'BODEGA-%' OR pcv_nombre.Valor LIKE 'ME-%' OR pcv_nombre.Valor LIKE 'GR-%' OR pcv_nombre.Valor LIKE 'CH-%' OR pcv_nombre.Valor LIKE 'M-%')
     `;
     const recordset = await queryWithFallback(query, 'ek_ubicaciones', 30000, req);
 
