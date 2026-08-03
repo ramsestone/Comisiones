@@ -983,6 +983,7 @@ function setSelectValue(field, value, row = null) {
             display.dataset.value = optionElement.dataset.value;
             if (optionElement.dataset.compania) display.dataset.compania = optionElement.dataset.compania;
             if (optionElement.dataset.desarrollo) display.dataset.desarrollo = optionElement.dataset.desarrollo;
+            if (optionElement.dataset.clientName) display.dataset.clientName = optionElement.dataset.clientName;
             if (isAutoSelect) {
                 display.classList.add('auto-selected');
                 const badge = document.createElement('span');
