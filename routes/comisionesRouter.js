@@ -964,7 +964,29 @@ router.post('/', authenticate, async (req, res) => {
       .insertMany(participantesConId);
 
     // ── 6.5 Crear deuda si es cancelación a miembros ──────────────────────────
-    // Eliminado: Las cancelaciones ahora son comisiones negativas en walletTransactions
+    if (is_cancellation && penalty_target === 'miembros') {
+      const debtsToInsert = participantesConId
+        .filter(p => p.commission_amount < 0)
+        .map(p => {
+          const absAmount = Math.abs(p.commission_amount);
+          return {
+            user_id: p.user,
+            comision_id: comisionId,
+            type: 'penalty',
+            description: `Penalización por cancelación - ${location.text}`,
+            total_amount: toDecimal(absAmount),
+            remaining_balance: toDecimal(absAmount),
+            status: 'active',
+            created_by: new ObjectId(req.user.id),
+            created_at: now,
+            updated_at: now,
+          };
+        });
+
+      if (debtsToInsert.length > 0) {
+        await db.collection('debts').insertMany(debtsToInsert);
+      }
+    }
 
     // ── 7. Notificar a cada participante ──────────────────────────────────────
     await notify(db, participantesConId.map(p => p.user),
@@ -1323,7 +1345,29 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
     });
 
     // 3. Si sigue siendo cancelación a miembros, regenerar las deudas con los nuevos montos
-    // Eliminado: Las cancelaciones ahora son comisiones negativas en walletTransactions
+    if (is_cancellation && penalty_target === 'miembros') {
+      const debtsToInsert = participanteDocs
+        .filter(p => p.commission_amount < 0)
+        .map(p => {
+          const absAmount = Math.abs(p.commission_amount);
+          return {
+            user_id: p.user,
+            comision_id: new ObjectId(id),
+            type: 'penalty',
+            description: `Penalización por cancelación - ${location.text}`,
+            total_amount: toDecimal(absAmount),
+            remaining_balance: toDecimal(absAmount),
+            status: 'active',
+            created_by: new ObjectId(req.user.id),
+            created_at: now,
+            updated_at: now,
+          };
+        });
+
+      if (debtsToInsert.length > 0) {
+        await db.collection('debts').insertMany(debtsToInsert);
+      }
+    }
 
     // ── 6. Notificar a cada participante ──────────────────────────────────────
     await notify(db, participanteDocs.map(p => p.user),

@@ -987,14 +987,7 @@ function setSelectValue(field, value, row = null) {
                     if (companiaOption && !companiaSelector.querySelector('.select-display').dataset.value) selectOption(companiaSelector, companiaOption, true);
                 }
             }
-            const conceptoVal = getSelectValue('concepto');
-            const isCancellation = conceptoVal && conceptoVal.text.toLowerCase() === 'cancelación';
-            const ubicacionesFiltradas = allData.ubicaciones.filter(u => {
-                if (u.desarrollo != desarrolloId) return false;
-                const estatus = u.estatus_venta ? u.estatus_venta.trim().toUpperCase() : '';
-                if (isCancellation) return estatus === 'CANCELADO';
-                return estatus !== 'CANCELADO';
-            });
+            const ubicacionesFiltradas = allData.ubicaciones.filter(u => u.desarrollo == desarrolloId);
             const ubicacionesSelector = document.querySelector('.custom-select[data-field="ubicacion"]');
             const ubicacionDisplay = ubicacionesSelector.querySelector('.select-display');
             const ubicacionActual = ubicacionDisplay.dataset.value;
@@ -1025,14 +1018,7 @@ function setSelectValue(field, value, row = null) {
                         const desarrolloOption = desarrolloSelector.querySelector(`[data-value="${desarrollo.id}"]`);
                         if (desarrolloOption) {
                             selectOptionSilent(desarrolloSelector, desarrolloOption, true);
-                            const conceptoVal = getSelectValue('concepto');
-                            const isCancellation = conceptoVal && conceptoVal.text.toLowerCase() === 'cancelación';
-                            const ubicacionesFiltradas = allData.ubicaciones.filter(u => {
-                                if (u.desarrollo != desarrollo.id) return false;
-                                const estatus = u.estatus_venta ? u.estatus_venta.trim().toUpperCase() : '';
-                                if (isCancellation) return estatus === 'CANCELADO';
-                                return estatus !== 'CANCELADO';
-                            });
+                            const ubicacionesFiltradas = allData.ubicaciones.filter(u => u.desarrollo == desarrollo.id);
                             const ubicacionesSelector = document.querySelector('.custom-select[data-field="ubicacion"]');
                             const ubicacionActual = ubicacionesSelector.querySelector('.select-display').dataset.value;
                             populateSelect(ubicacionesSelector, ubicacionesFiltradas);
