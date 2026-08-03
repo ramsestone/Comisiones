@@ -384,6 +384,11 @@
             <div class="stat-label">Cierres Exitosos</div>
             <div class="stat-value" id="valCierres">0</div>
           </div>
+          <div class="stat-card amber">
+            <div class="stat-icon"><i class="fas fa-ban"></i></div>
+            <div class="stat-label">Cancelaciones</div>
+            <div class="stat-value" id="valCancelaciones">0</div>
+          </div>
         </div>
 
         <div class="leaderboards">
@@ -396,6 +401,7 @@
                 <div class="sort-tab active" data-target="gerentes" data-sort="volume" onclick="setSort(this)">Volumen</div>
                 <div class="sort-tab" data-target="gerentes" data-sort="commission" onclick="setSort(this)">Comisiones</div>
                 <div class="sort-tab" data-target="gerentes" data-sort="count" onclick="setSort(this)">Cierres</div>
+                <div class="sort-tab" data-target="gerentes" data-sort="cancelledVolume" onclick="setSort(this)">Cancelaciones</div>
               </div>
             </div>
             <div class="ranking-list" id="listGerentes">
@@ -412,6 +418,7 @@
                 <div class="sort-tab active" data-target="asesores" data-sort="volume" onclick="setSort(this)">Volumen</div>
                 <div class="sort-tab" data-target="asesores" data-sort="commission" onclick="setSort(this)">Comisiones</div>
                 <div class="sort-tab" data-target="asesores" data-sort="count" onclick="setSort(this)">Cierres</div>
+                <div class="sort-tab" data-target="asesores" data-sort="cancelledVolume" onclick="setSort(this)">Cancelaciones</div>
               </div>
             </div>
             <div class="ranking-list" id="listAsesores">
@@ -483,6 +490,7 @@
         if (sortBy === 'volume') primaryStatStr = fmtMoney(item.volume);
         else if (sortBy === 'commission') primaryStatStr = fmtMoney(item.commission);
         else if (sortBy === 'count') primaryStatStr = `${item.count} ventas`;
+        else if (sortBy === 'cancelledVolume') primaryStatStr = `<span style="color:#ff4d4f;">- ${fmtMoney(item.cancelledVolume)}</span>`;
 
         html += `
           <div class="ranking-item ${rankClass}">
@@ -493,6 +501,7 @@
                 <span><i class="fas fa-chart-line"></i> ${fmtMoney(item.volume)}</span>
                 <span><i class="fas fa-hand-holding-usd"></i> ${fmtMoney(item.commission)}</span>
                 <span><i class="fas fa-file-contract"></i> ${item.count}</span>
+                <span><i class="fas fa-ban" style="color:#ff4d4f;"></i> <span style="color:#ff4d4f;">- ${fmtMoney(item.cancelledVolume || 0)}</span></span>
               </div>
             </div>
             <div class="rank-primary-stat">${primaryStatStr}</div>
@@ -535,6 +544,7 @@
           document.getElementById('valVolumen').textContent = fmtMoney(d.stats.totalVolume);
           document.getElementById('valComisiones').textContent = fmtMoney(d.stats.totalCommissions);
           document.getElementById('valCierres').textContent = d.stats.totalSales || 0;
+          document.getElementById('valCancelaciones').textContent = d.stats.totalCancelaciones || 0;
 
           renderLeaderboards();
 

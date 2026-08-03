@@ -583,7 +583,7 @@ router.patch('/:id/aprobar', authenticate, async (req, res) => {
           created_by: new ObjectId(req.user.id),
           created_at: now
         };
-      }).filter(t => parseFloat(t.amount.toString()) > 0);
+      }).filter(t => parseFloat(t.amount.toString()) !== 0);
       
       if (txs.length > 0) {
         await db.collection('walletTransactions').insertMany(txs);
@@ -686,24 +686,26 @@ router.patch('/:id/pagar', authenticate, async (req, res) => {
       `¡Tu comisión de ${locationPago} ha sido pagada!`, now);
 
     // ── Insertar débito en wallet al pagar la comisión ────────────────────────
-    const txs = participantes.map(p => {
-      const monto = parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString());
-      return {
-        user_id: p.user,
-        type: 'debit',
-        amount: Decimal128.fromString(monto.toString()),
-        concept: 'payment', // Retiro de la comisión de la wallet
-        description: `Retiro por comisión pagada - ${locationPago}`,
-        debt_id: null,
-        comision_id: comisionId,
-        reference_date: now,
-        created_by: new ObjectId(req.user.id),
-        created_at: now
-      };
-    }).filter(t => parseFloat(t.amount.toString()) > 0);
-    
-    if (txs.length > 0) {
-      await db.collection('walletTransactions').insertMany(txs);
+    if (!comision.is_cancellation) {
+      const txs = participantes.map(p => {
+        const monto = parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString());
+        return {
+          user_id: p.user,
+          type: 'debit',
+          amount: Decimal128.fromString(monto.toString()),
+          concept: 'payment', // Retiro de la comisión de la wallet
+          description: `Retiro por comisión pagada - ${locationPago}`,
+          debt_id: null,
+          comision_id: comisionId,
+          reference_date: now,
+          created_by: new ObjectId(req.user.id),
+          created_at: now
+        };
+      }).filter(t => parseFloat(t.amount.toString()) !== 0);
+      
+      if (txs.length > 0) {
+        await db.collection('walletTransactions').insertMany(txs);
+      }
     }
 
     return res.status(200).json({
@@ -849,7 +851,11 @@ router.post('/', authenticate, async (req, res) => {
 
       let commAmount = sale_price * parsedPct;
       if (is_cancellation) {
-        commAmount = 0;
+        if (penalty_target === 'miembros') {
+          commAmount = -Math.abs(commAmount);
+        } else {
+          commAmount = 0;
+        }
       }
 
       return {
@@ -935,6 +941,8 @@ router.post('/', authenticate, async (req, res) => {
       status:              statusInicial._id,
       correction_comments: null,
       created_by:          created_by,
+      is_cancellation,
+      penalty_target,
       created_at:          now,
       updated_at:          now,
     };
@@ -956,23 +964,7 @@ router.post('/', authenticate, async (req, res) => {
       .insertMany(participantesConId);
 
     // ── 6.5 Crear deuda si es cancelación a miembros ──────────────────────────
-    if (is_cancellation && penalty_target === 'miembros') {
-        const debtsToInsert = participanteDocs.map(p => ({
-            user_id: p.user,
-            type: 'penalty',
-            description: `Penalización por cancelación - ${location.text || location.id}`,
-            total_amount: toDecimal(sale_price * p.percentage),
-            remaining_balance: toDecimal(sale_price * p.percentage),
-            status: 'active',
-            comision_id: comisionId,
-            created_by: created_by,
-            created_at: now,
-            updated_at: now,
-        }));
-        if (debtsToInsert.length > 0) {
-            await db.collection('debts').insertMany(debtsToInsert);
-        }
-    }
+    // Eliminado: Las cancelaciones ahora son comisiones negativas en walletTransactions
 
     // ── 7. Notificar a cada participante ──────────────────────────────────────
     await notify(db, participantesConId.map(p => p.user),
@@ -1218,12 +1210,21 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
         throw new Error(`El porcentaje ingresado para el usuario no es válido o no está permitido.`);
       }
 
+      let commAmount = sale_price * parsedPct;
+      if (is_cancellation) {
+        if (penalty_target === 'miembros') {
+          commAmount = -Math.abs(commAmount);
+        } else {
+          commAmount = 0;
+        }
+      }
+
       return {
         comision_id:         new ObjectId(id),
         user:                new ObjectId(userId),
         role_in_comision:    roleInComision,
         percentage:          parsedPct,
-        commission_amount:   sale_price * parsedPct,
+        commission_amount:   commAmount,
         adjusted_commission: null,
         verification:        false,          // ← reset
         status:              statusInicial._id, // ← reset
@@ -1294,6 +1295,8 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
           register_date:       new Date(register_date),
           status:              statusInicial._id,   // ← reset
           correction_comments: null,
+          is_cancellation,
+          penalty_target,
           updated_at:          now,
         },
       }
@@ -1320,23 +1323,7 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
     });
 
     // 3. Si sigue siendo cancelación a miembros, regenerar las deudas con los nuevos montos
-    if (is_cancellation && penalty_target === 'miembros') {
-        const debtsToInsert = participanteDocs.map(p => ({
-            user_id: p.user,
-            type: 'penalty',
-            description: `Penalización por cancelación - ${location.text || location.id}`,
-            total_amount: toDecimal(sale_price * p.percentage),
-            remaining_balance: toDecimal(sale_price * p.percentage),
-            status: 'active',
-            comision_id: new ObjectId(id),
-            created_by: new ObjectId(req.user.id),
-            created_at: now,
-            updated_at: now,
-        }));
-        if (debtsToInsert.length > 0) {
-            await db.collection('debts').insertMany(debtsToInsert);
-        }
-    }
+    // Eliminado: Las cancelaciones ahora son comisiones negativas en walletTransactions
 
     // ── 6. Notificar a cada participante ──────────────────────────────────────
     await notify(db, participanteDocs.map(p => p.user),

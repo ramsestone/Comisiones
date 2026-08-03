@@ -693,9 +693,7 @@ function cardHTML(c) {
     const isMe = p.usuario?._id === USER.id;
     let rightHtml;
     
-    const dispAmount = (isCancelacion && p.commission_amount === 0) 
-      ? -(c.sale_price * (p.percentage || 0)) 
-      : p.commission_amount;
+    const dispAmount = p.commission_amount;
       
     dispTotal += dispAmount;
 

@@ -86,10 +86,45 @@ router.get('/dashboard', authenticate, async (req, res) => {
         },
         { $unwind: '$usuario' },
         {
+          $lookup: {
+            from: 'comisiones-ubicaciones',
+            let: { locId: '$ubicacion.location.id', myId: '$ubicacion._id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$location.id', '$$locId'] },
+                      { $ne: ['$_id', '$$myId'] },
+                      { $not: { $in: ['$concept.id', [3, '3']] } }
+                    ]
+                  }
+                }
+              },
+              { $limit: 1 }
+            ],
+            as: 'related_positive'
+          }
+        },
+        {
           $group: {
             _id: '$user',
             name: { $first: '$usuario.name' },
-            volume: { $sum: '$ubicacion.sale_price' },
+            volume: { 
+              $sum: {
+                $cond: [
+                  { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
+                  {
+                    $cond: [
+                      { $gt: [{ $size: '$related_positive' }, 0] },
+                      { $multiply: ['$ubicacion.sale_price', -1] },
+                      0
+                    ]
+                  },
+                  '$ubicacion.sale_price'
+                ]
+              } 
+            },
             count: { 
               $sum: {
                 $cond: [
@@ -99,7 +134,30 @@ router.get('/dashboard', authenticate, async (req, res) => {
                 ]
               } 
             },
-            commission: { $sum: '$commission_amount' }
+            commission: { 
+              $sum: {
+                $cond: [
+                  { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
+                  {
+                    $cond: [
+                      { $gt: [{ $size: '$related_positive' }, 0] },
+                      '$commission_amount',
+                      0
+                    ]
+                  },
+                  '$commission_amount'
+                ]
+              }
+            },
+            cancelledVolume: {
+              $sum: {
+                $cond: [
+                  { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
+                  '$ubicacion.sale_price',
+                  0
+                ]
+              }
+            }
           }
         },
         { $sort: { volume: -1 } }
@@ -145,14 +203,72 @@ router.get('/dashboard', authenticate, async (req, res) => {
         }
       },
       {
+        $lookup: {
+          from: 'comisiones-ubicaciones',
+          let: { locId: '$ubicacion.location.id', myId: '$ubicacion._id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$location.id', '$$locId'] },
+                    { $ne: ['$_id', '$$myId'] },
+                    { $not: { $in: ['$concept.id', [3, '3']] } }
+                  ]
+                }
+              }
+            },
+            { $limit: 1 }
+          ],
+          as: 'related_positive'
+        }
+      },
+      {
         $group: {
           _id: null,
-          totalVolume: { $sum: '$ubicacion.sale_price' },
-          totalCommissions: { $sum: '$commission_amount' },
+          totalVolume: { 
+            $sum: {
+              $cond: [
+                { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
+                {
+                  $cond: [
+                    { $gt: [{ $size: '$related_positive' }, 0] },
+                    { $multiply: ['$ubicacion.sale_price', -1] },
+                    0
+                  ]
+                },
+                '$ubicacion.sale_price'
+              ]
+            } 
+          },
+          totalCommissions: { 
+            $sum: {
+              $cond: [
+                { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
+                {
+                  $cond: [
+                    { $gt: [{ $size: '$related_positive' }, 0] },
+                    '$commission_amount',
+                    0
+                  ]
+                },
+                '$commission_amount'
+              ]
+            }
+          },
           totalSalesSet: {
             $addToSet: {
               $cond: [
                 { $or: [ { $eq: ['$ubicacion.concept.id', '2'] }, { $eq: ['$ubicacion.concept.id', 2] } ] },
+                '$comision_id', 
+                null
+              ]
+            }
+          },
+          totalCancelacionesSet: {
+            $addToSet: {
+              $cond: [
+                { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
                 '$comision_id', 
                 null
               ]
@@ -165,15 +281,22 @@ router.get('/dashboard', authenticate, async (req, res) => {
     const statsResult = await db.collection('comisiones-participantes').aggregate(generalStatsPipeline).toArray();
     
     let totalSalesCount = 0;
-    if (statsResult.length > 0 && statsResult[0].totalSalesSet) {
-      totalSalesCount = statsResult[0].totalSalesSet.filter(id => id !== null).length;
+    let totalCancelacionesCount = 0;
+    if (statsResult.length > 0) {
+      if (statsResult[0].totalSalesSet) {
+        totalSalesCount = statsResult[0].totalSalesSet.filter(id => id !== null).length;
+      }
+      if (statsResult[0].totalCancelacionesSet) {
+        totalCancelacionesCount = statsResult[0].totalCancelacionesSet.filter(id => id !== null).length;
+      }
     }
 
     const stats = statsResult.length > 0 ? {
       totalVolume: statsResult[0].totalVolume,
       totalCommissions: statsResult[0].totalCommissions,
-      totalSales: totalSalesCount
-    } : { totalVolume: 0, totalCommissions: 0, totalSales: 0 };
+      totalSales: totalSalesCount,
+      totalCancelaciones: totalCancelacionesCount
+    } : { totalVolume: 0, totalCommissions: 0, totalSales: 0, totalCancelaciones: 0 };
 
 
     return res.status(200).json({
