@@ -436,7 +436,7 @@
   <div class="filter-bar" id="filterBar" style="display:none">
     <div class="filter-search-wrap">
       <i class="fas fa-search"></i>
-      <input type="text" id="filterSearch" placeholder="Buscar ubicación, desarrollo, participante…">
+      <input type="text" id="filterSearch" placeholder="Buscar cliente, ubicación, desarrollo, participante…">
     </div>
     <select class="filter-select" id="filterStatus">
       <option value="">Todos los estados</option>
@@ -513,7 +513,7 @@ function getFiltered() {
     if (FILTERS.concept && (c.concept?.text || c.concept || '') !== FILTERS.concept) return false;
     if (FILTERS.search) {
       const hay = [
-        c.location?.text, c.development?.text, c.company?.text,
+        c.client_name, c.location?.text, c.development?.text, c.company?.text,
         ...(c.participantes || []).map(p => p.usuario?.name || ''),
       ].join(' ').toLowerCase();
       if (!hay.includes(FILTERS.search)) return false;

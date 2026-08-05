@@ -282,7 +282,7 @@ router.get('/historial', authenticate, async (req, res) => {
       {
         $project: {
           company: 1, development: 1, location: 1, concept: 1,
-          sale_price: 1, total_commission: 1, operation_date: 1,
+          sale_price: 1, total_commission: 1, operation_date: 1, client_name: 1,
           'participantes.role_in_comision': 1,
           'participantes.percentage': 1,
           'participantes.commission_amount': 1,
@@ -314,6 +314,7 @@ router.get('/historial', authenticate, async (req, res) => {
           company:     txt(c.company),
           development: devText,
           locationText: locText,
+          client_name: c.client_name,
           contrato:    null,
           escritura:   null,
           bono:        null,

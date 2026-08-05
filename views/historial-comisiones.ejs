@@ -209,7 +209,7 @@
   <div class="controls-bar">
     <div class="search-wrap">
       <i class="fas fa-search"></i>
-      <input class="search-input" id="searchInput" type="text" placeholder="Buscar por desarrollo, empresa, ubicación, participante…">
+      <input class="search-input" id="searchInput" type="text" placeholder="Buscar por cliente, desarrollo, empresa, ubicación, participante…">
     </div>
   </div>
 
@@ -521,7 +521,7 @@ function applyFilters() {
     if (filters.ubicacion  && d.locationText       !== filters.ubicacion)  return false;
     if (filters.search) {
       const hay = [
-        d.development, d.company, d.locationText,
+        d.client_name, d.development, d.company, d.locationText,
         ...(d.contrato?.participantes  || []).map(p => p.usuario?.name || ''),
         ...(d.escritura?.participantes || []).map(p => p.usuario?.name || ''),
       ].join(' ').toLowerCase();
