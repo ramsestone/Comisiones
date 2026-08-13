@@ -363,8 +363,10 @@ function resetSelectDisplay(id, placeholder) {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function phaseTotal(fase) {
-  return fase?.total_commission ||
-    (fase?.participantes || []).reduce((a, p) => a + (p.commission_amount || 0), 0);
+  const arr = Array.isArray(fase) ? fase : (fase && (fase._id || fase.participantes) ? [fase] : []);
+  return arr.reduce((sum, f) => {
+    return sum + (f.total_commission || (f.participantes || []).reduce((a, p) => a + (p.commission_amount || 0), 0));
+  }, 0);
 }
 
 function buildParticipants(participantes) {
@@ -389,55 +391,63 @@ function buildParticipants(participantes) {
   }).join('');
 }
 
-function buildPhaseCol(fase, tipo, loc) {
-  if (!fase) fase = {};
+function buildPhaseCol(fases, tipo, loc) {
+  const arr = Array.isArray(fases) ? fases : (fases && (fases._id || fases.participantes) ? [fases] : []);
   const isC   = tipo === 'contrato';
   const isE   = tipo === 'escritura';
   const isB   = tipo === 'bono';
   const cls   = isC ? 'contrato-col' : (isE ? 'escritura-col' : 'bono-col');
   const label = isC ? 'Contrato' : (isE ? 'Escritura' : 'Bono');
   const icon  = isC ? 'fas fa-file-signature' : (isE ? 'fas fa-stamp' : 'fas fa-gift');
-  const total = phaseTotal(fase);
 
-  let contentHtml = '';
-  if (!isC && !fase._id && loc && loc.contrato && loc.contrato._id) {
-    contentHtml = `
-      <div style="padding: 2rem; display: flex; justify-content: center; align-items: center; height: 100%;">
-        <a href="/registrar-comision?fromContrato=${loc.contrato._id}" style="text-decoration: none;">
-          <button style="background: transparent; border: 1px solid var(--green); color: var(--green); padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(96,230,26,0.1)'" onmouseout="this.style.background='transparent'">
-            Registrar comisión de escritura
-          </button>
-        </a>
-      </div>
-    `;
-  } else {
-    contentHtml = `
-      <div class="phase-price-row">
-        <div>
-          <div class="phase-price-label">Precio de venta</div>
-          <div class="phase-price-val">${fmt(fase.sale_price)}</div>
-        </div>
-        <div style="text-align:right;">
-          <div class="phase-price-label">Comisión total</div>
-          <div class="phase-commission-total">${fmt(total)}</div>
-        </div>
-      </div>
-      <div class="p-list">${buildParticipants(fase.participantes)}</div>
-    `;
+  if (arr.length === 0) {
+    if (!isC && loc && loc.contrato && loc.contrato.length > 0) {
+      return `
+        <div class="phase-col ${cls}">
+          <div class="phase-col-header">
+            <div class="phase-col-icon"><i class="${icon}"></i></div>
+            <div class="phase-col-title">${label}</div>
+          </div>
+          <div style="padding: 2rem; display: flex; justify-content: center; align-items: center; height: 100%;">
+            <a href="/registrar-comision?fromContrato=${loc.contrato[0]._id}" style="text-decoration: none;">
+              <button style="background: transparent; border: 1px solid var(--green); color: var(--green); padding: 0.8rem 1.5rem; border-radius: 8px; cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 700; transition: all 0.2s;" onmouseover="this.style.background='rgba(96,230,26,0.1)'" onmouseout="this.style.background='transparent'">
+                Registrar comisión de escritura
+              </button>
+            </a>
+          </div>
+        </div>`;
+    }
+    return `<div class="phase-col ${cls}"></div>`;
   }
+
+  const phasesHtml = arr.map(fase => {
+    const total = phaseTotal(fase);
+    return `
+      <div style="margin-bottom: 1.5rem; border-bottom: 1px dashed rgba(96,230,26,0.08); padding-bottom: 1rem;">
+        <div class="phase-col-date" style="margin-bottom: 0.5rem;">
+          <i class="fas fa-calendar-alt" style="margin-right:4px;opacity:0.6;"></i>${fmtDate(fase.operation_date)}
+        </div>
+        <div class="phase-price-row">
+          <div>
+            <div class="phase-price-label">Precio de venta</div>
+            <div class="phase-price-val">${fmt(fase.sale_price)}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="phase-price-label">Comisión total</div>
+            <div class="phase-commission-total">${fmt(total)}</div>
+          </div>
+        </div>
+        <div class="p-list">${buildParticipants(fase.participantes)}</div>
+      </div>`;
+  }).join('');
 
   return `
     <div class="phase-col ${cls}">
       <div class="phase-col-header">
         <div class="phase-col-icon"><i class="${icon}"></i></div>
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <div>
-            <div class="phase-col-title">${label}</div>
-            <div class="phase-col-date"><i class="fas fa-calendar-alt" style="margin-right:4px;opacity:0.6;"></i>${fmtDate(fase.operation_date)}</div>
-          </div>
-        </div>
+        <div class="phase-col-title">${label}</div>
       </div>
-      ${contentHtml}
+      ${phasesHtml}
     </div>`;
 }
 
@@ -447,6 +457,7 @@ function buildLocationBlock(loc, idx) {
   const bTotal = phaseTotal(loc.bono);
   const grand  = cTotal + eTotal + bTotal;
   const locText = loc.locationText || '';
+  const hasBono = loc.bono && loc.bono.length > 0;
 
   const block = document.createElement('div');
   block.className = 'location-block';
@@ -462,7 +473,7 @@ function buildLocationBlock(loc, idx) {
       <div class="loc-phases">
         <div class="phase-pill contrato"><div class="phase-dot"></div>Contrato</div>
         <div class="phase-pill escritura"><div class="phase-dot"></div>Escritura</div>
-        ${loc.bono ? '<div class="phase-pill bono"><div class="phase-dot"></div>Bono</div>' : ''}
+        ${hasBono ? '<div class="phase-pill bono"><div class="phase-dot"></div>Bono</div>' : ''}
       </div>
       <div class="loc-total">
         <div class="loc-total-label">Total comisiones</div>
@@ -474,7 +485,7 @@ function buildLocationBlock(loc, idx) {
       <div class="phases-grid">
         ${buildPhaseCol(loc.contrato, 'contrato', loc)}
         ${buildPhaseCol(loc.escritura, 'escritura', loc)}
-        ${loc.bono ? buildPhaseCol(loc.bono, 'bono', loc) : ''}
+        ${hasBono ? buildPhaseCol(loc.bono, 'bono', loc) : ''}
       </div>
       <div class="loc-totals-row">
         <div class="loc-total-cell">
@@ -485,7 +496,7 @@ function buildLocationBlock(loc, idx) {
           <div class="ltc-icon e"><i class="fas fa-stamp"></i></div>
           <div><div class="ltc-label">Total Escritura</div><div class="ltc-val e">${fmt(eTotal)}</div></div>
         </div>
-        ${loc.bono ? `
+        ${hasBono ? `
         <div class="loc-total-cell" style="border-left:1px solid rgba(96,230,26,0.08);">
           <div class="ltc-icon b"><i class="fas fa-gift"></i></div>
           <div><div class="ltc-label">Total Bono</div><div class="ltc-val b">${fmt(bTotal)}</div></div>
@@ -520,10 +531,12 @@ function applyFilters() {
     if (filters.desarrollo && d.development       !== filters.desarrollo) return false;
     if (filters.ubicacion  && d.locationText       !== filters.ubicacion)  return false;
     if (filters.search) {
+      const getNames = arr => (arr || []).flatMap(f => (f.participantes || []).map(p => p.usuario?.name || ''));
       const hay = [
         d.client_name, d.development, d.company, d.locationText,
-        ...(d.contrato?.participantes  || []).map(p => p.usuario?.name || ''),
-        ...(d.escritura?.participantes || []).map(p => p.usuario?.name || ''),
+        ...getNames(d.contrato),
+        ...getNames(d.escritura),
+        ...getNames(d.bono),
       ].join(' ').toLowerCase();
       if (!hay.includes(filters.search)) return false;
     }

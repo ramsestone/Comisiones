@@ -93,6 +93,19 @@ const authenticate = (req, res, next) => {
   }
 };
 
+// ─── Middleware: valida que el rol del usuario esté permitido ─────────────────
+const authorize = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user || !allowedRoles.includes(req.user.roleName)) {
+      return res.status(403).json({
+        success: false,
+        message: 'No tienes permiso para realizar esta acción',
+        data:    null,
+        error:   'Acceso denegado',
+      });
+    }
+    next();
+  };
+};
 
-
-module.exports = { setAuthCookie, clearAuthCookie, authenticate, injectUserLocals, };
+module.exports = { setAuthCookie, clearAuthCookie, authenticate, injectUserLocals, authorize };

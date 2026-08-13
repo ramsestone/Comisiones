@@ -225,42 +225,37 @@ router.get('/dashboard', authenticate, async (req, res) => {
       },
       {
         $group: {
+          _id: '$comision_id',
+          sale_price: { $first: '$ubicacion.sale_price' },
+          conceptId: { $first: '$ubicacion.concept.id' },
+          commissionSum: { $sum: '$commission_amount' },
+          related_positive: { $first: '$related_positive' }
+        }
+      },
+      {
+        $group: {
           _id: null,
           totalVolume: { 
             $sum: {
               $cond: [
-                { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
+                { $or: [ { $eq: ['$conceptId', '3'] }, { $eq: ['$conceptId', 3] } ] },
                 {
                   $cond: [
                     { $gt: [{ $size: '$related_positive' }, 0] },
-                    { $multiply: ['$ubicacion.sale_price', -1] },
+                    { $multiply: ['$sale_price', -1] },
                     0
                   ]
                 },
-                '$ubicacion.sale_price'
+                '$sale_price'
               ]
             } 
           },
-          totalCommissions: { 
-            $sum: {
-              $cond: [
-                { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
-                {
-                  $cond: [
-                    { $gt: [{ $size: '$related_positive' }, 0] },
-                    '$commission_amount',
-                    0
-                  ]
-                },
-                '$commission_amount'
-              ]
-            }
-          },
+          totalCommissions: { $sum: '$commissionSum' },
           totalSalesSet: {
             $addToSet: {
               $cond: [
-                { $or: [ { $eq: ['$ubicacion.concept.id', '2'] }, { $eq: ['$ubicacion.concept.id', 2] } ] },
-                '$comision_id', 
+                { $or: [ { $eq: ['$conceptId', '2'] }, { $eq: ['$conceptId', 2] } ] },
+                '$_id', 
                 null
               ]
             }
@@ -268,8 +263,8 @@ router.get('/dashboard', authenticate, async (req, res) => {
           totalCancelacionesSet: {
             $addToSet: {
               $cond: [
-                { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
-                '$comision_id', 
+                { $or: [ { $eq: ['$conceptId', '3'] }, { $eq: ['$conceptId', 3] } ] },
+                '$_id', 
                 null
               ]
             }

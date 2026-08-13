@@ -3,6 +3,7 @@ require('dotenv').config();
 
 const express = require('express');
 const router = express.Router();
+const { authenticate, authorize } = require('../JWT/authCookies');
 
 // Config conexión
 const port = parseInt(process.env.EK_PORT, 10);
@@ -74,7 +75,7 @@ connectDB();
 // ---------- ENDPOINTS ----------
 
 // Probar conexión
-router.get('/version', async (req, res) => {
+router.get('/version', authenticate, async (req, res) => {
   try {
     const result = await pool.request().query('SELECT @@VERSION AS version');
     res.json(result.recordset[0]);
@@ -84,7 +85,7 @@ router.get('/version', async (req, res) => {
 });
 
 // Sincronización manual de EK a Mongo
-router.post('/sync', async (req, res) => {
+router.post('/sync', authenticate, authorize(['Administrador', 'Director']), async (req, res) => {
   try {
     const db = req.app.locals.mongoClient.db('Commission-Management');
     const result = await syncEKData(pool, db);
@@ -94,7 +95,7 @@ router.post('/sync', async (req, res) => {
   }
 });
 
-router.get('/companias', async (req, res) => {
+router.get('/companias', authenticate, async (req, res) => {
   try {
     const recordset = await queryWithFallback('SELECT Id as id, Nombre as nombre FROM Companias', 'ek_companias', 15000, req);
 
@@ -117,7 +118,7 @@ router.get('/companias', async (req, res) => {
 });
 
 // Consulta genérica
-router.get('/desarrollos', async (req, res) => {
+router.get('/desarrollos', authenticate, async (req, res) => {
   try {
     const recordset = await queryWithFallback('SELECT Id as id, Descripcion as nombre, IdCompania as compania FROM scv_Desarrollos', 'ek_desarrollos', 15000, req);
 
@@ -141,7 +142,7 @@ router.get('/desarrollos', async (req, res) => {
 
 
 
-router.get('/ubicaciones', async (req, res) => {
+router.get('/ubicaciones', authenticate, async (req, res) => {
 
   try {
     const query = `
@@ -184,7 +185,7 @@ router.get('/ubicaciones', async (req, res) => {
     });
   }
 });
-router.get('/expedientes', async (req, res) => {
+router.get('/expedientes', authenticate, async (req, res) => {
   try {
     const recordset = await queryWithFallback("SELECT IdExpediente as id, CONCAT(IdExpediente, ' - ', [Cliente.Nombre]) as nombre, [Cliente.Nombre] as cliente_nombre FROM uvw_SCV_Ventas WHERE IdExpediente IS NOT NULL AND [Cliente.Nombre] IS NOT NULL", 'ek_expedientes', 30000, req);
 

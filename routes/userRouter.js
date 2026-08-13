@@ -4,7 +4,8 @@ const router = express.Router();
 const {
     setAuthCookie,
     clearAuthCookie,
-    authenticate
+    authenticate,
+    authorize
 } = require('../JWT/authCookies');
 
 const DB_NAME = 'roles_usuarios';
@@ -166,7 +167,7 @@ router.post('/', authenticate, upload.single('picture'), async (req, res) => {
 });
 
 // GET /api/users
-router.get('/', authenticate, async (req, res) => {
+router.get('/', authenticate, authorize(['Administrador', 'Director']), async (req, res) => {
   const db = req.app.locals.mongoClient.db(DB_NAME);
 
   try {
@@ -359,14 +360,18 @@ router.get('/by-role/:roleName', authenticate, async (req, res) => {
   }
 });
 router.put('/:id', authenticate, upload.single('picture'), async (req, res) => {
-    if (req.user.roleName !== 'Administrador') {
-        return res.status(403).json({ success: false, message: 'No tienes permiso para realizar esta acción' });
-    }
     const client = req.app.locals.mongoClient;
     const db = client.db(DB_NAME);
     try {
         const { id } = req.params;
         if (!ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'ID inválido' });
+
+        const isAdmin = req.user.roleName === 'Administrador';
+        const isSelf = req.user.id === id;
+
+        if (!isAdmin && !isSelf) {
+            return res.status(403).json({ success: false, message: 'No tienes permiso para realizar esta acción' });
+        }
 
         const { email, role, password, active, phone, blood_type, birth_date, emergency_contact_phone, username, removePicture, manager_ids } = req.body;
         let { name, emergency_contact_name } = req.body;
@@ -385,11 +390,11 @@ router.put('/:id', authenticate, upload.single('picture'), async (req, res) => {
         if (emergency_contact_phone !== undefined) updateData.emergency_contact_phone = emergency_contact_phone;
         if (username !== undefined) updateData.username = username;
         
-        if (role) updateData.role = new ObjectId(role);
+        if (role && isAdmin) updateData.role = new ObjectId(role);
         if (password && password.trim() !== '') updateData.password = password;
-        if (active !== undefined) updateData.active = (active === 'true' || active === true);
+        if (active !== undefined && isAdmin) updateData.active = (active === 'true' || active === true);
         
-        if (manager_ids !== undefined) {
+        if (manager_ids !== undefined && isAdmin) {
             if (!manager_ids || manager_ids === '') {
                 updateData.manager_ids = [];
             } else {
@@ -420,12 +425,10 @@ router.put('/:id', authenticate, upload.single('picture'), async (req, res) => {
 
         const result = await db.collection('usuarios').updateOne({ _id: new ObjectId(id) }, { $set: updateData });
 
-        let isSelf = false;
         let finalPicture = updateData.picture !== undefined ? updateData.picture : currentUser.picture;
         let finalName = updateData.name !== undefined ? updateData.name : currentUser.name;
 
-        if (req.user.id === id) {
-            isSelf = true;
+        if (isSelf) {
             const updatedUser = await db.collection('usuarios').aggregate([
                 { $match: { _id: new ObjectId(id) } },
                 { $lookup: { from: 'roles', localField: 'role', foreignField: '_id', as: 'roleObj' } },
@@ -446,14 +449,18 @@ router.put('/:id', authenticate, upload.single('picture'), async (req, res) => {
 });
 
 router.delete('/:id/picture', authenticate, async (req, res) => {
-    if (req.user.roleName !== 'Administrador') {
-        return res.status(403).json({ success: false, message: 'No tienes permiso para realizar esta acción' });
-    }
     const client = req.app.locals.mongoClient;
     const db = client.db(DB_NAME);
     try {
         const { id } = req.params;
         if (!ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'ID inválido' });
+
+        const isAdmin = req.user.roleName === 'Administrador';
+        const isSelf = req.user.id === id;
+
+        if (!isAdmin && !isSelf) {
+            return res.status(403).json({ success: false, message: 'No tienes permiso para realizar esta acción' });
+        }
 
         const currentUser = await db.collection('usuarios').findOne({ _id: new ObjectId(id) });
         if (!currentUser) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
@@ -466,9 +473,7 @@ router.delete('/:id/picture', authenticate, async (req, res) => {
             await db.collection('usuarios').updateOne({ _id: new ObjectId(id) }, { $set: { picture: null, updated_at: new Date() } });
         }
 
-        let isSelf = false;
-        if (req.user.id === id) {
-            isSelf = true;
+        if (isSelf) {
             const updatedUser = await db.collection('usuarios').aggregate([
                 { $match: { _id: new ObjectId(id) } },
                 { $lookup: { from: 'roles', localField: 'role', foreignField: '_id', as: 'roleObj' } },

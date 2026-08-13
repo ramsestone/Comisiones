@@ -4,7 +4,8 @@ const router = express.Router();
 const {
     setAuthCookie,
     clearAuthCookie,
-    authenticate
+    authenticate,
+    authorize
 } = require('../JWT/authCookies');
 
 const DB_NAME = 'roles_usuarios';
@@ -12,7 +13,7 @@ const DB_NAME = 'roles_usuarios';
 /**
  * GET /api/roles
  */
-router.get('/', authenticate, async (req, res) => {
+router.get('/', authenticate, authorize(['Administrador', 'Director']), async (req, res) => {
     try {
         const db = req.app.locals.mongoClient.db(DB_NAME);
 

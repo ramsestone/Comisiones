@@ -1,7 +1,7 @@
 const express = require('express');
 const { ObjectId, Decimal128 } = require('mongodb');
 const router = express.Router();
-const { authenticate } = require('../JWT/authCookies');
+const { authenticate, authorize } = require('../JWT/authCookies');
 
 const DB_NAME = 'roles_usuarios';
 
@@ -50,7 +50,7 @@ const netBalance = async (db, userId) => {
  * POST /api/wallet/debts
  * Registrar una deuda nueva (loan | penalty)
  */
-router.post('/debts', authenticate, async (req, res) => {
+router.post('/debts', authenticate, authorize(['Administrador', 'Director']), async (req, res) => {
     const client = req.app.locals.mongoClient;
     const db = client.db(DB_NAME);
 
@@ -121,9 +121,33 @@ router.post('/debts', authenticate, async (req, res) => {
         const { insertedId } = await db.collection('debts').insertOne(debtDoc);
         debtId = insertedId;
 
-        // 2. Transacciones
-        // Ya no insertaremos el debit automáticamente aquí, porque el usuario ha solicitado
-        // que las deudas no se cobren de las comisiones hasta que él lo indique explícitamente.
+        // 2. Transacciones (Modelo de Cuenta Corriente)
+        if (type === 'loan') {
+            await db.collection('walletTransactions').insertMany([
+                {
+                    user_id: new ObjectId(user_id),
+                    type: 'credit',
+                    amount: toDecimal(parsedAmount),
+                    concept: 'loan',
+                    description: description ?? `Préstamo registrado (Ingreso virtual)`,
+                    debt_id: debtId,
+                    reference_date: now,
+                    created_by: new ObjectId(req.user.id),
+                    created_at: now
+                },
+                {
+                    user_id: new ObjectId(user_id),
+                    type: 'debit',
+                    amount: toDecimal(parsedAmount),
+                    concept: 'withdrawal',
+                    description: `Retiro de efectivo por préstamo`,
+                    debt_id: debtId,
+                    reference_date: now,
+                    created_by: new ObjectId(req.user.id),
+                    created_at: now
+                }
+            ]);
+        }
 
         return res.status(201).json({
             success: true,
@@ -209,7 +233,7 @@ router.get('/debts/:user_id', authenticate, async (req, res) => {
  * POST /api/wallet/debts/:debt_id/payment
  * Aplicar un pago parcial o total a una deuda
  */
-router.post('/debts/:debt_id/payment', authenticate, async (req, res) => {
+router.post('/debts/:debt_id/payment', authenticate, authorize(['Administrador']), async (req, res) => {
     const client = req.app.locals.mongoClient;
     const db = client.db(DB_NAME);
 
@@ -329,7 +353,7 @@ router.post('/debts/:debt_id/payment', authenticate, async (req, res) => {
  * PATCH /api/wallet/debts/:debt_id/cancel
  * Cancelar una deuda activa
  */
-router.patch('/debts/:debt_id/cancel', authenticate, async (req, res) => {
+router.patch('/debts/:debt_id/cancel', authenticate, authorize(['Administrador', 'Director']), async (req, res) => {
     try {
         const db = req.app.locals.mongoClient.db(DB_NAME);
         const { debt_id } = req.params;
@@ -413,6 +437,31 @@ router.get('/:user_id/transactions', authenticate, async (req, res) => {
             });
         }
 
+        const targetUserId = user_id;
+        const currentUserId = req.user.id;
+        const roleName = req.user.roleName;
+
+        const isAdminOrDirector = ['Administrador', 'Director'].includes(roleName);
+        const isSelf = currentUserId === targetUserId;
+        let isAllowed = isAdminOrDirector || isSelf;
+
+        if (!isAllowed && roleName === 'Gerente') {
+            const sub = await db.collection('usuarios').findOne({
+                _id: new ObjectId(targetUserId),
+                manager_ids: new ObjectId(currentUserId)
+            });
+            if (sub) isAllowed = true;
+        }
+
+        if (!isAllowed) {
+            return res.status(403).json({
+                success: false,
+                message: 'Acceso denegado a las transacciones de este usuario',
+                data: null,
+                error: 'Permiso denegado'
+            });
+        }
+
         const match = { user_id: new ObjectId(user_id) };
         if (concept) match.concept = concept;
         if (type) match.type = type;
@@ -492,7 +541,7 @@ router.get('/:user_id/transactions', authenticate, async (req, res) => {
  * POST /api/wallet/:user_id/transactions/credit
  * Registrar un crédito manual (ej: comisión pagada)
  */
-router.post('/:user_id/transactions/credit', authenticate, async (req, res) => {
+router.post('/:user_id/transactions/credit', authenticate, authorize(['Administrador']), async (req, res) => {
     try {
         const db = req.app.locals.mongoClient.db(DB_NAME);
         const { user_id } = req.params;
@@ -574,12 +623,31 @@ router.post('/:user_id/transactions/credit', authenticate, async (req, res) => {
  * GET /api/wallet/cartera
  * Devuelve el resumen agregado para todos los asesores y gerentes.
  */
-router.get('/cartera', authenticate, async (req, res) => {
+router.get('/cartera', authenticate, authorize(['Administrador', 'Director', 'Gerente']), async (req, res) => {
     try {
         const db = req.app.locals.mongoClient.db(DB_NAME);
 
+        const currentUserId = new ObjectId(req.user.id);
+        const roleName = req.user.roleName;
+
+        let matchStage = { active: true };
+        if (roleName === 'Gerente') {
+            const subAdvisors = await db.collection('usuarios')
+                .find({ manager_ids: currentUserId })
+                .project({ _id: 1 })
+                .toArray();
+            const subIds = subAdvisors.map(a => a._id);
+            matchStage = {
+                active: true,
+                $or: [
+                    { _id: currentUserId },
+                    { _id: { $in: subIds } }
+                ]
+            };
+        }
+
         const cartera = await db.collection('usuarios').aggregate([
-            { $match: { active: true } },
+            { $match: matchStage },
             {
                 $lookup: {
                     from: 'roles',
@@ -639,6 +707,7 @@ router.get('/cartera', authenticate, async (req, res) => {
                 }
             });
 
+            if (comision < 0) comision = 0; // Protección contra créditos negativos históricos
             let remainingDebits = totalDebits;
             if (remainingDebits > 0) {
                 if (comision >= remainingDebits) {
