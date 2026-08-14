@@ -87,8 +87,8 @@ connectDatabase().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
     
-    // Iniciar tarea cron para sincronización de EK
-    cron.schedule('0 * * * *', async () => {
+    // Iniciar tarea cron para sincronización de EK (cada 10 minutos)
+    cron.schedule('*/10 * * * *', async () => {
       try {
         const v10Router = require('./routes/v10Router');
         const pool = v10Router.getPool ? v10Router.getPool() : null;

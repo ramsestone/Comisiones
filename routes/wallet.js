@@ -121,33 +121,7 @@ router.post('/debts', authenticate, authorize(['Administrador', 'Director']), as
         const { insertedId } = await db.collection('debts').insertOne(debtDoc);
         debtId = insertedId;
 
-        // 2. Transacciones (Modelo de Cuenta Corriente)
-        if (type === 'loan') {
-            await db.collection('walletTransactions').insertMany([
-                {
-                    user_id: new ObjectId(user_id),
-                    type: 'credit',
-                    amount: toDecimal(parsedAmount),
-                    concept: 'loan',
-                    description: description ?? `Préstamo registrado (Ingreso virtual)`,
-                    debt_id: debtId,
-                    reference_date: now,
-                    created_by: new ObjectId(req.user.id),
-                    created_at: now
-                },
-                {
-                    user_id: new ObjectId(user_id),
-                    type: 'debit',
-                    amount: toDecimal(parsedAmount),
-                    concept: 'withdrawal',
-                    description: `Retiro de efectivo por préstamo`,
-                    debt_id: debtId,
-                    reference_date: now,
-                    created_by: new ObjectId(req.user.id),
-                    created_at: now
-                }
-            ]);
-        }
+
 
         return res.status(201).json({
             success: true,
@@ -696,36 +670,25 @@ router.get('/cartera', authenticate, authorize(['Administrador', 'Director', 'Ge
                 deuda += parseFloat(d.remaining_balance?.toString() || 0);
             });
 
+            let commissionCredits = 0;
+            let otherCredits = 0;
             let totalDebits = 0;
+
             user.transactions.forEach(t => {
                 const amount = parseFloat(t.amount?.toString() || 0);
                 if (t.type === 'credit') {
-                    if (t.concept === 'commission') comision += amount;
-                    else saldo += amount;
+                    if (t.concept === 'commission') commissionCredits += amount;
+                    else otherCredits += amount;
                 } else if (t.type === 'debit') {
                     totalDebits += amount;
                 }
             });
 
-            if (comision < 0) comision = 0; // Protección contra créditos negativos históricos
-            let remainingDebits = totalDebits;
-            if (remainingDebits > 0) {
-                if (comision >= remainingDebits) {
-                    comision -= remainingDebits;
-                    remainingDebits = 0;
-                } else {
-                    remainingDebits -= comision;
-                    comision = 0;
-                }
-            }
-            if (remainingDebits > 0) {
-                if (saldo >= remainingDebits) {
-                    saldo -= remainingDebits;
-                    remainingDebits = 0;
-                } else {
-                    saldo = 0;
-                }
-            }
+            const totalCredits = commissionCredits + otherCredits;
+            const netSaldo = Math.max(0, parseFloat((totalCredits - totalDebits).toFixed(2)));
+            
+            comision = Math.min(commissionCredits, netSaldo);
+            saldo = parseFloat((netSaldo - comision).toFixed(2));
 
             let allLogs = [
                 ...user.transactions.map(t => ({
@@ -737,7 +700,7 @@ router.get('/cartera', authenticate, authorize(['Administrador', 'Director', 'Ge
                 })),
                 ...user.all_debts.map(d => ({
                     id: d._id,
-                    t: d.description || (d.type === 'loan' ? 'Préstamo' : 'Penalización'),
+                    t: d.description || (d.type === 'loan' ? 'Préstamo' : 'Penalización por cancelación'),
                     tipo: 'pen',
                     monto: parseFloat(d.total_amount?.toString() || 0),
                     fecha: d.created_at

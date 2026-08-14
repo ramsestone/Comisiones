@@ -175,6 +175,28 @@
   color: #7af028;
 }
 
+.btn-sync-db {
+  position: relative;
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: transparent;
+  color: rgba(255,255,255,0.45);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-size: 13px;
+}
+.btn-sync-db:hover {
+  background: rgba(56,197,245,0.15);
+  border-color: rgba(56,197,245,0.35);
+  color: #38c5f5;
+}
+.btn-sync-db:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .notif-badge {
   position: absolute;
   top: -4px; right: -4px;

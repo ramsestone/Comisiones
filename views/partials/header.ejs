@@ -2,6 +2,13 @@
   <span class="app-header-title"><%= typeof title !== 'undefined' ? title : '' %></span>
   <div class="app-header-user">
 
+    <% if (typeof user !== 'undefined' && user && user.roleName === 'Administrador') { %>
+      <!-- ── Sincronizar Base de Datos V10 (Administrador) ── -->
+      <button class="btn-sync-db" id="syncDbBtn" onclick="syncV10Database()" title="Sincronizar base de datos V10 (Manual)">
+        <i class="fas fa-sync-alt" id="syncDbIcon"></i>
+      </button>
+    <% } %>
+
     <!-- ── Buzón de notificaciones ── -->
     <div class="notif-wrap" id="notifWrap">
       <button class="notif-bell" id="notifBtn" onclick="toggleNotifPanel()" title="Notificaciones">
@@ -135,6 +142,39 @@
     document.getElementById('notifBadge').textContent = '';
     document.getElementById('notifBadge').classList.remove('visible');
     fetch('/api/notificaciones/read-all', { method: 'PATCH', credentials: 'include' });
+  };
+
+  // ── Sincronizar DB V10 ───────────────────────────────────────────
+  window.syncV10Database = async function() {
+    const btn = document.getElementById('syncDbBtn');
+    const icon = document.getElementById('syncDbIcon');
+    if (btn) btn.disabled = true;
+    if (icon) icon.classList.add('fa-spin');
+
+    const showMsg = function(msg) {
+      if (typeof toast === 'function') toast(msg);
+      else if (typeof showToast === 'function') showToast(msg);
+      else alert(msg);
+    };
+
+    try {
+      const res = await fetch('/v10/sync', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const j = await res.json();
+      if (j.success) {
+        showMsg('✓ Base de datos V10 sincronizada correctamente');
+      } else {
+        showMsg('Error: ' + (j.message || 'Fallo en la sincronización'));
+      }
+    } catch(e) {
+      showMsg('Error al conectar con el servidor V10');
+    } finally {
+      if (btn) btn.disabled = false;
+      if (icon) icon.classList.remove('fa-spin');
+    }
   };
 
   // ── Carga inicial (sólo badge) ───────────────────────────────────

@@ -63,7 +63,7 @@
         .input-with-icon { position: relative; }
         .input-with-icon i { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #666; pointer-events: none; }
         .input-with-icon input { padding-right: 45px; }
-        .password-toggle { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #888; cursor: pointer; transition: color 0.3s; pointer-events: all; }
+        .input-with-icon i.password-toggle, .password-toggle { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #888; cursor: pointer; transition: color 0.3s; pointer-events: auto !important; z-index: 5; }
         .password-toggle:hover { color: #60e61a; }
         .avatar-upload { display: flex; align-items: center; gap: 20px; }
         .avatar-preview { width: 100px; height: 100px; border-radius: 50%; border: 3px solid rgba(96,230,26,0.4); background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #60e61a; overflow: hidden; position: relative; }
@@ -571,16 +571,22 @@
         }
 
         // Toggle contraseña visible
-        document.getElementById('togglePassword').addEventListener('click', function () {
-            const input = document.getElementById('contrasena');
-            input.type = input.type === 'password' ? 'text' : 'password';
-            this.classList.toggle('fa-eye'); this.classList.toggle('fa-eye-slash');
-        });
-        document.getElementById('toggleConfirmPassword').addEventListener('click', function () {
-            const input = document.getElementById('confirmar_contrasena');
-            input.type = input.type === 'password' ? 'text' : 'password';
-            this.classList.toggle('fa-eye'); this.classList.toggle('fa-eye-slash');
-        });
+        function setupPasswordToggle(toggleId, inputId) {
+            const toggleBtn = document.getElementById(toggleId);
+            const inputBtn  = document.getElementById(inputId);
+            if (toggleBtn && inputBtn) {
+                toggleBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const isPassword = inputBtn.type === 'password';
+                    inputBtn.type = isPassword ? 'text' : 'password';
+                    this.classList.toggle('fa-eye', !isPassword);
+                    this.classList.toggle('fa-eye-slash', isPassword);
+                });
+            }
+        }
+        setupPasswordToggle('togglePassword', 'contrasena');
+        setupPasswordToggle('toggleConfirmPassword', 'confirmar_contrasena');
 
         // Validación en tiempo real
         document.querySelectorAll('.form-input, .form-select').forEach(input => {

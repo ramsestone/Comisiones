@@ -204,11 +204,57 @@
     }
     #toast.show { opacity: 1; }
 
-    /* Search Bar */
-    .search-container { margin-bottom: 1.5rem; display: flex; align-items: center; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 14px; }
+    /* Search Bar & Filters */
+    .filter-bar {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 1.5rem;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+    }
+    .search-container { margin-bottom: 0; display: flex; align-items: center; background: transparent; border: none; padding: 0; }
     .search-container i { color: var(--color-text-muted); font-size: 16px; margin-right: 10px; }
     .search-container input { flex: 1; background: transparent; border: none; color: var(--color-text); font-family: var(--font); outline: none; font-size: 14px; }
     .search-container input::placeholder { color: var(--color-text-faint); }
+
+    .filter-select {
+      padding: 8px 12px;
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-family: var(--font);
+      color: var(--blue-tx);
+      background: var(--blue-bg);
+      outline: none;
+      cursor: pointer;
+      transition: all .15s;
+      min-width: 170px;
+    }
+    .filter-select:hover, .filter-select:focus {
+      border-color: var(--blue-tx);
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+    .filter-select option {
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+
+    .filter-clear {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 600; padding: 8px 13px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--red-br);
+      background: var(--red-bg);
+      color: var(--red-tx);
+      cursor: pointer;
+      font-family: var(--font);
+      transition: opacity .15s;
+      white-space: nowrap;
+    }
+    .filter-clear:hover { opacity: .85; }
+    .filter-clear.hidden { display: none; }
 
     /* ── Starfield + Beam + Dots ── */
     .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
@@ -250,9 +296,30 @@
     <div class="stat"><div class="stat-label">Saldo neto</div><div class="stat-value" id="tot-net">$0</div></div>
   </div>
 
-  <div class="search-container">
-    <i class="fas fa-search"></i>
-    <input type="text" id="search-user" placeholder="Buscar asesor o gerente por nombre..." oninput="filterUsers()" autocomplete="off" />
+  <div class="filter-bar">
+    <div class="search-container" style="margin-bottom:0; flex:1; min-width: 220px; border:none; padding:0; background:transparent;">
+      <i class="fas fa-search" style="margin-left: 4px;"></i>
+      <input type="text" id="search-user" placeholder="Buscar asesor o gerente por nombre..." oninput="filterUsers()" autocomplete="off" />
+    </div>
+
+    <select class="filter-select" id="filter-role" onchange="filterUsers()">
+      <option value="">Todos los roles</option>
+      <option value="Asesor">Asesores</option>
+      <option value="Gerente">Gerentes</option>
+    </select>
+
+    <select class="filter-select" id="filter-status" onchange="filterUsers()">
+      <option value="">Todos los estados</option>
+      <option value="with-debt">Con deuda activa</option>
+      <option value="with-positive">Con saldo positivo</option>
+      <option value="can-adjust">Con saldo disponible para abonar</option>
+      <option value="net-negative">Con saldo neto negativo</option>
+      <option value="no-movements">Sin movimientos</option>
+    </select>
+
+    <button type="button" class="filter-clear hidden" id="filter-clear" onclick="clearFilters()">
+      <i class="fas fa-times"></i> Limpiar
+    </button>
   </div>
 
   <div id="debtors-container"></div>
@@ -268,8 +335,11 @@
 
   let debtors = [];
 
-  async function loadCartera() {
-    document.getElementById('debtors-container').innerHTML = '<div class="state-msg"><div class="spinner"></div>Cargando cartera...</div>';
+  async function loadCartera(silent = false) {
+    if (!silent) {
+      document.getElementById('debtors-container').innerHTML = '<div class="state-msg"><div class="spinner"></div>Cargando cartera...</div>';
+    }
+    const currentScroll = window.scrollY;
     try {
       const r = await fetch('/api/wallet/cartera');
       const j = await r.json();
@@ -277,6 +347,9 @@
         debtors = j.data;
         renderAll();
         recalcTotals();
+        if (silent) {
+          window.scrollTo(0, currentScroll);
+        }
       } else {
         showToast('Error: ' + j.message);
       }
@@ -286,9 +359,9 @@
   }
 
   /* ── TOTALES ── */
-  function recalcTotals() {
+  function recalcTotals(sourceList = debtors) {
     let td = 0, tc = 0, ts = 0;
-    debtors.forEach(d => { td += d.deuda; tc += d.comision; ts += d.saldo; });
+    sourceList.forEach(d => { td += d.deuda; tc += d.comision; ts += d.saldo; });
     document.getElementById('tot-deuda').textContent = fmt(td);
     document.getElementById('tot-com').textContent = fmt(tc);
     document.getElementById('tot-sal').textContent = fmt(ts);
@@ -324,6 +397,7 @@
 
   /* ── APLICAR AJUSTE ── */
   window.applyAdj = async function(id, type, inputId) {
+    if (typeof event !== 'undefined' && event && event.preventDefault) event.preventDefault();
     const d = debtors.find(x => x.id === id);
     const inp = document.getElementById(inputId);
     const val = parseFloat(inp.value);
@@ -331,55 +405,70 @@
     
     const avail = d.comision + d.saldo;
     if (avail <= 0) { showToast('Sin comisión activa ni saldo a favor para aplicar'); return; }
+    if (val > avail) { showToast('El monto a abonar excede el saldo positivo disponible (' + fmt(avail) + ')'); return; }
 
     if (type === 'prestamo') {
-      if (!d.active_debts || d.active_debts.length === 0) {
-        showToast('El usuario no tiene préstamos activos');
+      if (!d.active_debts || d.active_debts.length === 0 || d.deuda <= 0) {
+        showToast('El usuario no tiene préstamos ni penalizaciones activas');
+        return;
+      }
+
+      if (val > d.deuda) {
+        showToast('El monto no puede ser mayor a la deuda activa (' + fmt(d.deuda) + ')');
         return;
       }
       
-      const btn = event.currentTarget;
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Aplicando...';
-      btn.disabled = true;
+      const btn = typeof event !== 'undefined' && event ? event.currentTarget : null;
+      let originalText = '';
+      if (btn) {
+        originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Aplicando...';
+        btn.disabled = true;
+      }
 
-      // Pagar a la primera deuda activa (simplificación)
+      // Pagar a la primera deuda activa (o iterar si el monto cubre más)
       const debtId = d.active_debts[0].id;
 
       try {
         const r = await fetch(`/api/wallet/debts/${debtId}/payment`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: val, description: 'Descuento aplicado desde Cartera' })
+          body: JSON.stringify({ amount: val, description: 'Descuento aplicado desde Cartera (Restar Deuda)' })
         });
         const j = await r.json();
         if(j.success) {
           showToast(`✓ Descontado ${fmt(val)} de la deuda de ${d.name}`);
           inp.value = '';
-          await loadCartera();
+          await loadCartera(true);
         } else {
           showToast(j.message || 'Error al aplicar pago');
         }
       } catch(e) {
         showToast('Error de conexión');
       } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        if (btn) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
       }
     }
   }
 
   /* ── AUMENTAR DEUDA (PRÉSTAMO/CANCELACIÓN) ── */
   window.addDebt = async function(id, type, inputId) {
+    if (typeof event !== 'undefined' && event && event.preventDefault) event.preventDefault();
     const d = debtors.find(x => x.id === id);
     const inp = document.getElementById(inputId);
     const val = parseFloat(inp.value);
     if (isNaN(val) || val <= 0) { showToast('Ingresa un monto válido mayor a 0'); return; }
 
-    const btn = event.currentTarget;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Registrando...';
-    btn.disabled = true;
+    const btn = typeof event !== 'undefined' && event ? event.currentTarget : null;
+    let originalText = '';
+    if (btn) {
+      originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Registrando...';
+      btn.disabled = true;
+    }
 
     try {
       const r = await fetch('/api/wallet/debts', {
@@ -396,22 +485,48 @@
       if(j.success) {
         showToast(`✓ ${type === 'loan' ? 'Préstamo' : 'Cancelación'} registrado a ${d.name}`);
         inp.value = '';
-        await loadCartera();
+        await loadCartera(true);
       } else {
         showToast(j.message || 'Error al registrar deuda');
       }
     } catch(e) {
       showToast('Error de conexión');
     } finally {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
+      if (btn) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
     }
   }
 
   /* ── FILTRAR ── */
   let filterText = '';
+  let filterRole = '';
+  let filterStatus = '';
+
   window.filterUsers = function() {
-    filterText = document.getElementById('search-user').value.toLowerCase();
+    filterText = (document.getElementById('search-user')?.value || '').toLowerCase().trim();
+    filterRole = document.getElementById('filter-role')?.value || '';
+    filterStatus = document.getElementById('filter-status')?.value || '';
+
+    updateClearBtn();
+    renderAll();
+  }
+
+  function updateClearBtn() {
+    const active = filterText || filterRole || filterStatus;
+    const btn = document.getElementById('filter-clear');
+    if (btn) btn.classList.toggle('hidden', !active);
+  }
+
+  window.clearFilters = function() {
+    if (document.getElementById('search-user')) document.getElementById('search-user').value = '';
+    if (document.getElementById('filter-role')) document.getElementById('filter-role').value = '';
+    if (document.getElementById('filter-status')) document.getElementById('filter-status').value = '';
+    filterText = '';
+    filterRole = '';
+    filterStatus = '';
+    updateClearBtn();
     renderAll();
   }
 
@@ -427,7 +542,7 @@
         <div class="adj-row">
           <label><i class="ti ti-receipt-refund"></i> Restar de deuda activa</label>
           <input type="number" id="inp-pre-${d.id}" placeholder="Monto $" min="1" step="0.01" />
-          <button class="btn-adj success" onclick="applyAdj('${d.id}','prestamo','inp-pre-${d.id}')">
+          <button type="button" class="btn-adj success" onclick="applyAdj('${d.id}','prestamo','inp-pre-${d.id}')">
             <i class="ti ti-minus"></i> Abonar
           </button>
         </div>
@@ -450,14 +565,14 @@
         <div class="adj-row">
           <label><i class="ti ti-cash-banknote"></i> Dar préstamo</label>
           <input type="number" id="inp-new-pre-${d.id}" placeholder="Monto $" min="1" step="0.01" />
-          <button class="btn-adj danger" onclick="addDebt('${d.id}','loan','inp-new-pre-${d.id}')">
+          <button type="button" class="btn-adj danger" onclick="addDebt('${d.id}','loan','inp-new-pre-${d.id}')">
             <i class="ti ti-plus"></i> Registrar
           </button>
         </div>
         <div class="adj-row">
           <label><i class="ti ti-file-alert"></i> Penalización / Cancelación</label>
           <input type="number" id="inp-new-can-${d.id}" placeholder="Monto $" min="1" step="0.01" />
-          <button class="btn-adj danger" onclick="addDebt('${d.id}','penalty','inp-new-can-${d.id}')">
+          <button type="button" class="btn-adj danger" onclick="addDebt('${d.id}','penalty','inp-new-can-${d.id}')">
             <i class="ti ti-plus"></i> Registrar
           </button>
         </div>
@@ -520,13 +635,35 @@
 
   /* ── RENDER COMPLETO ── */
   function renderAll() {
-    const list = debtors.filter(d => 
-      d.name.toLowerCase().includes(filterText) || 
-      d.role.toLowerCase().includes(filterText)
-    );
+    const list = debtors.filter(d => {
+      // 1. Búsqueda por texto (nombre / rol)
+      if (filterText) {
+        const hay = (d.name + ' ' + d.role).toLowerCase();
+        if (!hay.includes(filterText)) return false;
+      }
 
-    if(list.length === 0) {
-      document.getElementById('debtors-container').innerHTML = '<div class="state-msg"><i class="ti ti-users"></i>No hay asesores ni gerentes que coincidan con la búsqueda</div>';
+      // 2. Filtro por Rol
+      if (filterRole) {
+        if (!d.role.toLowerCase().includes(filterRole.toLowerCase())) return false;
+      }
+
+      // 3. Filtro por Estado de cuenta
+      const avail = d.comision + d.saldo;
+      const net = avail - d.deuda;
+
+      if (filterStatus === 'with-debt' && d.deuda <= 0) return false;
+      if (filterStatus === 'with-positive' && avail <= 0) return false;
+      if (filterStatus === 'can-adjust' && (avail <= 0 || d.deuda <= 0)) return false;
+      if (filterStatus === 'net-negative' && net >= 0) return false;
+      if (filterStatus === 'no-movements' && (d.deuda !== 0 || d.comision !== 0 || d.saldo !== 0)) return false;
+
+      return true;
+    });
+
+    recalcTotals(list);
+
+    if (list.length === 0) {
+      document.getElementById('debtors-container').innerHTML = '<div class="state-msg"><i class="ti ti-users"></i>No hay asesores ni gerentes que coincidan con los filtros aplicados</div>';
       return;
     }
     const prev = new Set(expanded);

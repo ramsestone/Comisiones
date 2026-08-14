@@ -517,13 +517,13 @@
             try {
                 if (isEditMode) {
                     await updateCommission(editId, pendingPayload);
-                } else{
+                } else {
                     await sendCommission(pendingPayload);
                 }
-                closePayloadModal();
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalHTML;
+                closePayloadModal(); // siempre cierra el modal; el alert de éxito o error se muestra encima
             }
         });
 
@@ -541,14 +541,16 @@
 
                 if (!response.ok) {
                     showAlert('Error al guardar', result.message || 'No se pudo registrar la comisión.', 'error');
-                    return;
+                    return false;
                 }
 
                 showAlert('¡Comisión registrada!', 'La comisión fue guardada exitosamente.', 'success');
                 resetFormSilently();
+                return true;
 
             } catch (error) {
                 showAlert('Error de conexión', 'No se pudo conectar con el servidor. Intenta de nuevo.', 'error');
+                return false;
             }
         }
 

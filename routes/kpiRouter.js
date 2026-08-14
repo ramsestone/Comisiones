@@ -5,22 +5,41 @@ const { ObjectId } = require('mongodb');
 
 const DB_NAME = 'roles_usuarios';
 
-// Helper for date filtering
+// Helper for date filtering (sin despasamiento por zona horaria UTC)
 const getDateFilter = (range, startDate, endDate) => {
   const now = new Date();
   if (range === 'mensual') {
     return {
-      $gte: new Date(now.getFullYear(), now.getMonth(), 1),
-      $lte: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+      $gte: new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0),
+      $lte: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
     };
   } else if (range === 'personalizado' && startDate && endDate) {
+    const s = startDate.split('-').map(Number);
+    const e = endDate.split('-').map(Number);
     return {
-      $gte: new Date(startDate),
-      $lte: new Date(new Date(endDate).setHours(23, 59, 59))
+      $gte: new Date(s[0], s[1] - 1, s[2], 0, 0, 0, 0),
+      $lte: new Date(e[0], e[1] - 1, e[2], 23, 59, 59, 999)
     };
   }
   // historical (no filter)
   return null;
+};
+
+// Condición unificada para identificar cancelaciones
+const isCancelCond = {
+  $or: [
+    { $eq: ['$ubicacion.concept.id', '3'] },
+    { $eq: ['$ubicacion.concept.id', 3] },
+    { $eq: ['$ubicacion.is_cancellation', true] },
+    { $eq: ['$ubicacion.is_cancellation', 1] }
+  ]
+};
+
+const isSaleCond = {
+  $or: [
+    { $eq: ['$ubicacion.concept.id', '2'] },
+    { $eq: ['$ubicacion.concept.id', 2] }
+  ]
 };
 
 router.get('/dashboard', authenticate, async (req, res) => {
@@ -70,8 +89,18 @@ router.get('/dashboard', authenticate, async (req, res) => {
         },
         { $unwind: '$ubicacion' },
         {
+          $lookup: {
+            from: 'estatus',
+            localField: 'ubicacion.status',
+            foreignField: '_id',
+            as: 'statusObj'
+          }
+        },
+        { $unwind: { path: '$statusObj', preserveNullAndEmptyArrays: true } },
+        {
           $match: {
             role_in_comision: roleInComision,
+            'statusObj.order': { $ne: 5 }, // Excluir Rechazadas
             ...(dateFilter ? { 'ubicacion.register_date': dateFilter } : {}),
             ...extraMatch
           }
@@ -96,7 +125,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
                     $and: [
                       { $eq: ['$location.id', '$$locId'] },
                       { $ne: ['$_id', '$$myId'] },
-                      { $not: { $in: ['$concept.id', [3, '3']] } }
+                      { $not: { $or: [ { $eq: ['$concept.id', 3] }, { $eq: ['$concept.id', '3'] }, { $eq: ['$is_cancellation', true] } ] } }
                     ]
                   }
                 }
@@ -113,7 +142,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
             volume: { 
               $sum: {
                 $cond: [
-                  { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
+                  isCancelCond,
                   {
                     $cond: [
                       { $gt: [{ $size: '$related_positive' }, 0] },
@@ -128,7 +157,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
             count: { 
               $sum: {
                 $cond: [
-                  { $or: [ { $eq: ['$ubicacion.concept.id', '2'] }, { $eq: ['$ubicacion.concept.id', 2] } ] },
+                  isSaleCond,
                   1, 
                   0
                 ]
@@ -137,7 +166,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
             commission: { 
               $sum: {
                 $cond: [
-                  { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
+                  isCancelCond,
                   {
                     $cond: [
                       { $gt: [{ $size: '$related_positive' }, 0] },
@@ -152,7 +181,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
             cancelledVolume: {
               $sum: {
                 $cond: [
-                  { $or: [ { $eq: ['$ubicacion.concept.id', '3'] }, { $eq: ['$ubicacion.concept.id', 3] } ] },
+                  isCancelCond,
                   '$ubicacion.sale_price',
                   0
                 ]
@@ -180,32 +209,50 @@ router.get('/dashboard', authenticate, async (req, res) => {
     }
     const topAsesores = await db.collection('comisiones-participantes').aggregate(getParticipantsPipeline('asesor', asesorMatch)).toArray();
 
-    // GENERAL STATS (Total volume, total commissions for the allowed users)
-    let statsMatch = {};
-    if (allowedUsers) {
-      statsMatch = { user: { $in: allowedUsers } };
-    }
-
+    // GENERAL STATS (Total volume, total commissions for the allowed users or all registered locations)
     const generalStatsPipeline = [
       {
         $lookup: {
-          from: 'comisiones-ubicaciones',
-          localField: 'comision_id',
+          from: 'estatus',
+          localField: 'status',
           foreignField: '_id',
-          as: 'ubicacion'
+          as: 'statusObj'
         }
       },
-      { $unwind: '$ubicacion' },
+      { $unwind: { path: '$statusObj', preserveNullAndEmptyArrays: true } },
       {
         $match: {
-          ...(dateFilter ? { 'ubicacion.register_date': dateFilter } : {}),
-          ...statsMatch
+          'statusObj.order': { $ne: 5 }, // Excluir Rechazadas
+          ...(dateFilter ? { register_date: dateFilter } : {})
+        }
+      },
+      ...(allowedUsers ? [
+        {
+          $lookup: {
+            from: 'comisiones-participantes',
+            localField: '_id',
+            foreignField: 'comision_id',
+            as: 'part_check'
+          }
+        },
+        {
+          $match: {
+            'part_check.user': { $in: allowedUsers }
+          }
+        }
+      ] : []),
+      {
+        $lookup: {
+          from: 'comisiones-participantes',
+          localField: '_id',
+          foreignField: 'comision_id',
+          as: 'participantes'
         }
       },
       {
         $lookup: {
           from: 'comisiones-ubicaciones',
-          let: { locId: '$ubicacion.location.id', myId: '$ubicacion._id' },
+          let: { locId: '$location.id', myId: '$_id' },
           pipeline: [
             {
               $match: {
@@ -213,7 +260,7 @@ router.get('/dashboard', authenticate, async (req, res) => {
                   $and: [
                     { $eq: ['$location.id', '$$locId'] },
                     { $ne: ['$_id', '$$myId'] },
-                    { $not: { $in: ['$concept.id', [3, '3']] } }
+                    { $not: { $or: [ { $eq: ['$concept.id', 3] }, { $eq: ['$concept.id', '3'] }, { $eq: ['$is_cancellation', true] } ] } }
                   ]
                 }
               }
@@ -224,12 +271,12 @@ router.get('/dashboard', authenticate, async (req, res) => {
         }
       },
       {
-        $group: {
-          _id: '$comision_id',
-          sale_price: { $first: '$ubicacion.sale_price' },
-          conceptId: { $first: '$ubicacion.concept.id' },
-          commissionSum: { $sum: '$commission_amount' },
-          related_positive: { $first: '$related_positive' }
+        $project: {
+          sale_price: 1,
+          conceptId: '$concept.id',
+          isCancellation: '$is_cancellation',
+          commissionSum: { $sum: '$participantes.commission_amount' },
+          related_positive: 1
         }
       },
       {
@@ -238,7 +285,14 @@ router.get('/dashboard', authenticate, async (req, res) => {
           totalVolume: { 
             $sum: {
               $cond: [
-                { $or: [ { $eq: ['$conceptId', '3'] }, { $eq: ['$conceptId', 3] } ] },
+                {
+                  $or: [
+                    { $eq: ['$conceptId', '3'] },
+                    { $eq: ['$conceptId', 3] },
+                    { $eq: ['$isCancellation', true] },
+                    { $eq: ['$isCancellation', 1] }
+                  ]
+                },
                 {
                   $cond: [
                     { $gt: [{ $size: '$related_positive' }, 0] },
@@ -263,7 +317,14 @@ router.get('/dashboard', authenticate, async (req, res) => {
           totalCancelacionesSet: {
             $addToSet: {
               $cond: [
-                { $or: [ { $eq: ['$conceptId', '3'] }, { $eq: ['$conceptId', 3] } ] },
+                {
+                  $or: [
+                    { $eq: ['$conceptId', '3'] },
+                    { $eq: ['$conceptId', 3] },
+                    { $eq: ['$isCancellation', true] },
+                    { $eq: ['$isCancellation', 1] }
+                  ]
+                },
                 '$_id', 
                 null
               ]
@@ -273,7 +334,291 @@ router.get('/dashboard', authenticate, async (req, res) => {
       }
     ];
 
-    const statsResult = await db.collection('comisiones-participantes').aggregate(generalStatsPipeline).toArray();
+    // BY DEVELOPMENT PIPELINE (Querying directly from comisiones-ubicaciones)
+    const developmentPipeline = [
+      {
+        $lookup: {
+          from: 'estatus',
+          localField: 'status',
+          foreignField: '_id',
+          as: 'statusObj'
+        }
+      },
+      { $unwind: { path: '$statusObj', preserveNullAndEmptyArrays: true } },
+      {
+        $match: {
+          'statusObj.order': { $ne: 5 }, // Excluir Rechazadas
+          ...(dateFilter ? { register_date: dateFilter } : {})
+        }
+      },
+      ...(allowedUsers ? [
+        {
+          $lookup: {
+            from: 'comisiones-participantes',
+            localField: '_id',
+            foreignField: 'comision_id',
+            as: 'part_check'
+          }
+        },
+        {
+          $match: {
+            'part_check.user': { $in: allowedUsers }
+          }
+        }
+      ] : []),
+      {
+        $lookup: {
+          from: 'comisiones-participantes',
+          localField: '_id',
+          foreignField: 'comision_id',
+          as: 'participantes'
+        }
+      },
+      {
+        $lookup: {
+          from: 'comisiones-ubicaciones',
+          let: { locId: '$location.id', myId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$location.id', '$$locId'] },
+                    { $ne: ['$_id', '$$myId'] },
+                    { $not: { $or: [ { $eq: ['$concept.id', 3] }, { $eq: ['$concept.id', '3'] }, { $eq: ['$is_cancellation', true] } ] } }
+                  ]
+                }
+              }
+            },
+            { $limit: 1 }
+          ],
+          as: 'related_positive'
+        }
+      },
+      {
+        $project: {
+          devName: { $ifNull: ['$development.text', { $ifNull: ['$development', 'Sin Desarrollo'] }] },
+          sale_price: '$sale_price',
+          conceptId: '$concept.id',
+          isCancellation: '$is_cancellation',
+          commissionSum: { $sum: '$participantes.commission_amount' },
+          related_positive: '$related_positive'
+        }
+      },
+      {
+        $group: {
+          _id: '$devName',
+          name: { $first: '$devName' },
+          totalRegistered: { $sum: 1 },
+          count: {
+            $sum: {
+              $cond: [
+                { $or: [ { $eq: ['$conceptId', '2'] }, { $eq: ['$conceptId', 2] } ] },
+                1,
+                0
+              ]
+            }
+          },
+          volume: {
+            $sum: {
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ['$conceptId', '3'] },
+                    { $eq: ['$conceptId', 3] },
+                    { $eq: ['$isCancellation', true] },
+                    { $eq: ['$isCancellation', 1] }
+                  ]
+                },
+                {
+                  $cond: [
+                    { $gt: [{ $size: '$related_positive' }, 0] },
+                    { $multiply: ['$sale_price', -1] },
+                    0
+                  ]
+                },
+                '$sale_price'
+              ]
+            }
+          },
+          commission: { $sum: '$commissionSum' },
+          cancelledVolume: {
+            $sum: {
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ['$conceptId', '3'] },
+                    { $eq: ['$conceptId', 3] },
+                    { $eq: ['$isCancellation', true] },
+                    { $eq: ['$isCancellation', 1] }
+                  ]
+                },
+                '$sale_price',
+                0
+              ]
+            }
+          }
+        }
+      },
+      { $sort: { count: -1, volume: -1 } }
+    ];
+
+    // MONTHLY TREND PIPELINE
+    const monthlyTrendPipeline = [
+      {
+        $lookup: {
+          from: 'estatus',
+          localField: 'status',
+          foreignField: '_id',
+          as: 'statusObj'
+        }
+      },
+      { $unwind: { path: '$statusObj', preserveNullAndEmptyArrays: true } },
+      {
+        $match: {
+          'statusObj.order': { $ne: 5 }, // Excluir Rechazadas
+          ...(dateFilter ? { register_date: dateFilter } : {})
+        }
+      },
+      ...(allowedUsers ? [
+        {
+          $lookup: {
+            from: 'comisiones-participantes',
+            localField: '_id',
+            foreignField: 'comision_id',
+            as: 'part_check'
+          }
+        },
+        {
+          $match: {
+            'part_check.user': { $in: allowedUsers }
+          }
+        }
+      ] : []),
+      {
+        $lookup: {
+          from: 'comisiones-participantes',
+          localField: '_id',
+          foreignField: 'comision_id',
+          as: 'participantes'
+        }
+      },
+      {
+        $project: {
+          year: { $year: '$register_date' },
+          month: { $month: '$register_date' },
+          sale_price: 1,
+          commissionSum: { $sum: '$participantes.commission_amount' },
+          isCancellation: '$is_cancellation',
+          conceptId: '$concept.id'
+        }
+      },
+      {
+        $group: {
+          _id: { year: '$year', month: '$month' },
+          volume: {
+            $sum: {
+              $cond: [
+                { $or: [ { $eq: ['$conceptId', '3'] }, { $eq: ['$conceptId', 3] }, { $eq: ['$isCancellation', true] } ] },
+                0,
+                '$sale_price'
+              ]
+            }
+          },
+          commission: { $sum: '$commissionSum' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ];
+
+    // CONCEPT DISTRIBUTION PIPELINE
+    const conceptDistributionPipeline = [
+      {
+        $lookup: {
+          from: 'estatus',
+          localField: 'status',
+          foreignField: '_id',
+          as: 'statusObj'
+        }
+      },
+      { $unwind: { path: '$statusObj', preserveNullAndEmptyArrays: true } },
+      {
+        $match: {
+          'statusObj.order': { $ne: 5 },
+          ...(dateFilter ? { register_date: dateFilter } : {})
+        }
+      },
+      ...(allowedUsers ? [
+        {
+          $lookup: {
+            from: 'comisiones-participantes',
+            localField: '_id',
+            foreignField: 'comision_id',
+            as: 'part_check'
+          }
+        },
+        {
+          $match: {
+            'part_check.user': { $in: allowedUsers }
+          }
+        }
+      ] : []),
+      {
+        $group: {
+          _id: { $ifNull: ['$concept.text', '$concept'] },
+          label: { $first: { $ifNull: ['$concept.text', '$concept'] } },
+          count: { $sum: 1 },
+          volume: { $sum: '$sale_price' }
+        }
+      },
+      { $sort: { count: -1 } }
+    ];
+
+    const [statsResult, byDevelopment, monthlyTrend, conceptDistribution] = await Promise.all([
+      db.collection('comisiones-ubicaciones').aggregate(generalStatsPipeline).toArray(),
+      db.collection('comisiones-ubicaciones').aggregate(developmentPipeline).toArray(),
+      db.collection('comisiones-ubicaciones').aggregate(monthlyTrendPipeline).toArray(),
+      db.collection('comisiones-ubicaciones').aggregate(conceptDistributionPipeline).toArray()
+    ]);
+
+    // Cross reference ek_ubicaciones and ek_desarrollos to populate totalUnits, v10Sold and absorption %
+    try {
+      const dbEK = req.app.locals.mongoClient ? req.app.locals.mongoClient.db('Commission-Management') : db;
+      const ekDesarrollos = await dbEK.collection('ek_desarrollos').find({}).toArray();
+      const ekUbicaciones = await dbEK.collection('ek_ubicaciones').find({}).toArray();
+      
+      const devTotalMap = {};
+      const devSoldV10Map = {};
+      ekDesarrollos.forEach(d => {
+        const totalCount = ekUbicaciones.filter(u => String(u.desarrollo) === String(d.id)).length;
+        const soldV10Count = ekUbicaciones.filter(u => String(u.desarrollo) === String(d.id) && u.estatus_venta === 'COMPLETADO').length;
+        if (d.id !== undefined && d.id !== null) {
+          devTotalMap[String(d.id)] = totalCount;
+          devSoldV10Map[String(d.id)] = soldV10Count;
+        }
+        if (d.nombre) {
+          devTotalMap[d.nombre.toUpperCase().trim()] = totalCount;
+          devSoldV10Map[d.nombre.toUpperCase().trim()] = soldV10Count;
+        }
+      });
+
+      byDevelopment.forEach(item => {
+        const keyName = (item.name || '').toUpperCase().trim();
+        const ekTotal = devTotalMap[keyName];
+        const ekSold = devSoldV10Map[keyName];
+        item.totalUnits = (ekTotal !== undefined && ekTotal > 0) ? ekTotal : (item.totalRegistered || item.count || 0);
+        item.v10Sold = (ekSold !== undefined) ? ekSold : 0;
+        item.absorption = item.totalUnits > 0 ? Number(((item.v10Sold / item.totalUnits) * 100).toFixed(1)) : 0;
+      });
+    } catch (e) {
+      console.warn('[KPIs] Could not match ek_ubicaciones totals:', e.message);
+      byDevelopment.forEach(item => {
+        item.totalUnits = item.totalRegistered || item.count || 0;
+        item.v10Sold = 0;
+        item.absorption = item.totalUnits > 0 ? Number(((item.count / item.totalUnits) * 100).toFixed(1)) : 0;
+      });
+    }
     
     let totalSalesCount = 0;
     let totalCancelacionesCount = 0;
@@ -286,13 +631,24 @@ router.get('/dashboard', authenticate, async (req, res) => {
       }
     }
 
-    const stats = statsResult.length > 0 ? {
-      totalVolume: statsResult[0].totalVolume,
-      totalCommissions: statsResult[0].totalCommissions,
-      totalSales: totalSalesCount,
-      totalCancelaciones: totalCancelacionesCount
-    } : { totalVolume: 0, totalCommissions: 0, totalSales: 0, totalCancelaciones: 0 };
+    const totalDesarrollos = byDevelopment.filter(d => d.count > 0 || d.volume > 0).length;
+    const totVolume = statsResult.length > 0 ? statsResult[0].totalVolume : 0;
+    const totCommissions = statsResult.length > 0 ? statsResult[0].totalCommissions : 0;
 
+    const ticketPromedio = totalSalesCount > 0 ? Number((totVolume / totalSalesCount).toFixed(2)) : 0;
+    const tasaCancelacion = (totalSalesCount + totalCancelacionesCount) > 0 ? Number(((totalCancelacionesCount / (totalSalesCount + totalCancelacionesCount)) * 100).toFixed(1)) : 0;
+    const comisionPromedio = totalSalesCount > 0 ? Number((totCommissions / totalSalesCount).toFixed(2)) : 0;
+
+    const stats = {
+      totalVolume: totVolume,
+      totalCommissions: totCommissions,
+      totalSales: totalSalesCount,
+      totalCancelaciones: totalCancelacionesCount,
+      totalDesarrollos: totalDesarrollos,
+      ticketPromedio,
+      tasaCancelacion,
+      comisionPromedio
+    };
 
     return res.status(200).json({
       success: true,
@@ -300,7 +656,10 @@ router.get('/dashboard', authenticate, async (req, res) => {
         role: user.roleName,
         stats,
         topGerentes,
-        topAsesores
+        topAsesores,
+        byDevelopment,
+        monthlyTrend,
+        conceptDistribution
       }
     });
 

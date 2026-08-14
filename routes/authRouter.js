@@ -93,7 +93,10 @@ router.get('/me', authenticate, (req, res) => {
   return res.status(200).json({
     success: true,
     message: 'Usuario autenticado',
-    data:    { user: req.user },
+    data:    {
+      user:  req.user,
+      isDev: process.env.NODE_ENV !== 'production',
+    },
     error:   null,
   });
 });

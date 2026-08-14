@@ -295,6 +295,16 @@
       color: var(--green-tx);
       cursor: default;
     }
+    .btn-verify-dev {
+      border-color: #8b5cf6;
+      color: #a78bfa;
+      background: rgba(139, 92, 246, 0.08);
+    }
+    .btn-verify-dev:hover:not(:disabled) {
+      border-color: #a78bfa;
+      color: #c4b5fd;
+      background: rgba(139, 92, 246, 0.2);
+    }
     .btn-verify i { font-size: 13px; }
 
     .p-verified { font-size: 11px; display: flex; align-items: center; gap: 4px; }
@@ -324,6 +334,8 @@
     .btn-green:hover { background: var(--green-bg); }
     .btn-amber { color: var(--amber-tx); border-color: var(--amber-br); }
     .btn-amber:hover { background: var(--amber-bg); }
+    .btn-purple { color: #c4b5fd; border-color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
+    .btn-purple:hover { background: rgba(139, 92, 246, 0.22); color: #fff; }
 
     /* ── Filtros ── */
     .filter-bar {
@@ -498,6 +510,7 @@ function toast(msg) {
 }
 
 let USER = null;
+let IS_DEV = false;
 let DATA = [];
 const FILTERS = { search: '', status: '', company: '', dev: '', concept: '' };
 
@@ -545,6 +558,7 @@ async function init() {
     const j = await r.json();
     if (!j.success) { showError('Sesión no válida. Inicia sesión.'); return; }
     USER = j.data.user;
+    IS_DEV = Boolean(j.data.isDev);
   } catch(e) {
     showError('No se pudo conectar con el servidor.');
     return;
@@ -672,7 +686,7 @@ function render() {
 function cardHTML(c) {
   const st = STATUS_MAP[c.status?.name] || { cls: 'b-v', label: c.status?.name || '—' };
   
-  const isCancelacion = (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci');
+  const isCancelacion = (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci') || Boolean(c.is_cancellation);
   let dispTotal = 0;
 
   const isCreador = c.created_by === USER.id;
@@ -694,21 +708,33 @@ function cardHTML(c) {
     let rightHtml;
     
     const dispAmount = p.commission_amount;
-      
     dispTotal += dispAmount;
+
+    const isPenaltyToClient = isCancelacion && c.penalty_target === 'cliente' && p.role_in_comision !== 'director';
+    const pctStr = isPenaltyToClient ? '' : ` (${fmtPct(p.percentage)})`;
+    const penaltyLabel = isPenaltyToClient ? ' (Penalización al cliente)' : '';
 
     if (isMe && c.status?.name === 'Pendiente Verificacion') {
       rightHtml = `
-        <span class="p-amount">${fmt(dispAmount)} (${fmtPct(p.percentage)})</span>
+        <span class="p-amount">${fmt(dispAmount)}${pctStr}${penaltyLabel}</span>
         <button class="btn-verify ${p.verification ? 'verified' : ''}"
           onclick="verificar('${c._id}')"
           ${p.verification ? 'disabled' : ''}>
           <i class="ti ${p.verification ? 'ti-circle-check' : 'ti-circle'}"></i>
           ${p.verification ? 'Verificado' : 'Verificar'}
         </button>`;
+    } else if (IS_DEV && USER.roleName === 'Administrador' && c.status?.name === 'Pendiente Verificacion' && !p.verification) {
+      rightHtml = `
+        <span class="p-amount">${fmt(dispAmount)}${pctStr}${penaltyLabel}</span>
+        <button class="btn-verify btn-verify-dev"
+          onclick="verificar('${c._id}', '${p._id}')"
+          title="Verificar en nombre de ${p.usuario?.name || 'participante'} (Modo Dev)">
+          <i class="ti ti-bolt"></i>
+          Verificar (Dev)
+        </button>`;
     } else {
       rightHtml = `
-        <span class="p-amount">${fmt(dispAmount)} (${fmtPct(p.percentage)})</span>
+        <span class="p-amount">${fmt(dispAmount)}${pctStr}${penaltyLabel}</span>
         <span class="p-verified ${p.verification ? 'yes' : 'no'}">
           <i class="ti ${p.verification ? 'ti-circle-check' : 'ti-circle'}" style="font-size:13px"></i>
           ${p.verification ? 'Verificado' : 'Pendiente'}
@@ -733,13 +759,24 @@ function cardHTML(c) {
 
   let actions = '';
   const sName = c.status?.name;
+  if (IS_DEV && USER.roleName === 'Administrador' && sName === 'Pendiente Verificacion') {
+    actions += `
+      <button class="btn btn-purple" onclick="verificarTodos('${c._id}')" title="Verificar todos los participantes de esta comisión (Modo Dev)">
+        <i class="ti ti-bolt"></i>Verificar todos (Dev)
+      </button>`;
+  }
   if (USER.roleName === 'Director' && sName === 'Pendiente Aprobacion') {
-    actions = `
+    actions += `
       <button class="btn btn-green" onclick="aprobar('${c._id}','aprobar')"><i class="ti ti-circle-check"></i>Aprobar</button>
       <button class="btn btn-amber" onclick="pedirCorreccion('${c._id}')"><i class="ti ti-alert-circle"></i>Corregir</button>`;
   }
+  if (IS_DEV && USER.roleName === 'Administrador' && sName === 'Pendiente Aprobacion') {
+    actions += `
+      <button class="btn btn-purple" onclick="aprobar('${c._id}','aprobar')" title="Aprobar como Director (Modo Dev)"><i class="ti ti-bolt"></i>Aprobar (Dev)</button>
+      <button class="btn btn-purple" style="opacity:.75" onclick="pedirCorreccion('${c._id}')" title="Pedir corrección como Director (Modo Dev)"><i class="ti ti-alert-circle"></i>Corregir (Dev)</button>`;
+  }
   if (USER.roleName === 'Administrador' && sName === 'Pendiente Pago') {
-    actions = `
+    actions += `
       <button class="btn btn-green" onclick="pagar('${c._id}')"><i class="ti ti-cash"></i>Marcar como pagada</button>
       <button class="btn btn-amber" onclick="pedirCorreccion('${c._id}')"><i class="ti ti-alert-circle"></i>Corregir</button>`;
   }
@@ -847,13 +884,35 @@ async function doEliminar(comisionId) {
 }
 
 // ── Acciones comisiones ───────────────────────────────────────────────────────
-async function verificar(comisionId) {
+async function verificar(comisionId, participanteId = null) {
   try {
-    const r = await fetch(`/api/comisiones/${comisionId}/verificar`, { method:'PATCH', credentials:'include' });
+    const opts = {
+      method:      'PATCH',
+      credentials: 'include',
+    };
+    if (participanteId) {
+      opts.headers = { 'Content-Type': 'application/json' };
+      opts.body    = JSON.stringify({ participante_id: participanteId });
+    }
+    const r = await fetch(`/api/comisiones/${comisionId}/verificar`, opts);
     const j = await r.json();
     toast(j.message);
-    if (j.success) await reloadComision(comisionId);
+    if (j.success) await reloadComision();
   } catch(e) { toast('Error al verificar'); }
+}
+
+async function verificarTodos(comisionId) {
+  try {
+    const r = await fetch(`/api/comisiones/${comisionId}/verificar`, {
+      method:      'PATCH',
+      credentials: 'include',
+      headers:     { 'Content-Type': 'application/json' },
+      body:        JSON.stringify({ verify_all: true }),
+    });
+    const j = await r.json();
+    toast(j.message);
+    if (j.success) await reloadComision();
+  } catch(e) { toast('Error al verificar participantes'); }
 }
 
 async function aprobar(comisionId, accion, correction_comments = null) {
@@ -881,9 +940,55 @@ async function pagar(comisionId) {
 }
 
 function pedirCorreccion(comisionId) {
-  const comentario = prompt('Indica el motivo de la corrección:');
-  if (!comentario) return;
-  aprobar(comisionId, 'correccion', comentario);
+  if (document.getElementById('correctionModal')) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'correctionModal';
+  overlay.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" style="width: 380px;">
+      <div class="modal-icon" style="background:var(--amber-bg)">
+        <i class="ti ti-alert-triangle" style="color:var(--amber-tx)"></i>
+      </div>
+      <h3>Enviar a corrección</h3>
+      <p>Indica los motivos o detalles que deben corregirse en esta comisión:</p>
+      <textarea id="correctionCommentInput" rows="3" placeholder="Comentarios de corrección..." style="width: 100%; font-family: 'Nunito', sans-serif; font-size: 13px; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--amber-br); background: var(--bg); color: var(--text-1); outline: none; resize: vertical; margin-bottom: 16px; margin-top: 8px;"></textarea>
+      <div class="modal-btns">
+        <button class="mbtn" onclick="closeCorrectionModal()">Cancelar</button>
+        <button class="mbtn" id="confirmCorrectionBtn" style="background: var(--amber-tx); color: #000; font-weight: 700; border-color: var(--amber-tx);" onclick="doPedirCorreccion('${comisionId}')">
+          Enviar a corrección
+        </button>
+      </div>
+    </div>`;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeCorrectionModal(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => {
+    const inp = document.getElementById('correctionCommentInput');
+    if (inp) inp.focus();
+  }, 100);
+}
+
+function closeCorrectionModal() {
+  const m = document.getElementById('correctionModal');
+  if (m) m.remove();
+}
+
+async function doPedirCorreccion(comisionId) {
+  const inp = document.getElementById('correctionCommentInput');
+  const comentario = inp ? inp.value.trim() : '';
+  if (!comentario) {
+    toast('Debes indicar los motivos de la corrección');
+    if (inp) inp.focus();
+    return;
+  }
+  const btn = document.getElementById('confirmCorrectionBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm" style="border-top-color:#000;"></span> Enviando…';
+  }
+  await aprobar(comisionId, 'correccion', comentario);
+  closeCorrectionModal();
 }
 
 async function reloadComision() {
@@ -906,17 +1011,31 @@ function exportCSV() {
   const headers = [
     'Desarrollo','Fecha','Concepto','Contrato (Fecha)','Vendedor',
     'referencia','Cliente','Casa (Ubicación)','Precio (de venta)',
-    '% Comisión','Comisión'
+    '% Comisión','Comisión','Penalización'
   ];
   const lines = [headers.map(escape).join(',')];
   
   for (const c of filtered) {
+    const isCancel = (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci') || Boolean(c.is_cancellation);
+    
+    let conceptText = c.concept?.text || c.concept || '';
+    let penalizacionText = '';
+
+    if (isCancel) {
+      if (c.penalty_target === 'cliente') {
+        conceptText += ' (Penalización al cliente)';
+        penalizacionText = 'Penalización al cliente';
+      } else if (c.penalty_target === 'miembros') {
+        penalizacionText = 'Penalización a miembros';
+      }
+    }
+
     if (c.participantes && c.participantes.length > 0) {
       for (const p of c.participantes) {
         lines.push([
           escape(c.development?.text || c.development || ''),
           escape(c.register_date ? new Date(c.register_date).toLocaleDateString('es-MX') : ''),
-          escape(c.concept?.text || c.concept || ''),
+          escape(conceptText),
           escape(c.operation_date ? new Date(c.operation_date).toLocaleDateString('es-MX') : ''),
           escape(p.usuario?.name || ''),
           escape(c.expediente_id || ''), // referencia
@@ -924,14 +1043,15 @@ function exportCSV() {
           escape(c.location?.text || ''),
           escape(c.sale_price ?? ''),
           escape(p.percentage != null ? (p.percentage * 100).toFixed(2) + '%' : ''),
-          escape(p.commission_amount != null ? Number(p.commission_amount).toFixed(2) : '')
+          escape(p.commission_amount != null ? Number(p.commission_amount).toFixed(2) : ''),
+          escape(penalizacionText)
         ].join(','));
       }
     } else {
       lines.push([
           escape(c.development?.text || c.development || ''),
           escape(c.register_date ? new Date(c.register_date).toLocaleDateString('es-MX') : ''),
-          escape(c.concept?.text || c.concept || ''),
+          escape(conceptText),
           escape(c.operation_date ? new Date(c.operation_date).toLocaleDateString('es-MX') : ''),
           '', // Vendedor
           escape(c.expediente_id || ''), // referencia
@@ -939,7 +1059,8 @@ function exportCSV() {
           escape(c.location?.text || ''),
           escape(c.sale_price ?? ''),
           '', // % Comisión
-          ''  // Comisión
+          '', // Comisión
+          escape(penalizacionText)
       ].join(','));
     }
   }

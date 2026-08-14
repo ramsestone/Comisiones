@@ -20,6 +20,7 @@ function hideDirectorData(comisiones, roleName) {
   arr.forEach(c => {
     if (c.participantes && Array.isArray(c.participantes)) {
       c.participantes = c.participantes.filter(p => p.role_in_comision !== 'director');
+      c.total_commission = c.participantes.reduce((sum, p) => sum + parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString()), 0);
     }
   });
 }
@@ -168,6 +169,8 @@ router.get('/mis-comisiones', authenticate, async (req, res) => {
             correction_comments:  1,
             created_at:           1,
             created_by:           1,
+            is_cancellation:      1,
+            penalty_target:       1,
             'status.name':        1,
             'status.order':       1,
             'status.description': 1,
@@ -351,6 +354,7 @@ router.get('/historial', authenticate, async (req, res) => {
 
 // ── 1. PATCH /api/comisiones/:id/verificar ────────────────────────────────────
 // El participante marca su verificación; si todos verificaron → sube estatus
+// En modo DEV (process.env.NODE_ENV !== 'production'), Administrador puede verificar en nombre de cualquier participante o todos.
 router.patch('/:id/verificar', authenticate, async (req, res) => {
   const client = req.app.locals.mongoClient;
   const db     = client.db(DB_NAME);
@@ -359,6 +363,8 @@ router.patch('/:id/verificar', authenticate, async (req, res) => {
     const comisionId = new ObjectId(req.params.id);
     const userId     = new ObjectId(req.user.id);
     const now        = new Date();
+    const isDev      = process.env.NODE_ENV !== 'production';
+    const isAdmin    = req.user.roleName === 'Administrador';
 
     // ── Datos de la comisión (location + status) ──────────────────────────────
     const comision = await db
@@ -389,25 +395,103 @@ router.patch('/:id/verificar', authenticate, async (req, res) => {
 
     const locationText = comision.location?.text || 'Sin ubicación';
 
-    // ── Verificar que el usuario es participante ──────────────────────────────
-    const participante = await db
-      .collection('comisiones-participantes')
-      .findOne({ comision_id: comisionId, user: userId });
+    // ── Modo Dev: Administrador verificando todos los participantes ───────────
+    if (isDev && isAdmin && req.body && req.body.verify_all) {
+      const allParticipants = await db
+        .collection('comisiones-participantes')
+        .find({ comision_id: comisionId })
+        .toArray();
 
-    if (!participante) {
-      return res.status(403).json({
-        success: false,
-        data:    null,
-        message: 'No eres participante de esta comisión',
+      if (!allParticipants.length) {
+        return res.status(400).json({
+          success: false,
+          data:    null,
+          message: 'No hay participantes en esta comisión',
+          error:   null,
+        });
+      }
+
+      await db.collection('comisiones-participantes').updateMany(
+        { comision_id: comisionId },
+        { $set: { verification: true, updated_at: now } }
+      );
+
+      const [statusVerificada, statusPendienteAprobacion] = await Promise.all([
+        db.collection('estatus').findOne({ order: 2 }),
+        db.collection('estatus').findOne({ order: 3 }),
+      ]);
+
+      await Promise.all([
+        db.collection('comisiones-ubicaciones').updateOne(
+          { _id: comisionId },
+          { $set: { status: statusPendienteAprobacion._id, updated_at: now } }
+        ),
+        db.collection('comisiones-participantes').updateMany(
+          { comision_id: comisionId },
+          { $set: { status: statusPendienteAprobacion._id, updated_at: now } }
+        ),
+      ]);
+
+      await notify(db, allParticipants.map(p => p.user),
+        `Todos los participantes fueron verificados por Administrador (Modo Dev) para la comisión de ${locationText}. Ahora está en Pendiente de Aprobación.`,
+        now);
+
+      const directorIds = await getUserIdsByRole(db, 'Director');
+      if (directorIds.length > 0) {
+        await notify(db, directorIds,
+          `La comisión de ${locationText} fue verificada (Modo Dev) y está lista para aprobación.`,
+          now);
+      }
+
+      return res.status(200).json({
+        success: true,
+        data:    { todos_verificaron: true, nuevo_status: statusPendienteAprobacion.name },
+        message: 'Todos los participantes fueron verificados (Modo Dev). Comisión en Pendiente Aprobación',
         error:   null,
       });
+    }
+
+    // ── Determinar participante a verificar ──────────────────────────────────
+    let participante = null;
+    if (isDev && isAdmin && req.body && (req.body.participante_id || req.body.user_id)) {
+      if (req.body.participante_id) {
+        participante = await db
+          .collection('comisiones-participantes')
+          .findOne({ _id: new ObjectId(req.body.participante_id), comision_id: comisionId });
+      } else if (req.body.user_id) {
+        participante = await db
+          .collection('comisiones-participantes')
+          .findOne({ comision_id: comisionId, user: new ObjectId(req.body.user_id) });
+      }
+
+      if (!participante) {
+        return res.status(404).json({
+          success: false,
+          data:    null,
+          message: 'Participante no encontrado en esta comisión',
+          error:   null,
+        });
+      }
+    } else {
+      participante = await db
+        .collection('comisiones-participantes')
+        .findOne({ comision_id: comisionId, user: userId });
+
+      if (!participante) {
+        return res.status(403).json({
+          success: false,
+          data:    null,
+          message: 'No eres participante de esta comisión',
+          error:   null,
+        });
+      }
     }
 
     if (participante.verification) {
       return res.status(400).json({
         success: false,
         data:    null,
-        message: 'Ya verificaste esta comisión',
+        message: 'Este participante ya verificó esta comisión',
         error:   null,
       });
     }
@@ -427,12 +511,16 @@ router.patch('/:id/verificar', authenticate, async (req, res) => {
       // Notificar a los demás participantes que alguien ya verificó
       const otrosParticipantes = await db
         .collection('comisiones-participantes')
-        .find({ comision_id: comisionId, user: { $ne: userId } })
+        .find({ comision_id: comisionId, user: { $ne: participante.user } })
         .project({ user: 1 })
         .toArray();
 
+      const verifierName = (isDev && isAdmin && !participante.user.equals(userId))
+        ? `Administrador (en nombre de participante)`
+        : req.user.name;
+
       await notify(db, otrosParticipantes.map(p => p.user),
-        `${req.user.name} verificó su parte de la comisión de ${locationText}. Faltan ${pendientes} verificaciones.`,
+        `${verifierName} verificó su parte de la comisión de ${locationText}. Faltan ${pendientes} verificaciones.`,
         now);
 
       return res.status(200).json({
@@ -478,7 +566,6 @@ router.patch('/:id/verificar', authenticate, async (req, res) => {
         `La comisión de ${locationText} fue verificada y está lista para aprobación.`,
         now);
     }
-
 
     return res.status(200).json({
       success: true,
@@ -600,26 +687,51 @@ router.patch('/:id/aprobar', authenticate, authorize(['Administrador', 'Director
 
     await notify(db, participantes.map(p => p.user), msgParticipantes, now);
 
-    // ── Insertar crédito en wallet si se aprueba ──────────────────────────────
-    if (accion === 'aprobar' && !comision.is_cancellation) {
-      const txs = participantes.map(p => {
-        const monto = parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString());
-        return {
-          user_id: p.user,
-          type: 'credit',
-          amount: Decimal128.fromString(monto.toString()),
-          concept: 'commission',
-          description: `Comisión aprobada - ${comisionLocation}`,
-          debt_id: null,
-          comision_id: comisionId,
-          reference_date: now,
-          created_by: new ObjectId(req.user.id),
-          created_at: now
-        };
-      }).filter(t => parseFloat(t.amount.toString()) !== 0);
-      
-      if (txs.length > 0) {
-        await db.collection('walletTransactions').insertMany(txs);
+    // ── Insertar crédito o deuda en wallet al aprobar ────────────────────────
+    if (accion === 'aprobar') {
+      if (!comision.is_cancellation) {
+        const txs = participantes.map(p => {
+          const monto = parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString());
+          return {
+            user_id: p.user,
+            type: 'credit',
+            amount: Decimal128.fromString(monto.toString()),
+            concept: 'commission',
+            description: `Comisión aprobada - ${comisionLocation}`,
+            debt_id: null,
+            comision_id: comisionId,
+            reference_date: now,
+            created_by: new ObjectId(req.user.id),
+            created_at: now
+          };
+        }).filter(t => parseFloat(t.amount.toString()) !== 0);
+        
+        if (txs.length > 0) {
+          await db.collection('walletTransactions').insertMany(txs);
+        }
+      } else if (comision.is_cancellation && comision.penalty_target === 'miembros') {
+        const debtsToInsert = participantes
+          .filter(p => parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString()) < 0)
+          .map(p => {
+            const commVal = parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString());
+            const absAmount = Math.abs(commVal);
+            return {
+              user_id: p.user,
+              comision_id: comisionId,
+              type: 'penalty',
+              description: `Penalización por cancelación - ${comisionLocation}`,
+              total_amount: Decimal128.fromString(absAmount.toString()),
+              remaining_balance: Decimal128.fromString(absAmount.toString()),
+              status: 'active',
+              created_by: new ObjectId(req.user.id),
+              created_at: now,
+              updated_at: now,
+            };
+          }).filter(d => parseFloat(d.total_amount.toString()) > 0);
+
+        if (debtsToInsert.length > 0) {
+          await db.collection('debts').insertMany(debtsToInsert);
+        }
       }
     }
 
@@ -813,19 +925,37 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
-    // ── 1.5 Validar si ya existe una comisión con la misma ubicación y concepto ─
-    if (location && location.id && concept && concept.id && !is_cancellation) {
-      const existingComision = await db.collection('comisiones-ubicaciones').findOne({
-        'location.id': location.id,
-        'concept.id': concept.id
-      });
-      if (existingComision) {
-        return res.status(400).json({
-          success: false,
-          data: null,
-          message: 'Ya existe una comisión registrada para esta ubicación y este concepto.',
-          error: null,
+    // ── 1.5 Validar duplicados ────────────────────────────────────────────────
+    if (location && location.id && concept && concept.id) {
+      if (!is_cancellation) {
+        // Comisión normal: no puede existir otra con misma ubicación y concepto
+        const existingComision = await db.collection('comisiones-ubicaciones').findOne({
+          'location.id': location.id,
+          'concept.id':  concept.id,
         });
+        if (existingComision) {
+          return res.status(400).json({
+            success: false,
+            data:    null,
+            message: 'Ya existe una comisión registrada para esta ubicación y este concepto.',
+            error:   null,
+          });
+        }
+      } else {
+        // Cancelación: no puede existir otra cancelación para el mismo expediente y ubicación
+        const existingCancellation = await db.collection('comisiones-ubicaciones').findOne({
+          'location.id':    location.id,
+          expediente_id:    expediente_id,
+          is_cancellation:  true,
+        });
+        if (existingCancellation) {
+          return res.status(400).json({
+            success: false,
+            data:    null,
+            message: 'Ya existe una cancelación registrada para este expediente y esta ubicación.',
+            error:   null,
+          });
+        }
       }
     }
 
@@ -996,30 +1126,6 @@ router.post('/', authenticate, async (req, res) => {
       .collection('comisiones-participantes')
       .insertMany(participantesConId);
 
-    // ── 6.5 Crear deuda si es cancelación a miembros ──────────────────────────
-    if (is_cancellation && penalty_target === 'miembros') {
-      const debtsToInsert = participantesConId
-        .filter(p => p.commission_amount < 0)
-        .map(p => {
-          const absAmount = Math.abs(p.commission_amount);
-          return {
-            user_id: p.user,
-            comision_id: comisionId,
-            type: 'penalty',
-            description: `Penalización por cancelación - ${location.text}`,
-            total_amount: toDecimal(absAmount),
-            remaining_balance: toDecimal(absAmount),
-            status: 'active',
-            created_by: new ObjectId(req.user.id),
-            created_at: now,
-            updated_at: now,
-          };
-        });
-
-      if (debtsToInsert.length > 0) {
-        await db.collection('debts').insertMany(debtsToInsert);
-      }
-    }
 
     // ── 7. Notificar a cada participante ──────────────────────────────────────
     await notify(db, participantesConId.map(p => p.user),
@@ -1246,19 +1352,37 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
       });
     }
 
-    // ── 1.5 Validar si ya existe una comisión con la misma ubicación y concepto ─
+    // ── 1.5 Validar duplicados ────────────────────────────────────────────────
     if (!is_cancellation) {
+      // Comisión normal: no puede existir otra con misma ubicación y concepto
       const existingComision = await db.collection('comisiones-ubicaciones').findOne({
         'location.id': location.id,
-        'concept.id': concept.id,
-        _id: { $ne: new ObjectId(id) } // Excluir la comisión actual
+        'concept.id':  concept.id,
+        _id: { $ne: new ObjectId(id) }, // Excluir la comisión actual
       });
       if (existingComision) {
         return res.status(400).json({
           success: false,
-          data: null,
+          data:    null,
           message: 'Ya existe una comisión registrada para esta ubicación y este concepto.',
-          error: null,
+          error:   null,
+        });
+      }
+    } else {
+      // Cancelación: no puede existir otra cancelación para el mismo expediente y ubicación
+      const expediente_id = req.body.expediente_id;
+      const existingCancellation = await db.collection('comisiones-ubicaciones').findOne({
+        'location.id':   location.id,
+        expediente_id:   expediente_id,
+        is_cancellation: true,
+        _id: { $ne: new ObjectId(id) }, // Excluir la comisión actual
+      });
+      if (existingCancellation) {
+        return res.status(400).json({
+          success: false,
+          data:    null,
+          message: 'Ya existe una cancelación registrada para este expediente y esta ubicación.',
+          error:   null,
         });
       }
     }

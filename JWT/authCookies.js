@@ -46,6 +46,7 @@ const clearAuthCookie = (res) => {
  * Disponibiliza user y permissions en TODAS las vistas EJS sin pasar nada a mano.
  */
 const injectUserLocals = (req, res, next) => {
+  res.locals.isDev = process.env.NODE_ENV !== 'production';
   const token = req.cookies?.[COOKIE_NAME];
   if (token) {
     try {

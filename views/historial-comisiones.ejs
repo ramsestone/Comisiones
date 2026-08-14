@@ -365,12 +365,15 @@ function resetSelectDisplay(id, placeholder) {
 function phaseTotal(fase) {
   const arr = Array.isArray(fase) ? fase : (fase && (fase._id || fase.participantes) ? [fase] : []);
   return arr.reduce((sum, f) => {
-    return sum + (f.total_commission || (f.participantes || []).reduce((a, p) => a + (p.commission_amount || 0), 0));
+    const parts = (f.participantes || []).filter(p => p.role_in_comision !== 'director' || (typeof USER !== 'undefined' && USER && ['Director', 'Administrador'].includes(USER.roleName)));
+    return sum + parts.reduce((a, p) => a + (p.commission_amount || 0), 0);
   }, 0);
 }
 
 function buildParticipants(participantes) {
-  return (participantes || []).map((p, i) => {
+  return (participantes || [])
+    .filter(p => p.role_in_comision !== 'director' || (typeof USER !== 'undefined' && USER && ['Director', 'Administrador'].includes(USER.roleName)))
+    .map((p, i) => {
     const name     = p.usuario?.name || '?';
     const initials = name.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
     const pct      = p.percentage != null ? (p.percentage * 100).toFixed(1) : '0';
