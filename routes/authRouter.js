@@ -95,7 +95,7 @@ router.get('/me', authenticate, (req, res) => {
     message: 'Usuario autenticado',
     data:    {
       user:  req.user,
-      isDev: process.env.NODE_ENV !== 'production',
+      isDev: process.env.NODE_ENV === 'development' || process.env.ENABLE_DEV_MODE === 'true',
     },
     error:   null,
   });

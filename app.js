@@ -1,4 +1,5 @@
 require('dotenv').config();
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 const path = require('path');
 const express = require('express');
 const { MongoClient } = require('mongodb');

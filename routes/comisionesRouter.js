@@ -363,7 +363,7 @@ router.patch('/:id/verificar', authenticate, async (req, res) => {
     const comisionId = new ObjectId(req.params.id);
     const userId     = new ObjectId(req.user.id);
     const now        = new Date();
-    const isDev      = process.env.NODE_ENV !== 'production';
+    const isDev      = process.env.NODE_ENV === 'development' || process.env.ENABLE_DEV_MODE === 'true';
     const isAdmin    = req.user.roleName === 'Administrador';
 
     // ── Datos de la comisión (location + status) ──────────────────────────────
