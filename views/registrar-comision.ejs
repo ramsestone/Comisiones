@@ -321,7 +321,7 @@
                         </div>
                         <div class="form-group">
                             <label><i class="fas fa-dollar-sign"></i> Precio de Venta <span class="req">*</span></label>
-                            <input type="text" id="salePrice" class="sale-price-input" placeholder="$0" inputmode="numeric" oninput="formatSalePrice(this)">
+                            <input type="text" id="salePrice" class="sale-price-input" placeholder="$0" inputmode="numeric" oninput="formatSalePrice(this)" readonly>
                             <div class="field-error" data-for="salePrice"><i class="fas fa-exclamation-circle"></i> Por favor ingresa el precio de venta.</div>
                         </div>
 
@@ -1003,9 +1003,22 @@ function setSelectValue(field, value, row = null) {
         function handleCompaniaChange(companiaId) {
             const desarrollosSelector = document.querySelector('.custom-select[data-field="desarrollo"]');
             const desarrollosFiltrados = allData.desarrollos.filter(d => d.compania == companiaId);
-            clearSelection('desarrollo'); clearSelection('ubicacion');
+            
+            const desarrollosIds = new Set(desarrollosFiltrados.map(d => d.id));
+            const seen = new Set();
+            const ubicacionesFiltradas = allData.ubicaciones.filter(u => {
+                if (desarrollosIds.has(u.desarrollo) && !seen.has(u.id)) {
+                    seen.add(u.id);
+                    return true;
+                }
+                return false;
+            });
+
+            clearSelection('desarrollo'); 
+            clearSelection('ubicacion');
+            
             populateSelect(desarrollosSelector, desarrollosFiltrados);
-            populateSelect(document.querySelector('.custom-select[data-field="ubicacion"]'), []);
+            populateSelect(document.querySelector('.custom-select[data-field="ubicacion"]'), ubicacionesFiltradas);
         }
 
         function handleDesarrolloChange(desarrolloId, isAutoSelect = false, preserveUbicacion = false) {

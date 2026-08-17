@@ -512,11 +512,7 @@
             <div class="stat-label">Cancelaciones</div>
             <div class="stat-value" id="valCancelaciones">0</div>
           </div>
-          <div class="stat-card cyan">
-            <div class="stat-icon"><i class="fas fa-tags"></i></div>
-            <div class="stat-label">Ticket Promedio</div>
-            <div class="stat-value" id="valTicketPromedio">$0.00</div>
-          </div>
+
           <div class="stat-card orange">
             <div class="stat-icon"><i class="fas fa-percent"></i></div>
             <div class="stat-label">Tasa de Cancelación</div>
@@ -568,8 +564,11 @@
 
         <!-- 3. Tabla de Desarrollos -->
         <div class="dev-table-container" id="desarrollosSection">
-          <div class="section-header">
+          <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
             <div class="section-title"><i class="fas fa-city"></i> Ventas por Desarrollo</div>
+            <button class="btn-apply" onclick="exportDevTableCSV()" title="Exportar a CSV">
+              <i class="fas fa-file-csv"></i> Exportar CSV
+            </button>
           </div>
           <div class="table-wrap">
             <table class="dev-kpi-table">
@@ -771,6 +770,52 @@
       }).join('');
     }
 
+    function exportDevTableCSV() {
+      if (!kpiData.byDevelopment || kpiData.byDevelopment.length === 0) {
+        alert("No hay datos para exportar.");
+        return;
+      }
+      
+      const sorted = sortDataEx(kpiData.byDevelopment, devSortState.field, devSortState.dir);
+      
+      const headers = [
+        "Ranking",
+        "Desarrollo",
+        "Viviendas Totales",
+        "Vendidas en V10",
+        "Vendidas en Sistema",
+        "% Absorcion",
+        "Volumen Total Vendido ($)",
+        "Comisiones Generadas ($)",
+        "Cancelaciones ($)"
+      ];
+      
+      let csvContent = headers.join(",") + "\n";
+      
+      sorted.forEach((item, index) => {
+        const rank = index + 1;
+        const name = item.name ? '"' + item.name + '"' : '"Desconocido"';
+        const totalUnits = item.totalUnits || item.count || 0;
+        const v10Sold = item.v10Sold || 0;
+        const sysSold = item.count || 0;
+        const absorption = item.absorption || 0;
+        const volume = item.volume || 0;
+        const commission = item.commission || 0;
+        const cancelled = item.cancelledVolume || 0;
+        
+        csvContent += [rank, name, totalUnits, v10Sold, sysSold, absorption, volume, commission, cancelled].join(",") + "\n";
+      });
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "ventas_por_desarrollo.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
     function renderTrendChart(monthlyTrend) {
       const ctx = document.getElementById('trendChart');
       if (!ctx) return;
@@ -837,7 +882,15 @@
 
       const labels = (conceptDistribution || []).map(c => c.label || 'Otros');
       const counts = (conceptDistribution || []).map(c => c.count || 0);
-      const colors = ['#7af028', '#38c5f5', '#00e676', '#ff4d4f', '#a855f7', '#f97316', '#06b6d4'];
+      
+      const defaultColors = ['#7af028', '#38c5f5', '#00e676', '#a855f7', '#f97316', '#06b6d4', '#eab308'];
+      let colorIdx = 0;
+      const dynamicColors = labels.map(label => {
+        if (label.toLowerCase().includes('cancel')) return '#ff4d4f';
+        const color = defaultColors[colorIdx % defaultColors.length];
+        colorIdx++;
+        return color;
+      });
 
       conceptChartInstance = new Chart(ctx, {
         type: 'doughnut',
@@ -845,7 +898,7 @@
           labels: labels.length ? labels : ['Sin datos'],
           datasets: [{
             data: counts.length ? counts : [1],
-            backgroundColor: colors.slice(0, Math.max(labels.length, 1)),
+            backgroundColor: labels.length ? dynamicColors : ['#4b5563'],
             borderColor: '#162828',
             borderWidth: 2
           }]
@@ -874,7 +927,7 @@
         return;
       }
 
-      const sorted = sortData(data, sortBy);
+      const sorted = sortData(data, sortBy).slice(0, 10);
       let html = '';
       
       sorted.forEach((item, index) => {
@@ -941,7 +994,7 @@
           document.getElementById('valComisiones').textContent = fmtMoney(d.stats.totalCommissions);
           document.getElementById('valCierres').textContent = d.stats.totalSales || 0;
           document.getElementById('valCancelaciones').textContent = d.stats.totalCancelaciones || 0;
-          document.getElementById('valTicketPromedio').textContent = fmtMoney(d.stats.ticketPromedio);
+
           document.getElementById('valTasaCancelacion').textContent = (d.stats.tasaCancelacion || 0) + '%';
           document.getElementById('valComisionPromedio').textContent = fmtMoney(d.stats.comisionPromedio);
 
