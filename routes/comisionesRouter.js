@@ -453,7 +453,7 @@ router.patch('/:id/verificar', authenticate, async (req, res) => {
 
     // ── Determinar participante a verificar ──────────────────────────────────
     let participante = null;
-    if (isDev && isAdmin && req.body && (req.body.participante_id || req.body.user_id)) {
+    if (req.body && (req.body.participante_id || req.body.user_id)) {
       if (req.body.participante_id) {
         participante = await db
           .collection('comisiones-participantes')
@@ -472,18 +472,36 @@ router.patch('/:id/verificar', authenticate, async (req, res) => {
           error:   null,
         });
       }
-    } else {
-      participante = await db
-        .collection('comisiones-participantes')
-        .findOne({ comision_id: comisionId, user: userId });
 
-      if (!participante) {
+      // Validar permisos: si no es admin en modo dev, la participación debe pertenecerle
+      if (!(isDev && isAdmin) && !participante.user.equals(userId)) {
         return res.status(403).json({
           success: false,
           data:    null,
-          message: 'No eres participante de esta comisión',
+          message: 'No tienes permiso para verificar la participación de otro usuario',
           error:   null,
         });
+      }
+    } else {
+      // Fallback: intentar buscar primero una participación no verificada
+      participante = await db
+        .collection('comisiones-participantes')
+        .findOne({ comision_id: comisionId, user: userId, verification: false });
+
+      if (!participante) {
+        // Si todas están verificadas o no existe ninguna, buscar la primera
+        participante = await db
+          .collection('comisiones-participantes')
+          .findOne({ comision_id: comisionId, user: userId });
+
+        if (!participante) {
+          return res.status(403).json({
+            success: false,
+            data:    null,
+            message: 'No eres participante de esta comisión',
+            error:   null,
+          });
+        }
       }
     }
 

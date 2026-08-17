@@ -718,7 +718,7 @@ function cardHTML(c) {
       rightHtml = `
         <span class="p-amount">${fmt(dispAmount)}${pctStr}${penaltyLabel}</span>
         <button class="btn-verify ${p.verification ? 'verified' : ''}"
-          onclick="verificar('${c._id}')"
+          onclick="verificar('${c._id}', '${p._id}')"
           ${p.verification ? 'disabled' : ''}>
           <i class="ti ${p.verification ? 'ti-circle-check' : 'ti-circle'}"></i>
           ${p.verification ? 'Verificado' : 'Verificar'}
