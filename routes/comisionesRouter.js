@@ -1358,7 +1358,7 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
       company, development, location, concept,
       commission_type, sale_price, operation_date,
       register_date, client_name, participants, is_cancellation,
-      penalty_target
+      penalty_target, reset_verifications = true, director_percentage
     } = req.body;
 
     if (!location || !location.id || !concept || !concept.id) {
@@ -1430,6 +1430,9 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
     const advisorKeys = ['advisor1', 'advisor2', 'advisor3'];
     const managerKeys = ['manager1', 'manager2', 'manager3'];
 
+    const oldParticipantes = await db.collection('comisiones-participantes')
+      .find({ comision_id: new ObjectId(id) }).toArray();
+
     // ── 3. Recalcular participantes con porcentajes frescos ───────────────────
     const buildParticipante = (userId, percentageKey, roleInComision, inputPercentage) => {
       const parsedPct = parseFloat(inputPercentage);
@@ -1446,6 +1449,10 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
         }
       }
 
+      const oldP = oldParticipantes.find(op => op.user.toString() === userId.toString() && op.role_in_comision === roleInComision);
+      const isVerified = (reset_verifications === false && oldP) ? oldP.verification : false;
+      const statusToUse = (reset_verifications === false && oldP) ? oldP.status : statusInicial._id;
+
       return {
         comision_id:         new ObjectId(id),
         user:                new ObjectId(userId),
@@ -1453,8 +1460,8 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
         percentage:          parsedPct,
         commission_amount:   commAmount,
         adjusted_commission: null,
-        verification:        false,          // ← reset
-        status:              statusInicial._id, // ← reset
+        verification:        isVerified,
+        status:              statusToUse,
         correction_comments: null,
         created_at:          now,
         updated_at:          now,
@@ -1482,7 +1489,13 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
     if (participants.managers && participants.managers.length > 0) {
       const directorIds = await getUserIdsByRole(db, 'Director');
       for (const directorId of directorIds) {
-        const pctDirector = 0.001; // 0.10%
+        let pctDirector = 0.001; // 0.10%
+        if (isAdmin || req.user.roleName === 'Director') {
+          if (director_percentage !== undefined && !isNaN(parseFloat(director_percentage))) {
+            pctDirector = parseFloat(director_percentage);
+          }
+        }
+        
         let commAmountDirector = sale_price * pctDirector;
         if (is_cancellation) {
           commAmountDirector = -Math.abs(commAmountDirector);
@@ -1490,6 +1503,10 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
           commAmountDirector = Math.abs(commAmountDirector);
         }
         
+        const oldPDirector = oldParticipantes.find(op => op.user.toString() === directorId.toString() && op.role_in_comision === 'director');
+        const isVerifiedDirector = (reset_verifications === false && oldPDirector) ? oldPDirector.verification : false;
+        const statusToUseDirector = (reset_verifications === false && oldPDirector) ? oldPDirector.status : statusInicial._id;
+
         participanteDocs.push({
           comision_id:         new ObjectId(id),
           user:                directorId,
@@ -1497,8 +1514,8 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
           percentage:          pctDirector,
           commission_amount:   commAmountDirector,
           adjusted_commission: null,
-          verification:        false,
-          status:              statusInicial._id,
+          verification:        isVerifiedDirector,
+          status:              statusToUseDirector,
           correction_comments: null,
           created_at:          now,
           updated_at:          now,
@@ -1510,6 +1527,8 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
       (sum, p) => sum + p.commission_amount, 0
     );
 
+    const finalStatus = (reset_verifications === false) ? comision.status : statusInicial._id;
+
     // ── 4. Actualizar comisiones-ubicaciones ──────────────────────────────────
     await db.collection('comisiones-ubicaciones').updateOne(
       { _id: new ObjectId(id) },
@@ -1520,7 +1539,7 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
           client_name:         client_name ?? null,
           operation_date:      new Date(operation_date),
           register_date:       new Date(register_date),
-          status:              statusInicial._id,   // ← reset
+          status:              finalStatus,
           correction_comments: null,
           is_cancellation,
           penalty_target,
@@ -1749,6 +1768,8 @@ router.get('/obtener/:id', authenticate, async (req, res) => {
       managers: participantes
         .filter(p => p.role_in_comision === 'gerente')
         .map(({ role_in_comision, ...p }) => p),
+      director: participantes
+        .find(p => p.role_in_comision === 'director') || null,
     };
 
     return res.status(200).json({

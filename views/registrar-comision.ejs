@@ -376,6 +376,24 @@
                     </div>
                 </div>
 
+                <div class="personnel-section" id="adminEditControls" style="display: none;">
+                    <div class="section-title"><i class="fas fa-shield-alt"></i> Controles de Administrador</div>
+                    <div class="personnel-row first-row" style="background: rgba(96, 230, 26, 0.05); border-color: rgba(96, 230, 26, 0.2);">
+                        <div class="form-group">
+                            <label><i class="fas fa-redo"></i> Verificaciones</label>
+                            <div class="mp-checkbox-inline" style="margin-top: 5px;">
+                                <input type="checkbox" id="resetVerifications">
+                                <label for="resetVerifications" class="checkbox-label" style="font-size:0.85rem">Reiniciar proceso de verificación</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-percentage"></i> % Director</label>
+                            <input type="number" step="0.01" id="directorPercentage" class="sale-price-input" value="0.10">
+                            <div style="font-size:0.75rem; color:#888; margin-top:5px;">Porcentaje para la directora</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="actions">
                     <button type="button" class="btn btn-secondary" onclick="cancelForm()"><i class="fas fa-times"></i> Cancelar</button>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Comisión</button>
@@ -643,7 +661,15 @@ async function loadComisionForEdit(comisionId, fromContratoMode = false) {
     if (!j.success) { showAlert('Error', j.message, 'error'); return; }
 
     const c            = j.data.comision;
-    const participantes = j.data.participantes; // por si también los necesitas
+    // const participantes = j.data.participantes; // por si también los necesitas
+
+    if (isEditMode && CURRENT_USER && ['Administrador', 'Director'].includes(CURRENT_USER.roleName)) {
+        document.getElementById('adminEditControls').style.display = 'block';
+        const directorP = c.participants?.director;
+        if (directorP) {
+            document.getElementById('directorPercentage').value = (directorP.percentage * 100).toFixed(2);
+        }
+    }
 
     // ── Fechas ────────────────────────────────────────────────────────────────
     if (!fromContratoMode) {
@@ -1505,6 +1531,8 @@ function setSelectValue(field, value, row = null) {
                 expediente_id: expediente_id, client_name: client_name,
                 status: "Pendiente", participants: { managers, advisors },
                 is_cancellation: isCancellation, penalty_target: penaltyTarget,
+                reset_verifications: document.getElementById('resetVerifications') ? document.getElementById('resetVerifications').checked : true,
+                director_percentage: document.getElementById('directorPercentage') ? parseFloat(document.getElementById('directorPercentage').value) / 100 : undefined,
                 created_at: new Date(), updated_at: new Date()
             };
         }
