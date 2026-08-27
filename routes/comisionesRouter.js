@@ -890,6 +890,113 @@ router.patch('/:id/pagar', authenticate, authorize(['Administrador']), async (re
 });
 
 
+// ── 3.1 PATCH /api/comisiones/:id/revertir-pago ──────────────────────────────
+// Permite retornar una comisión con estatus "Pagada" (order 6) de nuevo a "Pendiente Pago" (order 5)
+router.patch('/:id/revertir-pago', authenticate, authorize(['Administrador', 'Director']), async (req, res) => {
+  const client = req.app.locals.mongoClient;
+  const db     = client.db(DB_NAME);
+
+  try {
+    const comisionId = new ObjectId(req.params.id);
+    const now        = new Date();
+
+    // ── 1. Verificar que la comisión está en "Pagada" (order 6) ─────────────
+    const comision = await db
+      .collection('comisiones-ubicaciones')
+      .aggregate([
+        { $match: { _id: comisionId } },
+        { $lookup: { from: 'estatus', localField: 'status', foreignField: '_id', as: 'status' } },
+        { $unwind: '$status' },
+      ])
+      .next();
+
+    if (!comision) {
+      return res.status(404).json({
+        success: false,
+        data:    null,
+        message: 'Comisión no encontrada',
+        error:   null,
+      });
+    }
+
+    if (comision.status.order !== 6) {
+      return res.status(400).json({
+        success: false,
+        data:    null,
+        message: `Solo se pueden retornar a Pendiente de Pago las comisiones que estén marcadas como "Pagada". Estado actual: ${comision.status.name}`,
+        error:   null,
+      });
+    }
+
+    // ── 2. Obtener el estatus "Pendiente Pago" (order 5) ─────────────────────
+    const statusPendientePago = await db.collection('estatus').findOne({ order: 5 });
+    if (!statusPendientePago) {
+      return res.status(500).json({
+        success: false,
+        data:    null,
+        message: 'No se encontró el estatus "Pendiente Pago" en la base de datos',
+        error:   null,
+      });
+    }
+
+    // ── 3. Actualizar comisiones-ubicaciones y comisiones-participantes ──────
+    await Promise.all([
+      db.collection('comisiones-ubicaciones').updateOne(
+        { _id: comisionId },
+        { $set: { status: statusPendientePago._id, updated_at: now } }
+      ),
+      db.collection('comisiones-participantes').updateMany(
+        { comision_id: comisionId },
+        { $set: { status: statusPendientePago._id, updated_at: now } }
+      ),
+    ]);
+
+    // ── 4. Revertir el débito por pago en walletTransactions ─────────────────
+    await db.collection('walletTransactions').deleteMany({
+      comision_id: comisionId,
+      type:        'debit',
+      concept:     'payment',
+    });
+
+    // ── 5. Notificar a participantes y Director ─────────────────────────────
+    const participantes = await db
+      .collection('comisiones-participantes')
+      .find({ comision_id: comisionId })
+      .project({ user: 1 })
+      .toArray();
+
+    const txt = v => {
+      if (!v) return 'Sin ubicación';
+      if (typeof v !== 'object') return String(v);
+      return v.text ?? v.nombre ?? v.name ?? v.value ?? 'Sin ubicación';
+    };
+    const locationPago = txt(comision?.location);
+
+    const directorIds = await getUserIdsByRole(db, 'Director');
+    const usersToNotify = [...new Set([...participantes.map(p => p.user.toString()), ...directorIds.map(id => id.toString())])];
+
+    await notify(db, usersToNotify.map(id => new ObjectId(id)),
+      `La comisión de ${locationPago} ha sido retornada a Pendiente por Pagar.`, now);
+
+    return res.status(200).json({
+      success: true,
+      data:    { nuevo_status: statusPendientePago.name },
+      message: 'Comisión retornada a Pendiente por Pagar exitosamente',
+      error:   null,
+    });
+
+  } catch (error) {
+    console.error('[PATCH /api/comisiones/:id/revertir-pago]', error);
+    return res.status(500).json({
+      success: false,
+      data:    null,
+      message: 'Error al retornar la comisión a Pendiente por Pagar',
+      error:   error.message,
+    });
+  }
+});
+
+
 // POST /api/comisiones
 router.post('/', authenticate, async (req, res) => {
   const client = req.app.locals.mongoClient;

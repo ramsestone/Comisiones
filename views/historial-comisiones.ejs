@@ -181,6 +181,159 @@
     .no-results{text-align:center;padding:4rem;color:var(--muted);opacity:0.6;}
     .no-results i{font-size:2.2rem;margin-bottom:0.8rem;display:block;}
 
+    /* ── Botón Retornar a Pendiente Pago ── */
+    .btn-revert-pago {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      font-family: 'Nunito', sans-serif;
+      background: rgba(240, 165, 0, 0.1);
+      border: 1px solid rgba(240, 165, 0, 0.4);
+      color: #f5b025;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.02em;
+    }
+    .btn-revert-pago:hover {
+      background: rgba(240, 165, 0, 0.25);
+      border-color: #f0a500;
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(240, 165, 0, 0.25);
+      transform: translateY(-1px);
+    }
+    .btn-revert-pago:active {
+      transform: translateY(0);
+    }
+    .btn-revert-pago i {
+      font-size: 0.72rem;
+      transition: transform 0.2s;
+    }
+    .btn-revert-pago:hover i {
+      transform: rotate(-30deg);
+    }
+
+    /* ── Modal Confirmation ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(10, 20, 20, 0.82);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 99999;
+      backdrop-filter: blur(6px);
+      animation: fadeIn .2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .hist-modal {
+      background: var(--bg2);
+      border: 1px solid rgba(96,230,26,0.3);
+      border-radius: 18px;
+      padding: 24px;
+      max-width: 440px;
+      width: 90%;
+      box-shadow: 0 18px 48px rgba(0,0,0,0.65), 0 0 24px rgba(96,230,26,0.12);
+      animation: slideUp .22s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .modal-icon-wrap {
+      width: 46px; height: 46px;
+      border-radius: 14px;
+      background: rgba(240, 165, 0, 0.12);
+      border: 1px solid rgba(240, 165, 0, 0.3);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+    }
+    .modal-icon-wrap i {
+      font-size: 20px;
+      color: var(--amber);
+    }
+    .hist-modal h3 {
+      font-size: 1.08rem;
+      font-weight: 900;
+      color: var(--white);
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+    .hist-modal p {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 22px;
+    }
+    .hist-modal p strong {
+      color: var(--white);
+    }
+    .hist-modal-btns {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    .mbtn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      font-family: 'Nunito', sans-serif;
+      cursor: pointer;
+      transition: all 0.18s;
+      border: 1px solid rgba(143,173,160,0.25);
+      background: transparent;
+      color: var(--muted);
+    }
+    .mbtn:hover {
+      background: rgba(255,255,255,0.06);
+      color: var(--white);
+    }
+    .mbtn-warning {
+      background: linear-gradient(135deg, #f0a500, #d48800);
+      color: #0f1e1e;
+      border: none;
+      font-weight: 900;
+      box-shadow: 0 4px 14px rgba(240, 165, 0, 0.3);
+    }
+    .mbtn-warning:hover {
+      filter: brightness(1.1);
+      box-shadow: 0 6px 18px rgba(240, 165, 0, 0.45);
+      transform: translateY(-1px);
+    }
+    .mbtn-warning:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 2rem; right: 2rem;
+      background: rgba(22, 40, 40, 0.96);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      border: 1px solid rgba(96,230,26,0.4);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(96,230,26,0.15);
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 12px 20px;
+      border-radius: 12px;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 999999;
+      max-width: 340px;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     @media(max-width:680px){
       .phases-grid{grid-template-columns:1fr;}
       .phase-col.contrato-col{border-right:none;border-bottom:1px solid rgba(56,197,245,0.1);}
@@ -254,6 +407,8 @@
 </main>
 </div><!-- /.main-area -->
 
+<div id="toast"></div>
+
 <script>
 // ── Formato ───────────────────────────────────────────────────────────────────
 const fmt = n => '$' + Number(n || 0).toLocaleString('es-MX');
@@ -264,6 +419,7 @@ function fmtDate(d) {
 const AV_COLORS = ['av-teal', 'av-green', 'av-pink', 'av-amber', 'av-purple'];
 
 // ── Estado ────────────────────────────────────────────────────────────────────
+let USER = null;
 let ALL_DATA = null;
 const filters = { compania: null, desarrollo: null, ubicacion: null, search: '' };
 
@@ -394,6 +550,11 @@ function buildParticipants(participantes) {
   }).join('');
 }
 
+function escapeAttr(str) {
+  if (!str) return '';
+  return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
 function buildPhaseCol(fases, tipo, loc) {
   const arr = Array.isArray(fases) ? fases : (fases && (fases._id || fases.participantes) ? [fases] : []);
   const isC   = tipo === 'contrato';
@@ -423,12 +584,22 @@ function buildPhaseCol(fases, tipo, loc) {
     return `<div class="phase-col ${cls}"></div>`;
   }
 
+  const canRevert = typeof USER !== 'undefined' && USER && ['Administrador', 'Director'].includes(USER.roleName);
+  const locTitle = (loc?.development || '') + (loc?.locationText ? ' — ' + loc.locationText : '');
+
   const phasesHtml = arr.map(fase => {
     const total = phaseTotal(fase);
     return `
       <div style="margin-bottom: 1.5rem; border-bottom: 1px dashed rgba(96,230,26,0.08); padding-bottom: 1rem;">
-        <div class="phase-col-date" style="margin-bottom: 0.5rem;">
-          <i class="fas fa-calendar-alt" style="margin-right:4px;opacity:0.6;"></i>${fmtDate(fase.operation_date)}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; gap: 8px; flex-wrap: wrap;">
+          <div class="phase-col-date">
+            <i class="fas fa-calendar-alt" style="margin-right:4px;opacity:0.6;"></i>${fmtDate(fase.operation_date)}
+          </div>
+          ${canRevert ? `
+            <button class="btn-revert-pago" onclick="confirmarRevertirPago('${fase._id}', '${escapeAttr(locTitle)} (${label})', event)" title="Retornar comisión a Pendiente por Pagar">
+              <i class="fas fa-undo-alt"></i> Retornar a pendiente de pago
+            </button>
+          ` : ''}
         </div>
         <div class="phase-price-row">
           <div>
@@ -560,11 +731,99 @@ function updateClearBtn() {
   document.getElementById('btnClear').classList.toggle('hidden', !active);
 }
 
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+function confirmarRevertirPago(faseId, titulo, e) {
+  if (e) e.stopPropagation();
+  if (document.getElementById('revertModal')) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'revertModal';
+  overlay.innerHTML = `
+    <div class="hist-modal" role="dialog" aria-modal="true">
+      <div class="modal-icon-wrap">
+        <i class="fas fa-undo-alt"></i>
+      </div>
+      <h3>Retornar a Pendiente por Pagar</h3>
+      <p>¿Estás seguro de que deseas retornar la comisión de <strong>${titulo}</strong> al estado <strong>Pendiente por Pagar</strong>?</p>
+      <p style="font-size: 0.76rem; opacity: 0.85; margin-top: -12px;">Se revertirá el retiro de cartera y volverá a aparecer en la lista de comisiones pendientes de pago.</p>
+      <div class="hist-modal-btns">
+        <button class="mbtn" onclick="closeRevertModal()">Cancelar</button>
+        <button class="mbtn mbtn-warning" id="confirmRevertBtn" onclick="doRevertirPago('${faseId}')">
+          <i class="fas fa-check"></i> Sí, retornar comisión
+        </button>
+      </div>
+    </div>`;
+
+  overlay.addEventListener('click', ev => { if (ev.target === overlay) closeRevertModal(); });
+  document.body.appendChild(overlay);
+}
+
+function closeRevertModal() {
+  const m = document.getElementById('revertModal');
+  if (m) m.remove();
+}
+
+async function doRevertirPago(faseId) {
+  const btn = document.getElementById('confirmRevertBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando…';
+  }
+
+  try {
+    const res = await fetch(`/api/comisiones/${faseId}/revertir-pago`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
+    const j = await res.json();
+
+    closeRevertModal();
+
+    if (!j.success) {
+      showToast(j.message || 'Error al retornar la comisión');
+      return;
+    }
+
+    showToast('✓ ' + (j.message || 'Comisión retornada a Pendiente por Pagar'));
+    
+    // Recargar historial para reflejar el cambio
+    ALL_DATA = await fetchHistorial();
+    populateFilters(ALL_DATA);
+    applyFilters();
+
+  } catch (err) {
+    console.error('Error al revertir pago:', err);
+    closeRevertModal();
+    showToast('Error de conexión al procesar el retorno');
+  }
+}
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function init() {
   const list = document.getElementById('locationList');
   list.innerHTML = '<div class="list-loading"><i class="fas fa-spinner"></i> Cargando historial…</div>';
   document.getElementById('summaryRow').innerHTML = '';
+
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    const j = await r.json();
+    if (j.success) {
+      USER = j.data.user;
+    }
+  } catch (e) {
+    console.warn('No se pudo cargar el usuario:', e);
+  }
 
   try {
     ALL_DATA = await fetchHistorial();
