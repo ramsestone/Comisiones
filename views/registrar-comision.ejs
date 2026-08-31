@@ -869,6 +869,8 @@ function setSelectValue(field, value, row = null) {
                 option.dataset.value = item.id;
                 if (item.compania) option.dataset.compania = item.compania;
                 if (item.desarrollo) option.dataset.desarrollo = item.desarrollo;
+                // Stamp expediente_id for bidirectional linking (ubicaciones only)
+                if (item.expediente_id != null) option.dataset.expedienteId = item.expediente_id;
                 option.addEventListener('click', function() { selectOption(selectorElement, this); });
                 return option;
             };
@@ -995,6 +997,61 @@ function setSelectValue(field, value, row = null) {
                     clearFieldError('salePrice');
                     salePriceEl.classList.remove('has-error');
                     salePriceEl.classList.add('valid');
+                }
+
+                // ── Vinculación bidireccional: Ubicación → Expediente ─────────────────
+                if (!window._linkingInProgress) {
+                    window._linkingInProgress = true;
+                    const expIdVinculado = optionElement.dataset.expedienteId;
+                    if (expIdVinculado) {
+                        // Obtener todos los expedientes vinculados a esta ubicación
+                        const ubicacionesDeEstaUbicacion = allData.ubicaciones.filter(u => u.id == ubicacionId && u.expediente_id);
+                        const expedienteIdsVinculados = [...new Set(ubicacionesDeEstaUbicacion.map(u => String(u.expediente_id)))];
+                        const expedienteSelector = document.querySelector('.custom-select[data-field="expediente"]');
+
+                        if (expedienteIdsVinculados.length === 1) {
+                            // Caso 1: única opción → auto-seleccionar
+                            const expOption = expedienteSelector.querySelector(`[data-value="${expedienteIdsVinculados[0]}"]`);
+                            if (expOption) selectOption(expedienteSelector, expOption, true);
+                        } else if (expedienteIdsVinculados.length > 1) {
+                            // Caso 2: múltiples → filtrar la lista de expedientes
+                            const expFiltrados = allData.expedientes.filter(e => expedienteIdsVinculados.includes(String(e.id)));
+                            populateSelect(expedienteSelector, expFiltrados);
+                        }
+                    }
+                    window._linkingInProgress = false;
+                }
+            } else if (field === 'expediente') {
+                // ── Vinculación bidireccional: Expediente → Ubicación ─────────────────
+                if (!window._linkingInProgress) {
+                    window._linkingInProgress = true;
+                    const expedienteId = optionElement.dataset.value;
+                    // Ubicaciones vinculadas a este expediente (antes de cualquier filtro de desarrollo)
+                    const ubicacionesVinculadas = allData.ubicaciones.filter(u => String(u.expediente_id) === String(expedienteId));
+                    const ubicacionIds = [...new Set(ubicacionesVinculadas.map(u => u.id))];
+                    const ubicacionSelector = document.querySelector('.custom-select[data-field="ubicacion"]');
+
+                    if (ubicacionIds.length === 1) {
+                        // Caso 1: única ubicación → auto-seleccionar (con todos los efectos)
+                        const ubOption = ubicacionSelector.querySelector(`[data-value="${ubicacionIds[0]}"]`);
+                        if (ubOption) {
+                            selectOption(ubicacionSelector, ubOption, true);
+                        } else {
+                            // La ubicación puede no estar en el select actual (filtrada por desarrollo)
+                            // Poblamos el select con las vinculadas y seleccionamos
+                            populateSelect(ubicacionSelector, ubicacionesVinculadas);
+                            const ubOpt2 = ubicacionSelector.querySelector(`[data-value="${ubicacionIds[0]}"]`);
+                            if (ubOpt2) selectOption(ubicacionSelector, ubOpt2, true);
+                        }
+                    } else if (ubicacionIds.length > 1) {
+                        // Caso 2: múltiples ubicaciones → filtrar la lista (respetando el desarrollo seleccionado)
+                        const desarrolloVal = getSelectValue('desarrollo');
+                        const ubFiltradas = desarrolloVal && desarrolloVal.id
+                            ? ubicacionesVinculadas.filter(u => u.desarrollo == desarrolloVal.id)
+                            : ubicacionesVinculadas;
+                        populateSelect(ubicacionSelector, ubFiltradas.length > 0 ? ubFiltradas : ubicacionesVinculadas);
+                    }
+                    window._linkingInProgress = false;
                 }
             } else if (field === 'gerente') {
                 handleGerenteChange(optionElement.dataset.value, selectorElement.dataset.row);

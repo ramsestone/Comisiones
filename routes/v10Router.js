@@ -146,12 +146,12 @@ router.get('/ubicaciones', authenticate, async (req, res) => {
 
   try {
     const query = `
-      SELECT ubi.Nombre as nombre, ubi.IdDesarrollo as desarrollo, ubi.Id as id, vta.importe as importe_venta, vta.[EstatusVenta.Nombre] as estatus_venta 
+      SELECT ubi.Nombre as nombre, ubi.IdDesarrollo as desarrollo, ubi.Id as id, vta.importe as importe_venta, vta.[EstatusVenta.Nombre] as estatus_venta, vta.IdExpediente as expediente_id 
       FROM scv_ubicaciones ubi 
       INNER JOIN scv_Ventas_Ubicaciones vta_ubi ON ubi.Id = vta_ubi.IdUbicacion 
       INNER JOIN uvw_SCV_Ventas vta ON vta_ubi.IdVenta = vta.ID 
       UNION ALL
-      SELECT pcv_nombre.Valor as nombre, vta.IdDesarrollo as desarrollo, pcv_nombre.Id as id, TRY_CAST(REPLACE(monto.Valor, ',', '') AS DECIMAL(18,2)) as importe_venta, vta.[EstatusVenta.Nombre] as estatus_venta 
+      SELECT pcv_nombre.Valor as nombre, vta.IdDesarrollo as desarrollo, pcv_nombre.Id as id, TRY_CAST(REPLACE(monto.Valor, ',', '') AS DECIMAL(18,2)) as importe_venta, vta.[EstatusVenta.Nombre] as estatus_venta, vta.IdExpediente as expediente_id 
       FROM PersonalizarCampos_Valores pcv_nombre 
       OUTER APPLY (
         SELECT TOP 1 pcv_monto.Valor
