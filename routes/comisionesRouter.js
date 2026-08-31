@@ -51,6 +51,7 @@ router.get('/mis-comisiones', authenticate, async (req, res) => {
 
   try {
     const userId = new ObjectId(req.user.id); // ← viene del JWT decodificado
+    const statusPagada = await db.collection('estatus').findOne({ order: 6 });
 
     // ── 1. IDs de comisiones donde el usuario es participante ────────────────
     const participaciones = await db
@@ -68,6 +69,10 @@ router.get('/mis-comisiones', authenticate, async (req, res) => {
         { _id: { $in: comisionIdsComoParticipante } },
       ],
     };
+
+    if (statusPagada) {
+      matchStage.status = { $ne: statusPagada._id };
+    }
 
     if (from && to) {
       matchStage.register_date = {
@@ -1286,7 +1291,12 @@ router.get('/', authenticate, authorize(['Administrador', 'Director']), async (r
 
   try {
     const { from, to } = req.query;
+    const statusPagada = await db.collection('estatus').findOne({ order: 6 });
     const matchStage = {};
+
+    if (statusPagada) {
+      matchStage.status = { $ne: statusPagada._id };
+    }
 
     if (from && to) {
       matchStage.register_date = {
