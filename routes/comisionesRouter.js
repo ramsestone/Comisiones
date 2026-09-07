@@ -1185,16 +1185,24 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
-    // ── 3.5 Asignar comisión al Director (0.10%) ──────────────────────────────
-    if (participants.managers && participants.managers.length > 0) {
+    // ── 3.5 Asignar comisión al Director (0.10%) o Bono (0%) ──────────────────
+    const conceptText = String(concept?.text ?? concept ?? '').toLowerCase();
+    const isBono = conceptText.includes('bono');
+    if ((participants.managers && participants.managers.length > 0) || isBono) {
       const directorIds = await getUserIdsByRole(db, 'Director');
       for (const directorId of directorIds) {
-        const pctDirector = 0.001; // 0.10%
+        let pctDirector = 0.001; // 0.10%
         let commAmountDirector = sale_price * pctDirector;
-        if (is_cancellation) {
-          commAmountDirector = -Math.abs(commAmountDirector);
+        
+        if (isBono) {
+          pctDirector = 0;
+          commAmountDirector = 0;
         } else {
-          commAmountDirector = Math.abs(commAmountDirector);
+          if (is_cancellation) {
+            commAmountDirector = -Math.abs(commAmountDirector);
+          } else {
+            commAmountDirector = Math.abs(commAmountDirector);
+          }
         }
         
         participanteDocs.push({
@@ -1602,8 +1610,10 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
       });
     }
 
-    // ── 3.5 Asignar comisión al Director (0.10%) ──────────────────────────────
-    if (participants.managers && participants.managers.length > 0) {
+    // ── 3.5 Asignar comisión al Director (0.10%) o Bono (0%) ──────────────────
+    const conceptText = String(concept?.text ?? concept ?? '').toLowerCase();
+    const isBono = conceptText.includes('bono');
+    if ((participants.managers && participants.managers.length > 0) || isBono) {
       const directorIds = await getUserIdsByRole(db, 'Director');
       for (const directorId of directorIds) {
         let pctDirector = 0.001; // 0.10%
@@ -1614,10 +1624,16 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
         }
         
         let commAmountDirector = sale_price * pctDirector;
-        if (is_cancellation) {
-          commAmountDirector = -Math.abs(commAmountDirector);
+        
+        if (isBono) {
+          pctDirector = 0;
+          commAmountDirector = 0;
         } else {
-          commAmountDirector = Math.abs(commAmountDirector);
+          if (is_cancellation) {
+            commAmountDirector = -Math.abs(commAmountDirector);
+          } else {
+            commAmountDirector = Math.abs(commAmountDirector);
+          }
         }
         
         const oldPDirector = oldParticipantes.find(op => op.user.toString() === directorId.toString() && op.role_in_comision === 'director');
