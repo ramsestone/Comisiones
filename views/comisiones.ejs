@@ -462,7 +462,13 @@
     </select>
     <select class="filter-select" id="filterCompany"><option value="">Todas las empresas</option></select>
     <select class="filter-select" id="filterDev"><option value="">Todos los desarrollos</option></select>
-    <select class="filter-select" id="filterConcept"><option value="">Todos los conceptos</option></select>
+    <select class="filter-select" id="filterConcept">
+      <option value="">Todos los conceptos</option>
+      <option value="Contrato">Contrato</option>
+      <option value="Escritura">Escritura</option>
+      <option value="Cancelación">Cancelación</option>
+      <option value="Bono">Bono</option>
+    </select>
     
     <div style="display: flex; gap: 8px; align-items: center; background: var(--surface); padding: 0 10px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
       <span style="font-size: 12px; color: var(--text-2);">Desde:</span>
@@ -655,7 +661,8 @@ async function loadComisiones(misComisiones) {
 function populateFilterDropdowns() {
   const companies    = [...new Set(DATA.map(c => c.company?.text).filter(Boolean))].sort();
   const developments = [...new Set(DATA.map(c => c.development?.text).filter(Boolean))].sort();
-  const concepts     = [...new Set(DATA.map(c => c.concept?.text || c.concept).filter(Boolean))].sort();
+  const defaultConcepts = ['Contrato', 'Escritura', 'Cancelación', 'Bono'];
+  const concepts     = [...new Set([...DATA.map(c => c.concept?.text || c.concept).filter(Boolean), ...defaultConcepts])].sort();
   const selC = $('filterCompany');
   const selD = $('filterDev');
   const selConcept = $('filterConcept');
