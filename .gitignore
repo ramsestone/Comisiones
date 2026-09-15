@@ -2,9 +2,14 @@ node_modules/
 package-lock.json
 tempCodeRunnerFile.js
 .env
+.env.*
 .claude
 test-mongo.js
 public/uploads/
 Ejemplos/
 test-query.js
 bin/*
+
+# Archivos temporales, respaldos y scripts locales
+backups/
+scratch/
