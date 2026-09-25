@@ -1186,9 +1186,16 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     // ── 3.5 Asignar comisión al Director (0.10%) o Bono (0%) ──────────────────
+    // Desarrollos de Querétaro: el Director general (Ariadna) NO recibe comisión.
+    // IDs EK: 10=MONTE JAYA, 21=MONTE HIMALAYA, 30=ZINTARA, 15=VITEA C-D, 33=MONTE DENALI
+    // TODO: Cuando se cree el usuario del director de Querétaro, agregar aquí su comisión con porcentaje distinto.
+    const QUERETARO_DEVELOPMENT_IDS = ['10', '21', '30', '15', '33'];
+    const developmentId = String(development?.id ?? '');
+    const isQueretaroDesarrollo = QUERETARO_DEVELOPMENT_IDS.includes(developmentId);
+
     const conceptText = String(concept?.text ?? concept ?? '').toLowerCase();
     const isBono = conceptText.includes('bono');
-    if ((participants.managers && participants.managers.length > 0) || isBono) {
+    if (!isQueretaroDesarrollo && ((participants.managers && participants.managers.length > 0) || isBono)) {
       const directorIds = await getUserIdsByRole(db, 'Director');
       for (const directorId of directorIds) {
         let pctDirector = 0.001; // 0.10%
