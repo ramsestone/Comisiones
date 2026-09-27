@@ -39,9 +39,32 @@ async function getUserIdsByRole(db, roleName) {
     { $lookup: { from: 'roles', localField: 'role', foreignField: '_id', as: 'r' } },
     { $unwind: '$r' },
     { $match: { 'r.name': roleName, active: true } },
-    { $project: { _id: 1 } },
+    { $project: { _id: 1, username: 1 } },
   ]).toArray();
   return users.map(u => u._id);
+}
+
+const QUERETARO_DEVELOPMENT_IDS = ['10', '21', '30', '15', '33'];
+
+async function getDirectorIdsForDevelopment(db, developmentId) {
+  const isQueretaro = QUERETARO_DEVELOPMENT_IDS.includes(String(developmentId ?? ''));
+  const directors = await db.collection('usuarios').aggregate([
+    { $lookup: { from: 'roles', localField: 'role', foreignField: '_id', as: 'r' } },
+    { $unwind: '$r' },
+    { $match: { 'r.name': 'Director', active: true } },
+    { $project: { _id: 1, username: 1 } },
+  ]).toArray();
+
+  if (isQueretaro) {
+    const qroDirector = directors.find(d => d.username === 'b.urien');
+    if (qroDirector) return [qroDirector._id];
+    // Si aún no está creado con ese rol o username en BD, buscar por username directamente
+    const userFallback = await db.collection('usuarios').findOne({ username: 'b.urien' });
+    return userFallback ? [userFallback._id] : [];
+  } else {
+    // Para CDMX y otros desarrollos, excluir a la directora de Querétaro (b.urien)
+    return directors.filter(d => d.username !== 'b.urien').map(d => d._id);
+  }
 }
 
 // GET /api/comisiones/mis-comisiones
@@ -1185,20 +1208,29 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
-    // ── 3.5 Asignar comisión al Director (0.10%) o Bono (0%) ──────────────────
-    // Desarrollos de Querétaro: el Director general (Ariadna) NO recibe comisión.
-    // IDs EK: 10=MONTE JAYA, 21=MONTE HIMALAYA, 30=ZINTARA, 15=VITEA C-D, 33=MONTE DENALI
-    // TODO: Cuando se cree el usuario del director de Querétaro, agregar aquí su comisión con porcentaje distinto.
-    const QUERETARO_DEVELOPMENT_IDS = ['10', '21', '30', '15', '33'];
+    // ── 3.5 Asignar comisión al Director ─────────────────────────────────────
+    // Desarrollos de Querétaro: Directora María Begoña Urien (b.urien) cobra 0.125% en Contrato y 0.125% en Escritura (0% en Bono).
+    // Otros desarrollos (CDMX, etc.): Director general cobra 0.10% (0.001) o Bono (0%).
     const developmentId = String(development?.id ?? '');
     const isQueretaroDesarrollo = QUERETARO_DEVELOPMENT_IDS.includes(developmentId);
 
     const conceptText = String(concept?.text ?? concept ?? '').toLowerCase();
     const isBono = conceptText.includes('bono');
-    if (!isQueretaroDesarrollo && ((participants.managers && participants.managers.length > 0) || isBono)) {
-      const directorIds = await getUserIdsByRole(db, 'Director');
+    const isContratoOEscritura = conceptText.includes('contrato') || conceptText.includes('escritura');
+
+    if ((participants.managers && participants.managers.length > 0) || isBono) {
+      const directorIds = await getDirectorIdsForDevelopment(db, developmentId);
       for (const directorId of directorIds) {
-        let pctDirector = 0.001; // 0.10%
+        let pctDirector = 0.001; // Default 0.10% para otros desarrollos (CDMX)
+        
+        if (isQueretaroDesarrollo) {
+          if (isContratoOEscritura) {
+            pctDirector = 0.00125; // 0.125% en Contrato y Escritura para Directora de Querétaro
+          } else {
+            pctDirector = 0;
+          }
+        }
+
         let commAmountDirector = sale_price * pctDirector;
         
         if (isBono) {
@@ -1617,13 +1649,24 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
       });
     }
 
-    // ── 3.5 Asignar comisión al Director (0.10%) o Bono (0%) ──────────────────
+    // ── 3.5 Asignar comisión al Director ─────────────────────────────────────
+    // Desarrollos de Querétaro: Directora María Begoña Urien (b.urien) cobra 0.125% en Contrato y 0.125% en Escritura (0% en Bono).
+    // Otros desarrollos (CDMX, etc.): Director general cobra 0.10% (0.001) o Bono (0%).
+    const developmentId = String(development?.id ?? '');
+    const isQueretaroDesarrollo = QUERETARO_DEVELOPMENT_IDS.includes(developmentId);
+
     const conceptText = String(concept?.text ?? concept ?? '').toLowerCase();
     const isBono = conceptText.includes('bono');
+    const isContratoOEscritura = conceptText.includes('contrato') || conceptText.includes('escritura');
+
     if ((participants.managers && participants.managers.length > 0) || isBono) {
-      const directorIds = await getUserIdsByRole(db, 'Director');
+      const directorIds = await getDirectorIdsForDevelopment(db, developmentId);
       for (const directorId of directorIds) {
-        let pctDirector = 0.001; // 0.10%
+        let pctDirector = 0.001; // 0.10% default
+        if (isQueretaroDesarrollo) {
+          pctDirector = isContratoOEscritura ? 0.00125 : 0;
+        }
+
         if (isAdmin || req.user.roleName === 'Director') {
           if (director_percentage !== undefined && !isNaN(parseFloat(director_percentage))) {
             pctDirector = parseFloat(director_percentage);
