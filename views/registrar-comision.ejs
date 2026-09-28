@@ -672,9 +672,21 @@ async function loadComisionForEdit(comisionId, fromContratoMode = false) {
     if (isEditMode && CURRENT_USER && ['Administrador', 'Director'].includes(CURRENT_USER.roleName)) {
         document.getElementById('adminEditControls').style.display = 'block';
         const directorP = c.participants?.director;
-        if (directorP) {
-            document.getElementById('directorPercentage').value = Number((directorP.percentage * 100).toFixed(4));
-            document.getElementById('directorPercentage').dataset.userEdited = 'true';
+        const devId = String(c.development?.id || c.development || '');
+        const isQro = ['10', '21', '30', '15', '33'].includes(devId);
+
+        if (isQro) {
+            if (directorP && directorP.percentage != null && directorP.percentage !== 0.001) {
+                document.getElementById('directorPercentage').value = Number((directorP.percentage * 100).toFixed(4));
+            } else {
+                document.getElementById('directorPercentage').value = '0.125';
+            }
+        } else {
+            if (directorP && directorP.percentage != null) {
+                document.getElementById('directorPercentage').value = Number((directorP.percentage * 100).toFixed(4));
+            } else {
+                document.getElementById('directorPercentage').value = '0.10';
+            }
         }
     }
 
@@ -1140,7 +1152,7 @@ function setSelectValue(field, value, row = null) {
             }
 
             const dirPctInput = document.getElementById('directorPercentage');
-            if (dirPctInput && !dirPctInput.dataset.userEdited) {
+            if (dirPctInput) {
                 const isQro = ['10', '21', '30', '15', '33'].includes(String(desarrolloId));
                 dirPctInput.value = isQro ? '0.125' : '0.10';
             }
