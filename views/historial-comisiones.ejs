@@ -532,7 +532,7 @@ function buildParticipants(participantes) {
     .map((p, i) => {
     const name     = p.usuario?.name || '?';
     const initials = name.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
-    const pct      = p.percentage != null ? (p.percentage * 100).toFixed(1) : '0';
+    const pct      = p.percentage != null ? Number((p.percentage * 100).toFixed(4)).toLocaleString('es-MX', { maximumFractionDigits: 3 }) : '0';
     const role     = p.role_in_comision === 'asesor' ? 'Asesor' : p.role_in_comision === 'gerente' ? 'Gerente' : (p.role_in_comision || '');
     const av       = AV_COLORS[i % AV_COLORS.length];
     return `

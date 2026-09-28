@@ -495,7 +495,7 @@ function fmt(n) {
   return (val < 0 ? '-' : '') + '$' + Math.abs(val).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 function fmtPct(n) {
-  return Number(n || 0).toLocaleString('es-MX', { style: 'percent', minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  return Number(n || 0).toLocaleString('es-MX', { style: 'percent', minimumFractionDigits: 0, maximumFractionDigits: 3 });
 }
 function fmtDate(d) {
   if (!d) return '—';
@@ -1048,7 +1048,7 @@ function exportCSV() {
           escape(c.client_name || ''),
           escape(c.location?.text || ''),
           escape(c.sale_price ?? ''),
-          escape(p.percentage != null ? (p.percentage * 100).toFixed(2) + '%' : ''),
+          escape(p.percentage != null ? Number((p.percentage * 100).toFixed(4)).toLocaleString('es-MX', { maximumFractionDigits: 3 }) + '%' : ''),
           escape(p.commission_amount != null ? Number(p.commission_amount).toFixed(2) : ''),
           escape(penalizacionText)
         ].join(','));

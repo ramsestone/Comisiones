@@ -81,7 +81,7 @@ function renderizarTarjeta(comision, index) {
                                         <div class="p-role-label">Gerente</div>
                                     </div>
                                     <div class="p-earnings">
-                                        <div class="p-pct">${(g.percentage * 100).toFixed(2)}%</div>
+                                        <div class="p-pct">${Number((g.percentage * 100).toFixed(4)).toLocaleString('es-MX', { maximumFractionDigits: 3 })}%</div>
                                         <div class="p-amt">$${formatNumber(g.commission_amount || 0)}</div>
                                     </div>
                                 </div>
@@ -103,7 +103,7 @@ function renderizarTarjeta(comision, index) {
                                         <div class="p-role-label">Asesor</div>
                                     </div>
                                     <div class="p-earnings">
-                                        <div class="p-pct">${(a.percentage * 100).toFixed(2)}%</div>
+                                        <div class="p-pct">${Number((a.percentage * 100).toFixed(4)).toLocaleString('es-MX', { maximumFractionDigits: 3 })}%</div>
                                         <div class="p-amt">$${formatNumber(a.commission_amount || 0)}</div>
                                     </div>
                                 </div>

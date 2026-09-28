@@ -13,3 +13,8 @@ bin/*
 # Archivos temporales, respaldos y scripts locales
 backups/
 scratch/
+diagrama_sistema_comisiones.html
+DOCUMENTACION_TECNICA.md
+flujo_comisiones.jpg
+public/diagrama_sistema_comisiones.html
+public/flujo_comisiones.jpg

@@ -494,7 +494,7 @@
             const body = document.getElementById('payloadModalBody');
             const fmt = (v) => v || '<span style="color:#555">—</span>';
             const fmtMoney = (v) => v ? '$' + Number(v).toLocaleString('es-MX') : '—';
-            const fmtPct = (v) => v != null ? (v * 100).toFixed(2) + '%' : '—';
+            const fmtPct = (v) => v != null ? (Number((v * 100).toFixed(4)).toLocaleString('es-MX', { maximumFractionDigits: 3 }) + '%') : '—';
             let html = '';
             html += `<div class="payload-section-label"><i class="fas fa-info-circle"></i> Información general</div>`;
             html += `<div class="payload-grid">
@@ -650,6 +650,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('salePrice').addEventListener('input', function() {
         if (this.dataset.raw && parseInt(this.dataset.raw) > 0) { clearFieldError('salePrice'); this.classList.remove('has-error'); this.classList.add('valid'); }
     });
+    const dirPctEl = document.getElementById('directorPercentage');
+    if (dirPctEl) {
+        dirPctEl.addEventListener('input', function() {
+            this.dataset.userEdited = 'true';
+        });
+    }
 
 });
 
@@ -667,7 +673,8 @@ async function loadComisionForEdit(comisionId, fromContratoMode = false) {
         document.getElementById('adminEditControls').style.display = 'block';
         const directorP = c.participants?.director;
         if (directorP) {
-            document.getElementById('directorPercentage').value = (directorP.percentage * 100).toFixed(2);
+            document.getElementById('directorPercentage').value = Number((directorP.percentage * 100).toFixed(4));
+            document.getElementById('directorPercentage').dataset.userEdited = 'true';
         }
     }
 
@@ -1130,6 +1137,12 @@ function setSelectValue(field, value, row = null) {
                 const ubicacionOption = ubicacionesSelector.querySelector(`[data-value="${ubicacionActual}"]`);
                 if (ubicacionOption) selectOptionSilent(ubicacionesSelector, ubicacionOption);
                 else clearSelection('ubicacion');
+            }
+
+            const dirPctInput = document.getElementById('directorPercentage');
+            if (dirPctInput && !dirPctInput.dataset.userEdited) {
+                const isQro = ['10', '21', '30', '15', '33'].includes(String(desarrolloId));
+                dirPctInput.value = isQro ? '0.125' : '0.10';
             }
         }
 
