@@ -79,8 +79,19 @@
       background: var(--green-bg);
       color: var(--green-tx);
     }
-    .btn-new:hover, .btn-export:hover { opacity: .8; }
-    .btn-new i, .btn-export i { font-size: 14px; }
+    .btn-print {
+      border: 1px solid rgba(56,197,245,0.4);
+      background: rgba(56,197,245,0.12);
+      color: var(--blue-tx);
+      font-weight: 600;
+    }
+    .btn-print:hover {
+      background: rgba(56,197,245,0.24);
+      border-color: var(--blue-tx);
+      color: #fff;
+    }
+    .btn-new:hover, .btn-export:hover, .btn-print:hover { opacity: .88; }
+    .btn-new i, .btn-export i, .btn-print i { font-size: 14px; }
 
     /* ── Modal overlay ── */
     .modal-overlay {
@@ -440,6 +451,10 @@
       <i class="ti ti-download"></i>
       Exportar CSV
     </button>
+    <button class="btn-print" id="btnPrintReport" style="display:none" onclick="imprimirReporteHTML()" title="Generar reporte imprimible">
+      <i class="ti ti-printer"></i>
+      Imprimir Reporte
+    </button>
     <span class="page-count" id="page-count"></span>
     
   </div>
@@ -580,6 +595,12 @@ async function init() {
     $('btnExport').style.display = 'flex';
   }
 
+  // Visible ÚNICAMENTE para Administradores
+  if (USER.roleName === 'Administrador') {
+    const btnPrint = $('btnPrintReport');
+    if (btnPrint) btnPrint.style.display = 'flex';
+  }
+
   const isLimitado = ['Asesor', 'Gerente'].includes(USER.roleName);
   $('page-title').textContent = isLimitado ? 'Mis comisiones' : 'Todas las comisiones';
   await loadComisiones(isLimitado);
@@ -628,6 +649,8 @@ async function doLogout() {
   $('urole').textContent = '—';
   $('btnLogout').style.display = 'none';
   $('btnNew').style.display    = 'none';
+  if ($('btnExport')) $('btnExport').style.display = 'none';
+  if ($('btnPrintReport')) $('btnPrintReport').style.display = 'none';
   $('page-count').textContent  = '';
   showError('Sesión cerrada. <a href="/login" style="color:var(--text-1);font-weight:500">Volver a iniciar sesión →</a>');
 } 
@@ -1082,6 +1105,539 @@ function exportCSV() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// ── Imprimir Reporte HTML (Exclusivo Administrador) ──────────────────────────
+function imprimirReporteHTML() {
+  const filtered = getFiltered();
+  if (!filtered.length) {
+    toast('No hay comisiones para imprimir con los filtros aplicados');
+    return;
+  }
+
+  const activeFilters = [];
+  if (FILTERS.search)  activeFilters.push(`Búsqueda: "${FILTERS.search}"`);
+  if (FILTERS.status)  activeFilters.push(`Estado: ${FILTERS.status}`);
+  if (FILTERS.company) activeFilters.push(`Empresa: ${FILTERS.company}`);
+  if (FILTERS.dev)     activeFilters.push(`Desarrollo: ${FILTERS.dev}`);
+  if (FILTERS.concept) activeFilters.push(`Concepto: ${FILTERS.concept}`);
+  const fFrom = $('filterFrom') ? $('filterFrom').value : '';
+  const fTo = $('filterTo') ? $('filterTo').value : '';
+  if (fFrom) activeFilters.push(`Desde: ${fFrom}`);
+  if (fTo) activeFilters.push(`Hasta: ${fTo}`);
+
+  let totalVentaAcum = 0;
+  let totalComisionesAcum = 0;
+  const processedCommissionIds = new Set();
+  const rows = [];
+
+  for (const c of filtered) {
+    const isCancel = (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci') || Boolean(c.is_cancellation);
+    let conceptText = c.concept?.text || c.concept || '—';
+    let penalizacionText = '—';
+
+    if (isCancel) {
+      if (c.penalty_target === 'cliente') {
+        conceptText += ' (Penalización al cliente)';
+        penalizacionText = 'Penalización al cliente';
+      } else if (c.penalty_target === 'miembros') {
+        penalizacionText = 'Penalización a miembros';
+      }
+    }
+
+    const salePriceNum = parseFloat(c.sale_price || 0);
+    const cId = c._id || (c.location?.text + c.operation_date);
+    if (!processedCommissionIds.has(cId)) {
+      processedCommissionIds.add(cId);
+      totalVentaAcum += salePriceNum;
+    }
+
+    if (c.participantes && c.participantes.length > 0) {
+      for (const p of c.participantes) {
+        const commAmt = parseFloat(p.commission_amount || 0);
+        totalComisionesAcum += commAmt;
+        rows.push({
+          dev: c.development?.text || c.development || '—',
+          company: c.company?.text || c.company || '—',
+          regDate: c.register_date ? new Date(c.register_date).toLocaleDateString('es-MX') : '—',
+          concept: conceptText,
+          opDate: c.operation_date ? new Date(c.operation_date).toLocaleDateString('es-MX') : '—',
+          participant: p.usuario?.name || '—',
+          role: p.role_in_comision || '—',
+          ref: c.expediente_id || '—',
+          client: c.client_name || '—',
+          location: c.location?.text || '—',
+          salePrice: salePriceNum,
+          pct: p.percentage != null ? Number((p.percentage * 100).toFixed(4)).toLocaleString('es-MX', { maximumFractionDigits: 3 }) + '%' : '—',
+          commission: commAmt,
+          penalty: penalizacionText,
+          status: c.status?.name || '—'
+        });
+      }
+    } else {
+      rows.push({
+        dev: c.development?.text || c.development || '—',
+        company: c.company?.text || c.company || '—',
+        regDate: c.register_date ? new Date(c.register_date).toLocaleDateString('es-MX') : '—',
+        concept: conceptText,
+        opDate: c.operation_date ? new Date(c.operation_date).toLocaleDateString('es-MX') : '—',
+        participant: '—',
+        role: '—',
+        ref: c.expediente_id || '—',
+        client: c.client_name || '—',
+        location: c.location?.text || '—',
+        salePrice: salePriceNum,
+        pct: '—',
+        commission: 0,
+        penalty: penalizacionText,
+        status: c.status?.name || '—'
+      });
+    }
+  }
+
+  const fmtCurrency = n => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const escapeHtml = str => String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  const nowStr = new Date().toLocaleString('es-MX', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  const tableRowsHtml = rows.map((r, i) => `
+    <tr>
+      <td style="text-align:center; color:#64748b;">${i + 1}</td>
+      <td style="font-weight:600;">${escapeHtml(r.dev)}</td>
+      <td>${escapeHtml(r.location)}</td>
+      <td style="font-weight:500;">${escapeHtml(r.client)}</td>
+      <td><span class="badge-tag">${escapeHtml(r.concept)}</span></td>
+      <td style="text-align:center;">${r.opDate}</td>
+      <td style="font-weight:600;">${escapeHtml(r.participant)}</td>
+      <td style="text-transform:capitalize;">${escapeHtml(r.role)}</td>
+      <td style="text-align:right; font-family:'Space Mono', monospace;">${fmtCurrency(r.salePrice)}</td>
+      <td style="text-align:center;">${r.pct}</td>
+      <td style="text-align:right; font-weight:700; font-family:'Space Mono', monospace; color:#0f766e;">${fmtCurrency(r.commission)}</td>
+      <td>${escapeHtml(r.penalty)}</td>
+      <td style="text-align:center;"><span class="status-badge">${escapeHtml(r.status)}</span></td>
+    </tr>
+  `).join('');
+
+  const filtersHtml = activeFilters.length
+    ? activeFilters.map(f => `<span class="filter-pill">${escapeHtml(f)}</span>`).join(' ')
+    : '<span style="color:#64748b; font-style:italic;">Todos los registros (sin filtros adicionales)</span>';
+
+  const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte de Comisiones — NOVU</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      padding: 24px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    
+    .action-bar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #0f1e1e;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      gap: 12px;
+    }
+    .action-bar-title {
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .action-bar-title span {
+      background: rgba(96,230,26,0.15);
+      border: 1px solid rgba(96,230,26,0.3);
+      color: #7af028;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+    .action-btns {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-act {
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-act-print {
+      background: #7af028;
+      color: #0f1e1e;
+    }
+    .btn-act-print:hover {
+      background: #60e61a;
+      transform: translateY(-1px);
+    }
+    .btn-act-close {
+      background: rgba(255,255,255,0.1);
+      color: #ffffff;
+    }
+    .btn-act-close:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .report-paper {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.03);
+      border: 1px solid #e2e8f0;
+      padding: 32px 36px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #0f766e;
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+    }
+    .brand-logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f1e1e;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .brand-logo .dot {
+      color: #16a34a;
+    }
+    .brand-subtitle {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #0f766e;
+      margin-top: 4px;
+    }
+    .report-title-box {
+      text-align: right;
+    }
+    .report-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+    .report-meta {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .kpi-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+    .kpi-label {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .kpi-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f172a;
+      font-family: 'Space Mono', monospace;
+    }
+    .kpi-val.accent {
+      color: #0f766e;
+    }
+
+    .filter-banner {
+      background: #f1f5f9;
+      border-left: 4px solid #0f766e;
+      padding: 10px 14px;
+      border-radius: 0 8px 8px 0;
+      font-size: 11px;
+      color: #334155;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-banner strong {
+      color: #0f172a;
+    }
+    .filter-pill {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 10.5px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.5px;
+    }
+    thead {
+      display: table-header-group;
+    }
+    th {
+      background: #0f2c2b;
+      color: #ffffff;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 9.5px;
+      padding: 8px 8px;
+      text-align: left;
+      border: 1px solid #0f2c2b;
+      white-space: nowrap;
+    }
+    td {
+      padding: 6px 8px;
+      border: 1px solid #e2e8f0;
+      vertical-align: middle;
+      color: #1e293b;
+    }
+    tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    tbody tr:hover {
+      background: #f1f5f9;
+    }
+    tfoot td {
+      background: #e2e8f0;
+      font-weight: 800;
+      border-top: 2px solid #0f766e;
+      padding: 8px;
+    }
+    
+    .badge-tag {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-weight: 600;
+      font-size: 9.5px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #dcfce7;
+      color: #15803d;
+      font-weight: 700;
+      font-size: 9.5px;
+    }
+
+    .report-footer {
+      margin-top: 32px;
+      padding-top: 18px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 10px;
+      color: #64748b;
+    }
+    .signatures {
+      display: flex;
+      gap: 60px;
+    }
+    .sign-box {
+      border-top: 1px solid #94a3b8;
+      width: 180px;
+      text-align: center;
+      padding-top: 6px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+        font-size: 9.5px;
+      }
+      .no-print, .action-bar {
+        display: none !important;
+      }
+      .report-paper {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      table {
+        font-size: 9px;
+      }
+      th, td {
+        padding: 4px 6px;
+      }
+      tr {
+        page-break-inside: avoid;
+      }
+      @page {
+        size: landscape;
+        margin: 10mm 8mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="action-bar no-print">
+    <div class="action-bar-title">
+      NOVU &bull; Vista de Impresión
+      <span>Administración</span>
+      <span style="background:rgba(255,255,255,0.1); color:#fff; border-color:transparent;">${rows.length} registros</span>
+    </div>
+    <div class="action-btns">
+      <button class="btn-act btn-act-close" onclick="window.close()">✕ Cerrar</button>
+      <button class="btn-act btn-act-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+    </div>
+  </div>
+
+  <div class="report-paper">
+    <header class="report-header">
+      <div>
+        <div class="brand-logo">NO<span class="dot">●</span>VU</div>
+        <div class="brand-subtitle">Gestión Integral de Comisiones</div>
+      </div>
+      <div class="report-title-box">
+        <h1 class="report-title">REPORTE DETALLADO DE COMISIONES</h1>
+        <div class="report-meta">
+          Fecha de emisión: <strong>${nowStr}</strong> &bull; Generado por: <strong>${escapeHtml(USER?.name || 'Administrador')}</strong>
+        </div>
+      </div>
+    </header>
+
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Operaciones (Filas)</div>
+        <div class="kpi-val">${rows.length}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Comisiones Únicas</div>
+        <div class="kpi-val">${processedCommissionIds.size}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Volumen Total Vendido</div>
+        <div class="kpi-val">${fmtCurrency(totalVentaAcum)}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Comisión Total Generada</div>
+        <div class="kpi-val accent">${fmtCurrency(totalComisionesAcum)}</div>
+      </div>
+    </div>
+
+    <div class="filter-banner">
+      <strong>Filtros aplicados:</strong> ${filtersHtml}
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 25px; text-align: center;">#</th>
+          <th>Desarrollo</th>
+          <th>Ubicación</th>
+          <th>Cliente</th>
+          <th>Concepto</th>
+          <th style="text-align: center;">Fecha Op.</th>
+          <th>Participante</th>
+          <th>Rol</th>
+          <th style="text-align: right;">Precio Venta</th>
+          <th style="text-align: center;">% Com.</th>
+          <th style="text-align: right;">Comisión</th>
+          <th>Penalización</th>
+          <th style="text-align: center;">Estatus</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRowsHtml}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="8" style="text-align: right; font-weight: 800;">TOTALES AUDITADOS:</td>
+          <td style="text-align: right; font-family:'Space Mono', monospace;">${fmtCurrency(totalVentaAcum)}</td>
+          <td></td>
+          <td style="text-align: right; font-family:'Space Mono', monospace; color:#0f766e;">${fmtCurrency(totalComisionesAcum)}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <footer class="report-footer">
+      <div>
+        <p>Documento oficial emitido por el Sistema NOVU.</p>
+        <p style="margin-top:2px; color:#94a3b8;">Uso confidencial para control de auditoría interna y contabilidad.</p>
+      </div>
+      <div class="signatures">
+        <div class="sign-box">Elaboró (Administración)</div>
+        <div class="sign-box">Revisó / Autorizó</div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        window.print();
+      }, 400);
+    });
+  <\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank', 'width=1200,height=800,menubar=no,toolbar=no,status=no');
+  if (!win) {
+    alert('Por favor, permite las ventanas emergentes (pop-ups) en tu navegador para ver e imprimir el reporte.');
+  } else {
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
 }
 
 // ── Event listeners filtros ───────────────────────────────────────────────────

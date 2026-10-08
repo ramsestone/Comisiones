@@ -935,6 +935,46 @@ function setSelectValue(field, value, row = null) {
             }
         }
 
+        function updateSalePrice(preferredExpedienteId = null, preferredUbicacionId = null) {
+            const ubicacionVal = getSelectValue('ubicacion');
+            const ubId = preferredUbicacionId || (ubicacionVal && ubicacionVal.id ? ubicacionVal.id : null);
+            if (!ubId) return;
+
+            const expedienteVal = getSelectValue('expediente');
+            const expId = preferredExpedienteId || (expedienteVal && expedienteVal.id ? expedienteVal.id : null);
+            const conceptoVal = getSelectValue('concepto');
+            const isCancelacion = conceptoVal && conceptoVal.text && conceptoVal.text.trim().toLowerCase() === 'cancelación';
+
+            let ubicacion = null;
+
+            // 1. Priorizar búsqueda con el expediente seleccionado si existe
+            if (expId) {
+                if (isCancelacion) {
+                    ubicacion = allData.ubicaciones.find(u => u.id == ubId && String(u.expediente_id) === String(expId) && u.estatus_venta === 'CANCELADO')
+                             || allData.ubicaciones.find(u => u.id == ubId && String(u.expediente_id) === String(expId));
+                } else {
+                    ubicacion = allData.ubicaciones.find(u => u.id == ubId && String(u.expediente_id) === String(expId) && u.estatus_venta !== 'CANCELADO')
+                             || allData.ubicaciones.find(u => u.id == ubId && String(u.expediente_id) === String(expId));
+                }
+            }
+
+            // 2. Si no hay expediente o no se encontró por expediente, buscar solo por ubicación
+            if (!ubicacion) {
+                ubicacion = isCancelacion 
+                    ? (allData.ubicaciones.find(u => u.id == ubId && u.estatus_venta === 'CANCELADO') || allData.ubicaciones.find(u => u.id == ubId))
+                    : (allData.ubicaciones.find(u => u.id == ubId && u.estatus_venta !== 'CANCELADO') || allData.ubicaciones.find(u => u.id == ubId));
+            }
+
+            const salePriceEl = document.getElementById('salePrice');
+            if (salePriceEl && ubicacion && ubicacion.importe_venta) {
+                salePriceEl.dataset.raw = ubicacion.importe_venta;
+                salePriceEl.value = '$' + parseInt(ubicacion.importe_venta).toLocaleString('es-MX');
+                clearFieldError('salePrice');
+                salePriceEl.classList.remove('has-error');
+                salePriceEl.classList.add('valid');
+            }
+        }
+
         function selectOption(selectorElement, optionElement, isAutoSelect = false) {
             const optionsContainer = selectorElement.querySelector('.select-options');
             const display = selectorElement.querySelector('.select-display');
@@ -982,41 +1022,13 @@ function setSelectValue(field, value, row = null) {
                 }
                 
                 // Actualizar el precio de venta si hay una ubicacion seleccionada
-                const ubicacionVal = getSelectValue('ubicacion');
-                if (ubicacionVal && ubicacionVal.id) {
-                    const salePriceEl = document.getElementById('salePrice');
-                    const ubicacion = isCancelacion 
-                        ? (allData.ubicaciones.find(u => u.id == ubicacionVal.id && u.estatus_venta === 'CANCELADO') || allData.ubicaciones.find(u => u.id == ubicacionVal.id))
-                        : (allData.ubicaciones.find(u => u.id == ubicacionVal.id && u.estatus_venta !== 'CANCELADO') || allData.ubicaciones.find(u => u.id == ubicacionVal.id));
-                    
-                    if (ubicacion && ubicacion.importe_venta) {
-                        salePriceEl.dataset.raw = ubicacion.importe_venta;
-                        salePriceEl.value = '$' + parseInt(ubicacion.importe_venta).toLocaleString('es-MX');
-                        clearFieldError('salePrice');
-                        salePriceEl.classList.remove('has-error');
-                        salePriceEl.classList.add('valid');
-                    }
-                }
+                updateSalePrice();
             }
             else if (field === 'desarrollo') handleDesarrolloChange(optionElement.dataset.value, isAutoSelect);
             else if (field === 'ubicacion') {
                 handleUbicacionChange(optionElement.dataset.desarrollo, isAutoSelect);
-                const salePriceEl = document.getElementById('salePrice');
                 const ubicacionId = optionElement.dataset.value;
-                const conceptoVal = getSelectValue('concepto');
-                const isCancellation = conceptoVal && conceptoVal.text.toLowerCase() === 'cancelación';
-                
-                const ubicacion = isCancellation 
-                    ? (allData.ubicaciones.find(u => u.id == ubicacionId && u.estatus_venta === 'CANCELADO') || allData.ubicaciones.find(u => u.id == ubicacionId))
-                    : (allData.ubicaciones.find(u => u.id == ubicacionId && u.estatus_venta !== 'CANCELADO') || allData.ubicaciones.find(u => u.id == ubicacionId));
-                
-                if (ubicacion && ubicacion.importe_venta) {
-                    salePriceEl.dataset.raw = ubicacion.importe_venta;
-                    salePriceEl.value = '$' + parseInt(ubicacion.importe_venta).toLocaleString('es-MX');
-                    clearFieldError('salePrice');
-                    salePriceEl.classList.remove('has-error');
-                    salePriceEl.classList.add('valid');
-                }
+                updateSalePrice(null, ubicacionId);
 
                 // ── Vinculación bidireccional: Ubicación → Expediente ─────────────────
                 if (!window._linkingInProgress) {
@@ -1040,6 +1052,7 @@ function setSelectValue(field, value, row = null) {
                     }
                     window._linkingInProgress = false;
                 }
+                updateSalePrice(null, ubicacionId);
             } else if (field === 'expediente') {
                 // ── Vinculación bidireccional: Expediente → Ubicación ─────────────────
                 if (!window._linkingInProgress) {
@@ -1072,6 +1085,7 @@ function setSelectValue(field, value, row = null) {
                     }
                     window._linkingInProgress = false;
                 }
+                updateSalePrice(optionElement.dataset.value);
             } else if (field === 'gerente') {
                 handleGerenteChange(optionElement.dataset.value, selectorElement.dataset.row);
             }
