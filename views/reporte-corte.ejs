@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte Ejecutivo de Corte de Comisiones</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      font-size: 11px;
+      line-height: 1.35;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Screen container */
+    .report-screen-wrapper {
+      background: #f1f5f9;
+      min-height: 100vh;
+      padding: 24px 0;
+    }
+
+    .report-sheet {
+      width: 216mm;
+      min-height: 279mm;
+      margin: 0 auto 20px auto;
+      background: #ffffff;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 14mm 16mm 14mm 16mm;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    /* Screen action toolbar */
+    .screen-toolbar {
+      max-width: 216mm;
+      margin: 0 auto 16px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .screen-toolbar .btn-action {
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .screen-toolbar .btn-action:hover {
+      background: #1d4ed8;
+    }
+
+    /* Header styling */
+    .header-system {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #2563eb;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .header-title {
+      font-size: 21px;
+      font-weight: 900;
+      color: #0b192c;
+      letter-spacing: -0.3px;
+      line-height: 1.15;
+      margin-bottom: 4px;
+    }
+    .header-subtitle {
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 14px;
+    }
+
+    /* Metadata Info Box */
+    .meta-box {
+      background-color: #f0f7ff;
+      border: 1px solid #c7e0ff;
+      border-radius: 4px;
+      padding: 10px 14px;
+      display: grid;
+      grid-template-columns: 1.25fr 1.25fr 1.5fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .meta-col {
+      display: flex;
+      flex-direction: column;
+    }
+    .meta-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #1e40af;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+    .meta-val-main {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+    .meta-val-sub {
+      font-size: 11px;
+      font-weight: 600;
+      color: #334155;
+      line-height: 1.2;
+    }
+
+    /* Section Titles */
+    .section-title {
+      font-size: 12.5px;
+      font-weight: 900;
+      color: #0b192c;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-top: 14px;
+      margin-bottom: 8px;
+    }
+    .section-subtitle {
+      font-size: 11px;
+      color: #475569;
+      font-weight: 500;
+      margin-top: -4px;
+      margin-bottom: 8px;
+    }
+
+    /* 1. Macro Summary Cards */
+    .macro-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .macro-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 9px 8px;
+      text-align: center;
+    }
+    .macro-card.highlight {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+    .macro-card-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 2px;
+    }
+    .macro-card-val {
+      font-size: 20px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.15;
+    }
+    .macro-card.highlight .macro-card-val {
+      color: #15803d;
+    }
+    .macro-card-sub {
+      font-size: 10px;
+      color: #64748b;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+    .macro-card.highlight .macro-card-sub {
+      color: #166534;
+      font-weight: 600;
+    }
+
+    /* Table Styles */
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      line-height: 1.3;
+      margin-bottom: 14px;
+    }
+    .report-table thead th {
+      background-color: #0b192c;
+      color: #ffffff;
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      padding: 6px 8px;
+      border: none;
+    }
+    .report-table th.text-left, .report-table td.text-left { text-align: left; }
+    .report-table th.text-center, .report-table td.text-center { text-align: center; }
+    .report-table th.text-right, .report-table td.text-right { text-align: right; }
+
+    .report-table tbody tr {
+      border-bottom: 1px solid #e9ecef;
+    }
+    .report-table tbody tr:nth-child(even) {
+      background-color: #fbfcfd;
+    }
+    .report-table tbody td {
+      padding: 5px 8px;
+      color: #1e293b;
+    }
+    .report-table tbody tr.row-cancellation td {
+      color: #dc2626;
+      font-weight: 600;
+    }
+    .report-table tbody tr.row-cancellation .concept-name {
+      color: #dc2626;
+      font-weight: 700;
+    }
+
+    /* Total Row */
+    .report-table tr.total-row {
+      background-color: #f0f7ff !important;
+      border-top: 1.5px solid #0b192c;
+      border-bottom: 1px solid #bfdbfe;
+      font-weight: 800;
+    }
+    .report-table tr.total-row td {
+      color: #0b192c;
+      padding: 6px 8px;
+    }
+    .report-table tr.total-row .total-title {
+      color: #1e3a8a;
+      font-weight: 900;
+    }
+
+    /* Padron Table */
+    .padron-table tbody td {
+      padding: 4px 6px;
+      font-size: 9.5px;
+    }
+    .padron-table .cell-idx {
+      color: #64748b;
+      font-weight: 700;
+      width: 24px;
+    }
+    .padron-table .cell-ubi {
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+    }
+    .padron-table .cell-client {
+      font-size: 9px;
+      color: #1e293b;
+      max-width: 170px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .padron-table .cell-money {
+      font-family: 'Space Mono', monospace;
+      font-size: 9.5px;
+      white-space: nowrap;
+    }
+
+    /* Page Breaks for Print & Multi-sheet Preview */
+    .page-break {
+      page-break-after: always;
+      break-after: page;
+    }
+
+    /* Print Media Query */
+    @media print {
+      @page {
+        size: letter portrait;
+        margin: 10mm 12mm 10mm 12mm;
+      }
+      body {
+        background: #ffffff !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .report-screen-wrapper {
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .report-sheet {
+        width: 100% !important;
+        min-height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      .page-break {
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      /* Prevent unwanted table row splits */
+      tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="report-screen-wrapper">
+    
+    <!-- Screen Action Bar (hidden on print) -->
+    <div class="screen-toolbar no-print">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <i class="fas fa-file-invoice-dollar" style="color:#60e61a; font-size:18px;"></i>
+        <div>
+          <strong style="font-size:13px;">Reporte Ejecutivo de Corte de Comisiones</strong>
+          <div style="font-size:11px; opacity:0.8;"><%= meta.periodoTexto %> <%= meta.diasTexto %></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-action" onclick="window.print()">
+          <i class="fas fa-print"></i> Imprimir / Guardar PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== PÁGINA 1 ==================== -->
+    <div class="report-sheet page-break">
+      
+      <!-- Top Title Header -->
+      <div class="header-system">SISTEMA DE GESTIÓN DE COMISIONES | GRUPO URBANIA</div>
+      <div class="header-title">REPORTE EJECUTIVO DE CORTE DE COMISIONES</div>
+      <div class="header-subtitle">Comisiones aprobadas y transicionadas a estatus 'Pendiente de Pago' (Corte de 48 Horas)</div>
+
+      <!-- Metadata Box -->
+      <div class="meta-box">
+        <div class="meta-col">
+          <div class="meta-label">PERÍODO DE CORTE</div>
+          <div class="meta-val-main"><%= meta.periodoTexto %></div>
+          <div class="meta-val-sub"><%= meta.diasTexto %></div>
+        </div>
+        <div class="meta-col">
+          <div class="meta-label">FECHA Y HORA DE EMISIÓN</div>
+          <div class="meta-val-main"><%= meta.fechaEmision %></div>
+          <div class="meta-val-sub"><%= meta.horaEmision %></div>
+        </div>
+        <div class="meta-col">
+          <div class="meta-label">DESTINATARIO</div>
+          <div class="meta-val-main"><%= meta.destinatarioPrincipal %></div>
+          <div class="meta-val-sub"><%= meta.destinatarioSub %></div>
+        </div>
+      </div>
+
+      <!-- 1. RESUMEN MACRO DEL CORTE -->
+      <div class="section-title">1. RESUMEN MACRO DEL CORTE</div>
+      <div class="macro-grid">
+        <div class="macro-card">
+          <div class="macro-card-label">TOTAL COMISIONES</div>
+          <div class="macro-card-val"><%= resumenMacro.totalComisiones %></div>
+          <div class="macro-card-sub"><%= resumenMacro.totalComisiones %> Operaciones</div>
+        </div>
+        <div class="macro-card">
+          <div class="macro-card-label">UBICACIONES ÚNICAS</div>
+          <div class="macro-card-val"><%= resumenMacro.ubicacionesUnicas %></div>
+          <div class="macro-card-sub"><%= resumenMacro.ubicacionesUnicas %> Unidades</div>
+        </div>
+        <div class="macro-card">
+          <div class="macro-card-label">VALOR TOTAL VENTAS</div>
+          <div class="macro-card-val" style="font-size: 16px;"><%= resumenMacro.valorTotalVentas %></div>
+          <div class="macro-card-sub">Precio de Venta</div>
+        </div>
+        <div class="macro-card highlight">
+          <div class="macro-card-label">TOTAL COMISIONADO</div>
+          <div class="macro-card-val" style="font-size: 16px;"><%= resumenMacro.totalComisionado %></div>
+          <div class="macro-card-sub">Neto a Dispersar</div>
+        </div>
+      </div>
+
+      <!-- 2. DISTRIBUCIÓN POR CONCEPTO DE OPERACIÓN -->
+      <div class="section-title">2. DISTRIBUCIÓN POR CONCEPTO DE OPERACIÓN</div>
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="text-left" style="width: 15%;">Concepto</th>
+            <th class="text-left" style="width: 48%;">Descripción</th>
+            <th class="text-right" style="width: 10%;">Cantidad</th>
+            <th class="text-right" style="width: 12%;">% Volumen</th>
+            <th class="text-left" style="width: 25%;">Estatus / Impacto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% distribucionConcepto.forEach(function(item) { %>
+            <tr class="<%= item.concepto === 'Cancelación' ? 'row-cancellation' : '' %>">
+              <td class="text-left <%- item.concepto === 'Cancelación' ? 'concept-name' : '' %>" style="font-weight: 700;"><%= item.concepto %></td>
+              <td class="text-left" style="color: #475569;"><%= item.descripcion %></td>
+              <td class="text-right" style="font-weight: 600;"><%= item.cantidad %></td>
+              <td class="text-right"><%= item.volumenPct %>%</td>
+              <td class="text-left" style="color: #475569;"><%= item.estatusImpacto %></td>
+            </tr>
+          <% }); %>
+          <tr class="total-row">
+            <td class="text-left total-title">TOTAL</td>
+            <td class="text-left">Consolidado total de movimientos</td>
+            <td class="text-right"><%= totales.totalOperaciones %></td>
+            <td class="text-right">100.0%</td>
+            <td class="text-left"><%= totales.totalOperaciones %> Movimientos</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 3. IMPORTE COMISIONADO POR EMPRESA -->
+      <div class="section-title">3. IMPORTE COMISIONADO POR EMPRESA</div>
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="text-left" style="width: 50%;">Empresa Razon Social</th>
+            <th class="text-right" style="width: 12%;">Operaciones</th>
+            <th class="text-right" style="width: 14%;">% Operaciones</th>
+            <th class="text-right" style="width: 14%;">Importe Comisionado</th>
+            <th class="text-right" style="width: 10%;">% Importe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% empresas.forEach(function(emp) { %>
+            <tr>
+              <td class="text-left" style="font-weight: 600;"><%= emp.empresa %></td>
+              <td class="text-right"><%= emp.operaciones %></td>
+              <td class="text-right"><%= emp.operacionesPct %>%</td>
+              <td class="text-right" style="font-weight: 700;"><%= emp.importeFormateado %></td>
+              <td class="text-right"><%= emp.importePct %>%</td>
+            </tr>
+          <% }); %>
+          <tr class="total-row">
+            <td class="text-left total-title">TOTAL GENERAL</td>
+            <td class="text-right"><%= totales.totalOperaciones %></td>
+            <td class="text-right">100.0%</td>
+            <td class="text-right" style="font-weight: 900;"><%= totales.totalComisionadoFormateado %></td>
+            <td class="text-right">100.0%</td>
+          </tr>
+        </tbody>
+      </table>
+
+    </div>
+
+
+    <!-- ==================== PÁGINA 2 ==================== -->
+    <div class="report-sheet page-break">
+      
+      <!-- 4. IMPORTE COMISIONADO POR DESARROLLO -->
+      <div class="section-title" style="margin-top: 0;">4. IMPORTE COMISIONADO POR DESARROLLO</div>
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="text-left" style="width: 32%;">Desarrollo</th>
+            <th class="text-left" style="width: 38%;">Empresa</th>
+            <th class="text-right" style="width: 10%;">Operaciones</th>
+            <th class="text-right" style="width: 12%;">Importe Comisionado</th>
+            <th class="text-right" style="width: 8%;">% Importe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% desarrollos.forEach(function(dev) { %>
+            <tr>
+              <td class="text-left" style="font-weight: 700;"><%= dev.desarrollo %></td>
+              <td class="text-left" style="color: #475569; font-size: 9.5px;"><%= dev.empresa %></td>
+              <td class="text-right"><%= dev.operaciones %></td>
+              <td class="text-right" style="font-weight: 700;"><%= dev.importeFormateado %></td>
+              <td class="text-right"><%= dev.importePct %>%</td>
+            </tr>
+          <% }); %>
+          <tr class="total-row">
+            <td class="text-left total-title">TOTAL CONSOLIDADO</td>
+            <td class="text-left" style="font-weight: 700; color: #1e3a8a;"><%= totales.totalDesarrollosActivos %> Desarrollos Activos</td>
+            <td class="text-right"><%= totales.totalOperaciones %></td>
+            <td class="text-right" style="font-weight: 900;"><%= totales.totalComisionadoFormateado %></td>
+            <td class="text-right">100.0%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 5. ACTIVIDAD E IMPORTE POR GERENTE COORDINADOR -->
+      <div class="section-title" style="margin-top: 18px;">5. ACTIVIDAD E IMPORTE POR GERENTE COORDINADOR</div>
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="text-left" style="width: 44%;">Gerente Responsable</th>
+            <th class="text-right" style="width: 18%;">Operaciones Coordinadas</th>
+            <th class="text-right" style="width: 19%;">Comisión Propia del Gerente</th>
+            <th class="text-right" style="width: 19%;">Total Comisiones de su Equipo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% gerentes.forEach(function(ger) { %>
+            <tr>
+              <td class="text-left" style="font-weight: 600;"><%= ger.gerente %></td>
+              <td class="text-right" style="color: #475569;"><%= ger.operaciones %></td>
+              <td class="text-right" style="font-weight: 700;"><%= ger.propiaFormateada %></td>
+              <td class="text-right" style="font-weight: 600;"><%= ger.equipoFormateado %></td>
+            </tr>
+          <% }); %>
+          <tr class="total-row">
+            <td class="text-left total-title">TOTAL GERENCIA</td>
+            <td class="text-right" style="font-weight: 700; color: #1e3a8a;"><%= totales.totalGerentes %> Gerentes</td>
+            <td class="text-right" style="font-weight: 900;"><%= totales.totalGerenciaPropiaFormateada %></td>
+            <td class="text-right">-</td>
+          </tr>
+        </tbody>
+      </table>
+
+    </div>
+
+
+    <!-- ==================== PÁGINA 3 ==================== -->
+    <div class="report-sheet <%= padron.length > 46 ? 'page-break' : '' %>">
+      
+      <div class="section-title" style="margin-top: 0;">6. ANEXO: PADRÓN DETALLADO DE COMISIONES EN CORTE (<%= padron.length %> OPERACIONES)</div>
+      <div class="section-subtitle">Listado completo de unidades transicionadas a Pendiente de Pago en el corte del <%= meta.periodoTexto %>.</div>
+
+      <table class="report-table padron-table">
+        <thead>
+          <tr>
+            <th class="text-center" style="width: 4%;">#</th>
+            <th class="text-left" style="width: 18%;">Ubicación</th>
+            <th class="text-left" style="width: 23%;">Desarrollo</th>
+            <th class="text-left" style="width: 11%;">Concepto</th>
+            <th class="text-left" style="width: 24%;">Cliente</th>
+            <th class="text-right" style="width: 10%;">Precio Venta</th>
+            <th class="text-right" style="width: 10%;">Comisión Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% 
+            const page1Items = padron.slice(0, 46);
+            page1Items.forEach(function(row) { 
+          %>
+            <tr class="<%= row.concepto === 'Cancelación' ? 'row-cancellation' : '' %>">
+              <td class="text-center cell-idx"><%= row.index %></td>
+              <td class="text-left cell-ubi"><%= row.ubicacion %></td>
+              <td class="text-left" style="font-size: 9px;"><%= row.desarrollo %></td>
+              <td class="text-left <%- row.concepto === 'Cancelación' ? 'concept-name' : '' %>" style="font-weight: 600;"><%= row.concepto %></td>
+              <td class="text-left cell-client"><%= row.cliente %></td>
+              <td class="text-right cell-money"><%= row.precioVenta %></td>
+              <td class="text-right cell-money" style="font-weight: 700; <%= row.isNegative ? 'color:#dc2626;' : '' %>"><%= row.comisionTotal %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+
+    </div>
+
+    <!-- ==================== PÁGINA 4 (Si hay más de 46 operaciones) ==================== -->
+    <% if (padron.length > 46) { %>
+    <div class="report-sheet">
+      
+      <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px;">
+        Continuación: Padrón Detallado de Comisiones en Corte (Pág. 2)
+      </div>
+
+      <table class="report-table padron-table">
+        <thead>
+          <tr>
+            <th class="text-center" style="width: 4%;">#</th>
+            <th class="text-left" style="width: 18%;">Ubicación</th>
+            <th class="text-left" style="width: 23%;">Desarrollo</th>
+            <th class="text-left" style="width: 11%;">Concepto</th>
+            <th class="text-left" style="width: 24%;">Cliente</th>
+            <th class="text-right" style="width: 10%;">Precio Venta</th>
+            <th class="text-right" style="width: 10%;">Comisión Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% 
+            const page2Items = padron.slice(46);
+            page2Items.forEach(function(row) { 
+          %>
+            <tr class="<%= row.concepto === 'Cancelación' ? 'row-cancellation' : '' %>">
+              <td class="text-center cell-idx"><%= row.index %></td>
+              <td class="text-left cell-ubi"><%= row.ubicacion %></td>
+              <td class="text-left" style="font-size: 9px;"><%= row.desarrollo %></td>
+              <td class="text-left <%- row.concepto === 'Cancelación' ? 'concept-name' : '' %>" style="font-weight: 600;"><%= row.concepto %></td>
+              <td class="text-left cell-client"><%= row.cliente %></td>
+              <td class="text-right cell-money"><%= row.precioVenta %></td>
+              <td class="text-right cell-money" style="font-weight: 700; <%= row.isNegative ? 'color:#dc2626;' : '' %>"><%= row.comisionTotal %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+
+    </div>
+    <% } %>
+
+  </div>
+
+  <script>
+    // Auto-trigger window.print if requested or loaded inside iframe
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldPrint = urlParams.get('autoPrint') === 'true' || urlParams.get('print') === 'true';
+
+    window.addEventListener('load', () => {
+      if (shouldPrint) {
+        setTimeout(() => {
+          window.print();
+        }, 500);
+      }
+    });
+  </script>
+</body>
+</html>

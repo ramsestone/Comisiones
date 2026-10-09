@@ -2,6 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const { authenticate } = require('../JWT/authCookies');
 const { ObjectId } = require('mongodb');
+const { getReporteCorteData } = require('../services/corteReportService');
 
 const DB_NAME = 'roles_usuarios';
 
@@ -666,6 +667,54 @@ router.get('/dashboard', authenticate, async (req, res) => {
   } catch (error) {
     console.error('[GET /api/kpis/dashboard]', error);
     return res.status(500).json({ success: false, message: 'Error fetching KPIs', error: error.message });
+  }
+});
+
+// ── GET /api/kpis/reporte-corte-html ──────────────────────────────────────────
+// Genera el reporte ejecutivo en HTML para impresión
+router.get('/reporte-corte-html', authenticate, async (req, res) => {
+  const db = req.app.locals.mongoClient.db(DB_NAME);
+  const user = req.user;
+
+  if (!['Director', 'Administrador'].includes(user.roleName)) {
+    return res.status(403).send('Acceso denegado. Solo Directores y Administradores pueden generar el reporte de corte.');
+  }
+
+  const { startDate, endDate } = req.query;
+  if (!startDate || !endDate) {
+    return res.status(400).send('Se requieren las fechas de inicio y fin (startDate y endDate).');
+  }
+
+  try {
+    const reportData = await getReporteCorteData(db, startDate, endDate);
+    return res.render('reporte-corte', reportData);
+  } catch (err) {
+    console.error('[GET /api/kpis/reporte-corte-html]', err);
+    return res.status(500).send('Error generando el reporte de corte: ' + err.message);
+  }
+});
+
+// ── GET /api/kpis/reporte-corte-data ──────────────────────────────────────────
+// Devuelve la información calculada del reporte en formato JSON
+router.get('/reporte-corte-data', authenticate, async (req, res) => {
+  const db = req.app.locals.mongoClient.db(DB_NAME);
+  const user = req.user;
+
+  if (!['Director', 'Administrador'].includes(user.roleName)) {
+    return res.status(403).json({ success: false, message: 'Acceso denegado' });
+  }
+
+  const { startDate, endDate } = req.query;
+  if (!startDate || !endDate) {
+    return res.status(400).json({ success: false, message: 'Se requieren las fechas startDate y endDate.' });
+  }
+
+  try {
+    const reportData = await getReporteCorteData(db, startDate, endDate);
+    return res.status(200).json({ success: true, data: reportData });
+  } catch (err) {
+    console.error('[GET /api/kpis/reporte-corte-data]', err);
+    return res.status(500).json({ success: false, message: 'Error generando datos de corte', error: err.message });
   }
 });
 

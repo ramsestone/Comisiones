@@ -135,6 +135,183 @@
       color: #000;
     }
 
+    .btn-corte {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.92rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+      transition: all 0.25s ease;
+      font-family: 'Nunito', sans-serif;
+    }
+    .btn-corte:hover {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+    }
+    .btn-corte:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── Modal Corte Ejecutivo ── */
+    .corte-modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.25s ease-out;
+    }
+    .corte-modal-backdrop.active {
+      display: flex;
+    }
+    .corte-modal-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 90%;
+      max-width: 520px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+      overflow: hidden;
+      animation: slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .corte-modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 30, 30, 0.85);
+    }
+    .corte-icon-wrap {
+      width: 42px; height: 42px;
+      background: rgba(37, 99, 235, 0.18);
+      border: 1px solid rgba(37, 99, 235, 0.35);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: #38bdf8;
+      font-size: 19px;
+    }
+    .corte-modal-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-1);
+    }
+    .corte-modal-subtitle {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-top: 2px;
+    }
+    .corte-modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-3);
+      font-size: 26px;
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    .corte-modal-close:hover {
+      color: #ff4d4f;
+    }
+    .corte-modal-body {
+      padding: 22px 24px;
+    }
+    .corte-shortcuts {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .btn-shortcut {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-1);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-shortcut:hover {
+      background: var(--green-bg);
+      color: var(--green-tx);
+      border-color: var(--green-br);
+    }
+    .corte-inputs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .corte-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .corte-form-group label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-2);
+    }
+    .corte-info-banner {
+      background: rgba(56, 197, 245, 0.08);
+      border: 1px solid rgba(56, 197, 245, 0.2);
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 11.5px;
+      color: #7dd3fc;
+      line-height: 1.45;
+    }
+    .corte-info-banner i {
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+    .corte-modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: rgba(15, 30, 30, 0.6);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-2);
+      padding: 9px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.92rem;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text-1);
+    }
+
     /* ── Stats Overview ── */
     .stats-grid {
       display: grid;
@@ -488,6 +665,14 @@
           <button class="btn-apply" onclick="fetchKPIs()">
             <i class="fas fa-sync-alt"></i> Actualizar
           </button>
+
+          <% if (typeof user !== 'undefined' && user && (user.roleName === 'Administrador' || user.roleName === 'Director')) { %>
+          <div style="margin-left: 10px;">
+            <button class="btn-corte" onclick="openCorteModal()" title="Generar Reporte Ejecutivo de Corte para dispersión">
+              <i class="fas fa-file-invoice-dollar"></i> Generar Corte Ejecutivo
+            </button>
+          </div>
+          <% } %>
         </div>
 
         <!-- 1. Tarjetas Generales -->
@@ -628,6 +813,67 @@
         </div>
 
       </div>
+
+      <% if (typeof user !== 'undefined' && user && (user.roleName === 'Administrador' || user.roleName === 'Director')) { %>
+      <!-- Modal Generar Corte Ejecutivo -->
+      <div class="corte-modal-backdrop" id="corteModalBackdrop" onclick="closeCorteModalOnBackdrop(event)">
+        <div class="corte-modal-content">
+          <div class="corte-modal-header">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="corte-icon-wrap">
+                <i class="fas fa-file-invoice-dollar"></i>
+              </div>
+              <div>
+                <h3 class="corte-modal-title">Generar Reporte Ejecutivo de Corte</h3>
+                <p class="corte-modal-subtitle">Comisiones aprobadas para dispersión de pago (Corte de 48 Horas)</p>
+              </div>
+            </div>
+            <button class="corte-modal-close" onclick="closeCorteModal()" type="button">&times;</button>
+          </div>
+
+          <div class="corte-modal-body">
+            <div class="corte-shortcuts">
+              <span style="font-size:12px; color:var(--text-2); font-weight:600;">Accesos rápidos:</span>
+              <button type="button" class="btn-shortcut" onclick="setCorteDates('2026-09-28', '2026-09-29')">
+                Último Corte (28-29 Sep 2026)
+              </button>
+              <button type="button" class="btn-shortcut" onclick="setCorteCurrentWeek()">
+                Esta Semana
+              </button>
+              <button type="button" class="btn-shortcut" onclick="setCorteCurrentMonth()">
+                Mes Actual
+              </button>
+            </div>
+
+            <div class="corte-inputs-grid">
+              <div class="corte-form-group">
+                <label for="corteStartDate"><i class="fas fa-calendar-alt"></i> Fecha de Inicio</label>
+                <input type="date" id="corteStartDate" class="input-date" style="width:100%;" required />
+              </div>
+              <div class="corte-form-group">
+                <label for="corteEndDate"><i class="fas fa-calendar-check"></i> Fecha de Fin</label>
+                <input type="date" id="corteEndDate" class="input-date" style="width:100%;" required />
+              </div>
+            </div>
+
+          </div>
+
+          <div class="corte-modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeCorteModal()">Cancelar</button>
+            <button type="button" class="btn-corte" id="btnSubmitCorte" onclick="ejecutarCorteYPrint()">
+              <i class="fas fa-print"></i> Generar e Imprimir
+            </button>
+            <button type="button" class="btn-apply" onclick="abrirCorteEnPestana()" title="Abrir en pestaña nueva">
+              <i class="fas fa-external-link-alt"></i> Ver en Pestaña
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden iframe for background print execution -->
+      <iframe id="cortePrintIframe" style="position: absolute; width: 0; height: 0; border: 0; visibility: hidden;"></iframe>
+      <% } %>
+
     </main>
   </div>
 
@@ -1018,6 +1264,105 @@
       } finally {
         overlay.classList.remove('active');
       }
+    }
+
+    // ── Funciones para Generar Reporte de Corte Ejecutivo ──
+    function openCorteModal() {
+      const modal = document.getElementById('corteModalBackdrop');
+      if (!modal) return;
+      
+      const sInput = document.getElementById('corteStartDate');
+      const eInput = document.getElementById('corteEndDate');
+      if (!sInput.value || !eInput.value) {
+        sInput.value = '2026-09-28';
+        eInput.value = '2026-09-29';
+      }
+      
+      modal.classList.add('active');
+    }
+
+    function closeCorteModal() {
+      const modal = document.getElementById('corteModalBackdrop');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function closeCorteModalOnBackdrop(e) {
+      if (e.target.id === 'corteModalBackdrop') {
+        closeCorteModal();
+      }
+    }
+
+    function setCorteDates(s, e) {
+      document.getElementById('corteStartDate').value = s;
+      document.getElementById('corteEndDate').value = e;
+    }
+
+    function setCorteCurrentWeek() {
+      const d = new Date();
+      const day = d.getDay() || 7;
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - day + 1);
+      const sunday = new Date(d);
+      sunday.setDate(d.getDate() - day + 7);
+      
+      document.getElementById('corteStartDate').value = monday.toISOString().slice(0, 10);
+      document.getElementById('corteEndDate').value = sunday.toISOString().slice(0, 10);
+    }
+
+    function setCorteCurrentMonth() {
+      const d = new Date();
+      const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      
+      document.getElementById('corteStartDate').value = firstDay.toISOString().slice(0, 10);
+      document.getElementById('corteEndDate').value = lastDay.toISOString().slice(0, 10);
+    }
+
+    function ejecutarCorteYPrint() {
+      const startDate = document.getElementById('corteStartDate').value;
+      const endDate = document.getElementById('corteEndDate').value;
+      if (!startDate || !endDate) {
+        alert('Por favor selecciona las fechas de inicio y fin.');
+        return;
+      }
+      if (startDate > endDate) {
+        alert('La fecha de inicio no puede ser posterior a la fecha de fin.');
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitCorte');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Generando...';
+
+      const iframe = document.getElementById('cortePrintIframe');
+      const url = `/api/kpis/reporte-corte-html?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+
+      iframe.onload = function() {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        closeCorteModal();
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (err) {
+          console.error('Error al invocar impresión en iframe:', err);
+          window.open(url + '&autoPrint=true', '_blank');
+        }
+      };
+
+      iframe.src = url;
+    }
+
+    function abrirCorteEnPestana() {
+      const startDate = document.getElementById('corteStartDate').value;
+      const endDate = document.getElementById('corteEndDate').value;
+      if (!startDate || !endDate) {
+        alert('Por favor selecciona las fechas de inicio y fin.');
+        return;
+      }
+      const url = `/api/kpis/reporte-corte-html?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+      window.open(url, '_blank');
     }
 
     // Default dates for custom to current month start/end
