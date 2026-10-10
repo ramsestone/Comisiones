@@ -14,16 +14,34 @@ const DB_NAME = 'roles_usuarios';
 const toDecimal = (value) => Decimal128.fromString(value.toString());
 
 // ── Helpers de permisos ───────────────────────────────────────────────────────
-function hideDirectorData(comisiones, roleName) {
+// Aplica la jerarquía de privacidad de comisiones según el rol del usuario en sesión:
+//   - Director / Administrador: Visibilidad completa (todos los participantes).
+//   - Gerente: Oculta a los participantes con rol 'director'.
+//   - Asesor: Oculta a los participantes con rol 'director' y 'gerente'.
+// En todos los casos, recalcula total_commission sumando únicamente
+// las comisiones de los participantes visibles para ese rol.
+function applyHierarchyPrivacy(comisiones, roleName) {
   if (['Director', 'Administrador'].includes(roleName)) return;
   const arr = Array.isArray(comisiones) ? comisiones : [comisiones];
   arr.forEach(c => {
     if (c.participantes && Array.isArray(c.participantes)) {
-      c.participantes = c.participantes.filter(p => p.role_in_comision !== 'director');
-      c.total_commission = c.participantes.reduce((sum, p) => sum + parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString()), 0);
+      if (roleName === 'Asesor') {
+        c.participantes = c.participantes.filter(
+          p => p.role_in_comision !== 'director' && p.role_in_comision !== 'gerente'
+        );
+      } else if (roleName === 'Gerente') {
+        c.participantes = c.participantes.filter(p => p.role_in_comision !== 'director');
+      }
+      c.total_commission = c.participantes.reduce(
+        (sum, p) => sum + parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString()),
+        0
+      );
     }
   });
 }
+
+// Alias de compatibilidad (no se usa en nuevas rutas; se mantiene por si queda referencia)
+const hideDirectorData = applyHierarchyPrivacy;
 
 // ── Helpers de notificaciones ─────────────────────────────────────────────────
 async function notify(db, userIds, message, now = new Date()) {
@@ -1944,15 +1962,22 @@ router.get('/obtener/:id', authenticate, async (req, res) => {
     ]).toArray();
 
     // ── 3. Separar asesores y gerentes (mismo formato que al crear) ───────
+    const roleName = req.user.roleName;
+    const includeGerentes = !['Asesor'].includes(roleName);
+    const includeDirector = ['Director', 'Administrador'].includes(roleName);
+
     const participants = {
       advisors: participantes
         .filter(p => p.role_in_comision === 'asesor')
         .map(({ role_in_comision, ...p }) => p),
-      managers: participantes
-        .filter(p => p.role_in_comision === 'gerente')
-        .map(({ role_in_comision, ...p }) => p),
-      director: participantes
-        .find(p => p.role_in_comision === 'director') || null,
+      managers: includeGerentes
+        ? participantes
+            .filter(p => p.role_in_comision === 'gerente')
+            .map(({ role_in_comision, ...p }) => p)
+        : undefined,
+      director: includeDirector
+        ? (participantes.find(p => p.role_in_comision === 'director') || null)
+        : undefined,
     };
 
     return res.status(200).json({

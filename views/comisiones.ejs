@@ -708,8 +708,11 @@ function cardHTML(c) {
   }
 
   const partRows = (c.participantes || []).map(p => {
-    // Only show Director to Director/Admin
+    // ── Jerarquía de privacidad ──────────────────────────────────────────────
+    // Director: solo visible para Director y Administrador
     if (p.role_in_comision === 'director' && !['Director', 'Administrador'].includes(USER.roleName)) return '';
+    // Gerente: oculto para Asesores (solo puede ver sus propias filas de asesor)
+    if (p.role_in_comision === 'gerente' && USER.roleName === 'Asesor') return '';
 
     const isMe = p.usuario?._id === USER.id;
     let rightHtml;

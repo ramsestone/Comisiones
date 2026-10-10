@@ -521,14 +521,36 @@ function resetSelectDisplay(id, placeholder) {
 function phaseTotal(fase) {
   const arr = Array.isArray(fase) ? fase : (fase && (fase._id || fase.participantes) ? [fase] : []);
   return arr.reduce((sum, f) => {
-    const parts = (f.participantes || []).filter(p => p.role_in_comision !== 'director' || (typeof USER !== 'undefined' && USER && ['Director', 'Administrador'].includes(USER.roleName)));
+    const parts = (f.participantes || []).filter(p => {
+      // Asesor: solo ve participantes con role_in_comision === 'asesor'
+      if (typeof USER !== 'undefined' && USER && USER.roleName === 'Asesor') {
+        return p.role_in_comision === 'asesor';
+      }
+      // Gerente: oculta al director
+      if (typeof USER !== 'undefined' && USER && USER.roleName === 'Gerente') {
+        return p.role_in_comision !== 'director';
+      }
+      // Director / Admin: todos visibles
+      return true;
+    });
     return sum + parts.reduce((a, p) => a + (p.commission_amount || 0), 0);
   }, 0);
 }
 
 function buildParticipants(participantes) {
   return (participantes || [])
-    .filter(p => p.role_in_comision !== 'director' || (typeof USER !== 'undefined' && USER && ['Director', 'Administrador'].includes(USER.roleName)))
+    .filter(p => {
+      // Asesor: solo ve participantes con role_in_comision === 'asesor'
+      if (typeof USER !== 'undefined' && USER && USER.roleName === 'Asesor') {
+        return p.role_in_comision === 'asesor';
+      }
+      // Gerente: oculta al director
+      if (typeof USER !== 'undefined' && USER && USER.roleName === 'Gerente') {
+        return p.role_in_comision !== 'director';
+      }
+      // Director / Admin: todos visibles
+      return true;
+    })
     .map((p, i) => {
     const name     = p.usuario?.name || '?';
     const initials = name.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
