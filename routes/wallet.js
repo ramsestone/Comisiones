@@ -641,7 +641,16 @@ router.get('/cartera', authenticate, authorize(['Administrador', 'Director', 'Ge
                     from: 'debts',
                     let: { userId: '$_id' },
                     pipeline: [
-                        { $match: { $expr: { $eq: ['$user_id', '$$userId'] } } }
+                        { $match: { $expr: { $eq: ['$user_id', '$$userId'] } } },
+                        {
+                            $lookup: {
+                                from: 'comisiones-ubicaciones',
+                                localField: 'comision_id',
+                                foreignField: '_id',
+                                as: 'comisionInfo'
+                            }
+                        },
+                        { $unwind: { path: '$comisionInfo', preserveNullAndEmptyArrays: true } }
                     ],
                     as: 'all_debts'
                 }
@@ -729,7 +738,25 @@ router.get('/cartera', authenticate, authorize(['Administrador', 'Director', 'Ge
                 deuda,
                 comision,
                 saldo,
-                active_debts: active_debts.map(d => ({ id: d._id, balance: parseFloat(d.remaining_balance?.toString() || 0) })),
+                active_debts: active_debts.map(d => {
+                    let ubi = d.comisionInfo?.location?.text || d.comisionInfo?.location?.name || (typeof d.comisionInfo?.location === 'string' ? d.comisionInfo.location : null);
+                    let des = d.comisionInfo?.development?.text || d.comisionInfo?.development?.name || (typeof d.comisionInfo?.development === 'string' ? d.comisionInfo.development : null);
+                    if (!ubi && d.description) {
+                        const match = d.description.match(/cancelaci[oó]n\s*[-–:]\s*(.+)/i);
+                        if (match && match[1]) ubi = match[1].trim();
+                        else if (d.type === 'penalty') ubi = d.description;
+                    }
+                    return {
+                        id: d._id,
+                        balance: parseFloat(d.remaining_balance?.toString() || 0),
+                        total_amount: parseFloat(d.total_amount?.toString() || 0),
+                        type: d.type,
+                        description: d.description || '',
+                        location: ubi || (d.type === 'loan' ? 'Préstamo personal' : 'Sin ubicación'),
+                        development: des || 'General',
+                        created_at: d.created_at
+                    };
+                }),
                 log
             };
         });

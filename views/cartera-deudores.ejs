@@ -89,11 +89,381 @@
 
     /* Stats row */
     .stats-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 1.5rem; }
-    .stat { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 12px 14px; }
+    .stat { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 12px 14px; position: relative; }
     .stat-label { font-size: 12px; color: var(--color-text-muted); margin-bottom: 4px; }
     .stat-value { font-size: 20px; font-weight: 600; color: var(--color-text); }
     .stat-value.danger { color: var(--color-danger); }
     .stat-value.success { color: var(--color-success); }
+
+    /* Stat Clickable (Desglose) */
+    .stat-clickable {
+      cursor: pointer;
+      user-select: none;
+      transition: transform .15s, border-color .15s, box-shadow .15s;
+    }
+    .stat-clickable:hover {
+      transform: translateY(-2px);
+      border-color: var(--color-danger);
+      box-shadow: 0 4px 18px rgba(231,76,60,0.18);
+    }
+    .stat-clickable.active {
+      border-color: var(--color-danger);
+      background: linear-gradient(180deg, var(--color-surface), rgba(231,76,60,0.06));
+    }
+    .stat-header-flex {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .stat-badge-btn {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--color-danger-bg);
+      color: var(--color-danger);
+      border: 1px solid var(--color-danger-border);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: all .15s;
+    }
+    .stat-clickable:hover .stat-badge-btn, .stat-clickable.active .stat-badge-btn {
+      background: var(--color-danger);
+      color: #ffffff;
+    }
+
+    /* Breakdown Toggle Button in Filter Bar */
+    .btn-toggle-ubi {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-danger-border);
+      background: var(--color-danger-bg);
+      color: var(--color-danger);
+      cursor: pointer;
+      font-family: var(--font);
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-toggle-ubi:hover, .btn-toggle-ubi.active {
+      background: var(--color-danger);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(231,76,60,0.3);
+    }
+    .ubi-count-pill {
+      background: rgba(0,0,0,0.25);
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    /* Breakdown Section Panel */
+    .ubi-breakdown-section {
+      background: linear-gradient(145deg, rgba(22,40,40,0.95), rgba(15,30,30,0.98));
+      border: 1px solid rgba(231,76,60,0.35);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.4rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.3);
+      backdrop-filter: blur(10px);
+      animation: fadeInUbi .2s ease-out;
+    }
+    @keyframes fadeInUbi {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ubi-panel-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      padding-bottom: 0.85rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .ubi-panel-title-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ubi-icon-box {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-md);
+      background: var(--color-danger-bg);
+      border: 1px solid var(--color-danger-border);
+      color: var(--color-danger);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+    }
+    .ubi-panel-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+    .ubi-panel-sub {
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+
+    /* Segmented Tabs */
+    .ubi-tabs {
+      display: flex;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 3px;
+      gap: 3px;
+    }
+    .ubi-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--color-text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 13px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: var(--font);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all .15s;
+    }
+    .ubi-tab-btn:hover {
+      color: var(--color-text);
+    }
+    .ubi-tab-btn.active {
+      background: var(--color-danger);
+      color: #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+
+    .ubi-close-btn {
+      background: transparent;
+      border: 1px solid var(--color-border);
+      color: var(--color-text-faint);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 6px 9px;
+      border-radius: var(--radius-sm);
+      line-height: 1;
+      transition: all .15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ubi-close-btn:hover {
+      color: var(--color-text);
+      border-color: var(--color-border-strong);
+      background: var(--color-surface-2);
+    }
+
+    /* Mini KPIs inside Breakdown */
+    .ubi-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 1.1rem;
+    }
+    .ubi-kpi-item {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+    }
+    .ubi-kpi-lbl {
+      font-size: 11px;
+      color: var(--color-text-muted);
+      margin-bottom: 2px;
+    }
+    .ubi-kpi-val {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+    .ubi-kpi-val.red { color: var(--color-danger); }
+
+    /* Search in breakdown */
+    .ubi-search-box {
+      display: flex;
+      align-items: center;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 7px 11px;
+      margin-bottom: 1rem;
+      gap: 8px;
+    }
+    .ubi-search-box i { color: var(--color-text-muted); font-size: 14px; }
+    .ubi-search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--color-text);
+      font-family: var(--font);
+      outline: none;
+      font-size: 13px;
+    }
+    .ubi-search-box input::placeholder { color: var(--color-text-faint); }
+
+    /* Grid of breakdown items */
+    .ubi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      max-height: 500px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .ubi-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 13px 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      transition: border-color .15s, transform .15s, box-shadow .15s;
+      position: relative;
+    }
+    .ubi-card:hover {
+      border-color: rgba(231,76,60,0.45);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+    .ubi-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .ubi-dev-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--blue-bg);
+      color: var(--blue-tx);
+      border: 1px solid var(--blue-br);
+    }
+    .ubi-pct-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-danger);
+    }
+    .ubi-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .ubi-amt-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+    .ubi-amt {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--color-danger);
+      font-family: 'Space Mono', monospace;
+    }
+    .ubi-type-pill {
+      font-size: 10px;
+      color: var(--color-text-muted);
+      background: var(--color-surface-2);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .ubi-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .ubi-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #e74c3c, #f0a500);
+      border-radius: 999px;
+      transition: width .3s ease;
+    }
+    .ubi-debtors-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 2px;
+      font-size: 11px;
+    }
+    .ubi-debtor-tag {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: var(--color-text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .ubi-debtor-tag strong {
+      color: var(--color-text);
+    }
+    .ubi-filter-action {
+      margin-top: 4px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-ubi-filter {
+      background: transparent;
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      color: var(--color-text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all .12s;
+    }
+    .btn-ubi-filter:hover {
+      background: var(--color-surface-2);
+      color: var(--accent);
+      border-color: var(--green-br);
+    }
+
+    /* Active filter indicator banner */
+    .filter-indicator-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--color-danger-bg);
+      border: 1px solid var(--color-danger-border);
+      border-radius: var(--radius-md);
+      padding: 9px 14px;
+      margin-bottom: 1.25rem;
+      font-size: 13px;
+      color: var(--color-text);
+      animation: fadeInUbi .15s ease-out;
+    }
+    .filter-indicator-bar strong { color: var(--color-danger); }
 
     /* Debtor cards */
     .debtor-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin-bottom: 10px; overflow: hidden; transition: border-color .15s; }
@@ -290,10 +660,82 @@
   </div>
 
   <div class="stats-row">
-    <div class="stat"><div class="stat-label">Total deuda activa</div><div class="stat-value danger" id="tot-deuda">$0</div></div>
+    <div class="stat stat-clickable" id="stat-card-deuda" onclick="toggleUbiBreakdown()" title="Haz clic para ver el desglose por ubicaciones">
+      <div class="stat-header-flex">
+        <div class="stat-label">Total deuda activa</div>
+        <span class="stat-badge-btn"><i class="ti ti-map-pin"></i> Ver desglose</span>
+      </div>
+      <div class="stat-value danger" id="tot-deuda">$0</div>
+    </div>
     <div class="stat"><div class="stat-label">Comisiones disponibles</div><div class="stat-value success" id="tot-com">$0</div></div>
     <div class="stat"><div class="stat-label">Saldo a favor total</div><div class="stat-value success" id="tot-sal">$0</div></div>
     <div class="stat"><div class="stat-label">Saldo neto</div><div class="stat-value" id="tot-net">$0</div></div>
+  </div>
+
+  <!-- PANEL DE DESGLOSE VISUAL POR UBICACIONES -->
+  <div id="ubi-breakdown-section" class="ubi-breakdown-section" style="display: none;">
+    <div class="ubi-panel-top">
+      <div class="ubi-panel-title-area">
+        <div class="ubi-icon-box"><i class="ti ti-building-community"></i></div>
+        <div>
+          <div class="ubi-panel-title">Desglose de Deuda Activa por Ubicación</div>
+          <div class="ubi-panel-sub">Unidades canceladas y préstamos que componen el saldo deudor (<span id="ubi-sub-total" style="color:var(--color-danger);font-weight:700;">$0</span>)</div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div class="ubi-tabs">
+          <button type="button" class="ubi-tab-btn active" id="tab-ubi" onclick="setUbiTab('ubicacion')"><i class="ti ti-map-pin"></i> Ubicación</button>
+          <button type="button" class="ubi-tab-btn" id="tab-des" onclick="setUbiTab('desarrollo')"><i class="ti ti-layout-grid"></i> Desarrollo</button>
+          <button type="button" class="ubi-tab-btn" id="tab-tipo" onclick="setUbiTab('tipo')"><i class="ti ti-tags"></i> Tipo / Préstamos</button>
+        </div>
+        <button type="button" class="ubi-close-btn" onclick="toggleUbiBreakdown(false)" title="Cerrar desglose">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mini KPIs -->
+    <div class="ubi-kpis">
+      <div class="ubi-kpi-item">
+        <div class="ubi-kpi-lbl">Deuda Total</div>
+        <div class="ubi-kpi-val red" id="ubi-kpi-total">$0</div>
+      </div>
+      <div class="ubi-kpi-item">
+        <div class="ubi-kpi-lbl">Ubicaciones / Conceptos</div>
+        <div class="ubi-kpi-val" id="ubi-kpi-count">0</div>
+      </div>
+      <div class="ubi-kpi-item">
+        <div class="ubi-kpi-lbl">Desarrollos Involucrados</div>
+        <div class="ubi-kpi-val" id="ubi-kpi-des-count">0</div>
+      </div>
+      <div class="ubi-kpi-item">
+        <div class="ubi-kpi-lbl">Asesores con Deuda</div>
+        <div class="ubi-kpi-val" id="ubi-kpi-debtors-count">0</div>
+      </div>
+    </div>
+
+    <!-- Search in Breakdown -->
+    <div class="ubi-search-box">
+      <i class="ti ti-search"></i>
+      <input type="text" id="ubi-search-input" placeholder="Buscar por nombre de ubicación, desarrollo o asesor..." oninput="renderUbiBreakdownGrid()" />
+    </div>
+
+    <!-- Grid Container -->
+    <div class="ubi-grid" id="ubi-cards-grid">
+      <!-- Inyectado dinámicamente -->
+    </div>
+  </div>
+
+  <!-- Banner de filtro activo por ubicación -->
+  <div id="ubi-filter-banner" class="filter-indicator-bar" style="display: none;">
+    <div>
+      <i class="ti ti-filter" style="margin-right: 6px; color: var(--color-danger);"></i>
+      Filtrando cartera por: <strong id="ubi-filter-name"></strong>
+    </div>
+    <button type="button" class="btn-adj danger" style="padding: 4px 10px; font-size: 11px;" onclick="clearUbiFilter()">
+      <i class="ti ti-x"></i> Quitar filtro
+    </button>
   </div>
 
   <div class="filter-bar">
@@ -301,6 +743,11 @@
       <i class="fas fa-search" style="margin-left: 4px;"></i>
       <input type="text" id="search-user" placeholder="Buscar asesor o gerente por nombre..." oninput="filterUsers()" autocomplete="off" />
     </div>
+
+    <button type="button" class="btn-toggle-ubi" id="btn-toggle-ubi" onclick="toggleUbiBreakdown()">
+      <i class="ti ti-map-pin"></i> Desglose por Ubicaciones
+      <span class="ubi-count-pill" id="ubi-btn-count">0</span>
+    </button>
 
     <select class="filter-select" id="filter-role" onchange="filterUsers()">
       <option value="">Todos los roles</option>
@@ -347,6 +794,10 @@
         debtors = j.data;
         renderAll();
         recalcTotals();
+        updateUbiBadge();
+        if (ubiBreakdownOpen) {
+          renderUbiBreakdownGrid();
+        }
         if (silent) {
           window.scrollTo(0, currentScroll);
         }
@@ -610,11 +1061,41 @@
           <div class="panel-box"><div class="panel-box-label">Saldo a favor</div><div class="panel-box-val green">${fmt(d.saldo)}</div></div>
           <div class="panel-box"><div class="panel-box-label">Disponible para ajuste</div><div class="panel-box-val ${canAdj ? 'green' : ''}">${fmt(avail)}</div></div>
         </div>
+        ${renderDebtorUbis(d)}
         ${adjHTML}
         ${addDebtHTML}
         ${renderLog(d)}
       </div>
     </div>`;
+  }
+
+  /* ── DESGLOSE DE DEUDAS DEL ASESOR ── */
+  function renderDebtorUbis(d) {
+    if (d.deuda <= 0) return '';
+    const ubis = extractDebtsFromDebtor(d);
+    if (!ubis || !ubis.length) return '';
+
+    return `
+      <div class="adj-section" style="border-top: none; padding-top: 4px; margin-bottom: 10px;">
+        <div class="adj-title" style="color: var(--color-danger); display: flex; align-items: center; justify-content: space-between;">
+          <span style="display: flex; align-items: center; gap: 5px;"><i class="ti ti-map-pin"></i> Desglose de deuda activa (${fmt(d.deuda)})</span>
+          <span style="font-size: 10px; color: var(--color-text-faint);">${ubis.length} concepto(s)</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px;">
+          ${ubis.map(u => `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--color-surface-2); border: 1px solid var(--color-border); padding: 8px 12px; border-radius: var(--radius-sm); gap: 10px;">
+              <div style="min-width: 0;">
+                <div style="font-weight: 700; color: #fff; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${u.location}</div>
+                <div style="font-size: 11px; color: var(--color-text-muted);">${u.development} · <span style="color: var(--color-danger);">${u.type}</span></div>
+              </div>
+              <div style="text-align: right; flex-shrink: 0;">
+                <div style="font-weight: 700; color: var(--color-danger); font-family: 'Space Mono', monospace; font-size: 14px;">${fmt(u.balance)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
   }
 
   /* ── EXPANDIR / COLAPSAR ── */
@@ -633,6 +1114,277 @@
     }
   }
 
+  /* ── EXTRACTOR ROBUSTO DE DEUDAS ── */
+  function extractDebtsFromDebtor(d) {
+    const list = [];
+    if (d.active_debts && d.active_debts.length > 0) {
+      d.active_debts.forEach((ad, idx) => {
+        let ubi = ad.location;
+        let des = ad.development || 'General';
+        let tipo = ad.type === 'loan' ? 'Préstamo' : 'Penalización por cancelación';
+        let desc = ad.description || '';
+
+        if (!ubi || ubi === 'Sin ubicación') {
+          if (desc) {
+            const match = desc.match(/cancelaci[oó]n\s*[-–:]\s*(.+)/i);
+            if (match && match[1]) ubi = match[1].trim();
+          }
+        }
+
+        if (!ubi || ubi === 'Sin ubicación') {
+          const penLogs = (d.log || []).filter(l => l.tipo === 'pen');
+          if (penLogs[idx]) {
+            const match = (penLogs[idx].t || '').match(/cancelaci[oó]n\s*[-–:]\s*(.+)/i);
+            if (match && match[1]) ubi = match[1].trim();
+            else ubi = penLogs[idx].t;
+          }
+        }
+
+        list.push({
+          id: ad.id,
+          balance: ad.balance || 0,
+          location: ubi || (ad.type === 'loan' ? 'Préstamo personal' : 'Ubicación sin especificar'),
+          development: des,
+          type: tipo,
+          description: desc,
+          debtorName: d.name,
+          debtorRole: d.role
+        });
+      });
+    } else if (d.deuda > 0) {
+      const penLogs = (d.log || []).filter(l => l.tipo === 'pen');
+      if (penLogs.length > 0) {
+        penLogs.forEach(l => {
+          const match = (l.t || '').match(/cancelaci[oó]n\s*[-–:]\s*(.+)/i);
+          list.push({
+            balance: l.monto || d.deuda,
+            location: match ? match[1].trim() : l.t,
+            development: 'General',
+            type: /prestamo/i.test(l.t || '') ? 'Préstamo' : 'Penalización por cancelación',
+            description: l.t,
+            debtorName: d.name,
+            debtorRole: d.role
+          });
+        });
+      } else {
+        list.push({
+          balance: d.deuda,
+          location: 'Préstamo personal',
+          development: 'General',
+          type: 'Préstamo',
+          description: 'Deuda activa',
+          debtorName: d.name,
+          debtorRole: d.role
+        });
+      }
+    }
+    return list;
+  }
+
+  function getAllActiveDebts() {
+    const all = [];
+    debtors.forEach(d => {
+      const uDebts = extractDebtsFromDebtor(d);
+      all.push(...uDebts);
+    });
+    return all;
+  }
+
+  /* ── CONTROLADOR DE DESGLOSE VISUAL POR UBICACIONES ── */
+  let ubiBreakdownOpen = false;
+  let currentUbiTab = 'ubicacion'; // 'ubicacion' | 'desarrollo' | 'tipo'
+  let filterUbi = '';
+
+  window.toggleUbiBreakdown = function(force) {
+    if (typeof force === 'boolean') {
+      ubiBreakdownOpen = force;
+    } else {
+      ubiBreakdownOpen = !ubiBreakdownOpen;
+    }
+
+    const sec = document.getElementById('ubi-breakdown-section');
+    const btn = document.getElementById('btn-toggle-ubi');
+    const statCard = document.getElementById('stat-card-deuda');
+
+    if (ubiBreakdownOpen) {
+      sec.style.display = 'block';
+      if (btn) btn.classList.add('active');
+      if (statCard) statCard.classList.add('active');
+      renderUbiBreakdownGrid();
+      sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      sec.style.display = 'none';
+      if (btn) btn.classList.remove('active');
+      if (statCard) statCard.classList.remove('active');
+    }
+  };
+
+  window.setUbiTab = function(tab) {
+    currentUbiTab = tab;
+    ['tab-ubi', 'tab-des', 'tab-tipo'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    });
+    const activeEl = document.getElementById(tab === 'ubicacion' ? 'tab-ubi' : (tab === 'desarrollo' ? 'tab-des' : 'tab-tipo'));
+    if (activeEl) activeEl.classList.add('active');
+    renderUbiBreakdownGrid();
+  };
+
+  function updateUbiBadge() {
+    const all = getAllActiveDebts();
+    const count = new Set(all.map(x => x.location)).size;
+    const badge = document.getElementById('ubi-btn-count');
+    if (badge) badge.textContent = count;
+  }
+
+  function renderUbiBreakdownGrid() {
+    const allDebts = getAllActiveDebts();
+    const q = (document.getElementById('ubi-search-input')?.value || '').toLowerCase().trim();
+
+    // Calcular Gran Total
+    let granTotal = 0;
+    allDebts.forEach(x => granTotal += x.balance);
+
+    document.getElementById('ubi-kpi-total').textContent = fmt(granTotal);
+    document.getElementById('ubi-sub-total').textContent = fmt(granTotal);
+
+    const uniqueUbis = new Set(allDebts.map(x => x.location));
+    const uniqueDes = new Set(allDebts.map(x => x.development).filter(x => x && x !== 'General'));
+    const uniqueDebtors = new Set(allDebts.map(x => x.debtorName));
+
+    document.getElementById('ubi-kpi-count').textContent = uniqueUbis.size;
+    document.getElementById('ubi-kpi-des-count').textContent = uniqueDes.size || (uniqueUbis.size > 0 ? 1 : 0);
+    document.getElementById('ubi-kpi-debtors-count').textContent = uniqueDebtors.size;
+
+    // Agrupaciones
+    const groups = {};
+
+    allDebts.forEach(d => {
+      let key = '';
+      let title = '';
+      let subtitle = '';
+      let badgeType = '';
+
+      if (currentUbiTab === 'ubicacion') {
+        key = d.location;
+        title = d.location;
+        subtitle = d.development !== 'General' ? d.development : (d.type || 'Deuda activa');
+        badgeType = d.type.includes('Cancelación') ? 'Cancelación' : 'Préstamo';
+      } else if (currentUbiTab === 'desarrollo') {
+        key = d.development || 'General';
+        title = d.development || 'General';
+        subtitle = 'Desarrollo / Proyecto';
+        badgeType = 'Desarrollo';
+      } else {
+        key = d.type.includes('Cancelación') ? 'Penalización por Cancelación' : 'Préstamo Personal';
+        title = key;
+        subtitle = key.includes('Cancelación') ? 'Deducciones por operaciones canceladas' : 'Créditos y adelantos otorgados';
+        badgeType = key.includes('Cancelación') ? 'Cancelaciones' : 'Préstamos';
+      }
+
+      if (!groups[key]) {
+        groups[key] = {
+          title,
+          subtitle,
+          badgeType,
+          total: 0,
+          debtorsMap: {},
+          locationsSet: new Set()
+        };
+      }
+
+      groups[key].total += d.balance;
+      groups[key].locationsSet.add(d.location);
+
+      if (!groups[key].debtorsMap[d.debtorName]) {
+        groups[key].debtorsMap[d.debtorName] = { amount: 0, role: d.debtorRole };
+      }
+      groups[key].debtorsMap[d.debtorName].amount += d.balance;
+    });
+
+    let entries = Object.values(groups);
+
+    // Filtro por búsqueda
+    if (q) {
+      entries = entries.filter(g => {
+        const matchTitle = g.title.toLowerCase().includes(q);
+        const matchSub = g.subtitle.toLowerCase().includes(q);
+        const matchDebtor = Object.keys(g.debtorsMap).some(n => n.toLowerCase().includes(q));
+        const matchLoc = Array.from(g.locationsSet).some(l => l.toLowerCase().includes(q));
+        return matchTitle || matchSub || matchDebtor || matchLoc;
+      });
+    }
+
+    // Ordenar descendente por total
+    entries.sort((a, b) => b.total - a.total);
+
+    const grid = document.getElementById('ubi-cards-grid');
+    if (entries.length === 0) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--color-text-faint); padding: 2.5rem;"><i class="ti ti-search" style="font-size: 24px; display: block; margin-bottom: 8px;"></i>No se encontraron conceptos de deuda que coincidan con la búsqueda.</div>';
+      return;
+    }
+
+    grid.innerHTML = entries.map(g => {
+      const pct = granTotal > 0 ? ((g.total / granTotal) * 100) : 0;
+      const debtorsList = Object.entries(g.debtorsMap).map(([name, info]) => `
+        <span class="ubi-debtor-tag">
+          <strong>${name}</strong> (${fmt(info.amount)})
+        </span>
+      `).join('');
+
+      return `
+        <div class="ubi-card">
+          <div class="ubi-card-head">
+            <span class="ubi-dev-badge">${g.badgeType}</span>
+            <span class="ubi-pct-badge">${pct.toFixed(1)}% del total</span>
+          </div>
+
+          <div class="ubi-name" title="${g.title}">${g.title}</div>
+          <div style="font-size: 11px; color: var(--color-text-muted); margin-top: -4px;">${g.subtitle}</div>
+
+          <div class="ubi-amt-row">
+            <div class="ubi-amt">${fmt(g.total)}</div>
+            <div class="ubi-type-pill">${Object.keys(g.debtorsMap).length} involucrado(s)</div>
+          </div>
+
+          <div class="ubi-bar-bg">
+            <div class="ubi-bar-fill" style="width: ${Math.min(100, Math.max(2, pct))}%;"></div>
+          </div>
+
+          <div class="ubi-debtors-list">
+            ${debtorsList}
+          </div>
+
+          <div class="ubi-filter-action">
+            <button type="button" class="btn-ubi-filter" onclick="filterByUbicacion('${g.title.replace(/'/g, "\\'")}')">
+              <i class="ti ti-filter"></i> Filtrar asesores de este concepto
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.filterByUbicacion = function(ubiName) {
+    filterUbi = ubiName;
+    const banner = document.getElementById('ubi-filter-banner');
+    const nameEl = document.getElementById('ubi-filter-name');
+    if (banner && nameEl) {
+      nameEl.textContent = ubiName;
+      banner.style.display = 'flex';
+    }
+    renderAll();
+    const c = document.getElementById('debtors-container');
+    if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  window.clearUbiFilter = function() {
+    filterUbi = '';
+    const banner = document.getElementById('ubi-filter-banner');
+    if (banner) banner.style.display = 'none';
+    renderAll();
+  };
+
   /* ── RENDER COMPLETO ── */
   function renderAll() {
     const list = debtors.filter(d => {
@@ -647,7 +1399,18 @@
         if (!d.role.toLowerCase().includes(filterRole.toLowerCase())) return false;
       }
 
-      // 3. Filtro por Estado de cuenta
+      // 3. Filtro por Ubicación activa seleccionada
+      if (filterUbi) {
+        const debUbis = extractDebtsFromDebtor(d);
+        const matches = debUbis.some(u => 
+          u.location.toLowerCase().includes(filterUbi.toLowerCase()) || 
+          u.development.toLowerCase().includes(filterUbi.toLowerCase()) ||
+          u.type.toLowerCase().includes(filterUbi.toLowerCase())
+        );
+        if (!matches) return false;
+      }
+
+      // 4. Filtro por Estado de cuenta
       const avail = d.comision + d.saldo;
       const net = avail - d.deuda;
 
