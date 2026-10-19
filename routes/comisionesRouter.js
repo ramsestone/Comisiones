@@ -62,6 +62,92 @@ async function getUserIdsByRole(db, roleName) {
   return users.map(u => u._id);
 }
 
+// ── Helpers de Cartera / Saldo y Cancelaciones ────────────────────────────────
+const netBalanceHelper = async (db, userId) => {
+  const resultado = await db.collection('walletTransactions').aggregate([
+    { $match: { user_id: new ObjectId(userId) } },
+    {
+      $group: {
+        _id: '$type',
+        total: { $sum: { $toDouble: '$amount' } },
+      },
+    },
+  ]).toArray();
+
+  const credits = resultado.find(r => r._id === 'credit')?.total ?? 0;
+  const debits = resultado.find(r => r._id === 'debit')?.total ?? 0;
+  return parseFloat((credits - debits).toFixed(2));
+};
+
+async function enrichCancellationDebts(db, comisiones) {
+  const list = (Array.isArray(comisiones) ? comisiones : [comisiones]).filter(Boolean);
+  const cancelComisiones = list.filter(c => 
+    c.is_cancellation === true || 
+    (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci')
+  );
+
+  if (!cancelComisiones.length) return;
+
+  const comisionIds = cancelComisiones.map(c => c._id);
+  const allDebts = await db.collection('debts').find({ comision_id: { $in: comisionIds } }).toArray();
+  const debtsByComisionUser = {};
+  for (const d of allDebts) {
+    const key = `${d.comision_id.toString()}_${d.user_id.toString()}`;
+    debtsByComisionUser[key] = d;
+  }
+
+  for (const c of cancelComisiones) {
+    let totalDebt = 0;
+    let totalRemaining = 0;
+
+    if (Array.isArray(c.participantes)) {
+      for (const p of c.participantes) {
+        const uId = (p.usuario?._id || p.user)?.toString();
+        const key = `${c._id.toString()}_${uId}`;
+        const debt = debtsByComisionUser[key];
+        const assignedAbs = Math.abs(parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString()));
+
+        if (debt) {
+          const tot = parseFloat(debt.total_amount?.toString() || assignedAbs);
+          const rem = Math.max(0, parseFloat(debt.remaining_balance?.toString() || 0));
+          const paid = Math.max(0, parseFloat((tot - rem).toFixed(2)));
+          p.debt_info = {
+            debt_id: debt._id,
+            total: tot,
+            remaining: rem,
+            paid: paid,
+            is_paid: rem <= 0 || debt.status === 'paid'
+          };
+          totalDebt += tot;
+          totalRemaining += rem;
+        } else {
+          p.debt_info = {
+            debt_id: null,
+            total: assignedAbs,
+            remaining: assignedAbs,
+            paid: 0,
+            is_paid: false
+          };
+          totalDebt += assignedAbs;
+          totalRemaining += assignedAbs;
+        }
+      }
+    }
+
+    const totalPaid = Math.max(0, parseFloat((totalDebt - totalRemaining).toFixed(2)));
+    const percentPaid = totalDebt > 0 ? Math.round((totalPaid / totalDebt) * 100) : 0;
+    c.cancellation_summary = {
+      total_debt: totalDebt,
+      total_remaining: totalRemaining,
+      total_paid: totalPaid,
+      percent_paid: percentPaid,
+      all_paid: totalRemaining <= 0,
+      is_partial: totalPaid > 0 && totalRemaining > 0
+    };
+  }
+}
+
+
 const QUERETARO_DEVELOPMENT_IDS = ['10', '21', '30', '15', '33'];
 
 async function getDirectorIdsForDevelopment(db, developmentId) {
@@ -249,6 +335,7 @@ router.get('/mis-comisiones', authenticate, async (req, res) => {
       ])
       .toArray();
 
+    await enrichCancellationDebts(db, comisiones);
     hideDirectorData(comisiones, req.user.roleName);
 
     return res.status(200).json({
@@ -827,9 +914,78 @@ router.patch('/:id/aprobar', authenticate, authorize(['Administrador', 'Director
   }
 });
 
+// ── 3.0 GET /api/comisiones/:id/cancellation-payment-info ─────────────────
+// Retorna la información de deudas y saldos en cartera de participantes para el modal de cobro
+router.get('/:id/cancellation-payment-info', authenticate, authorize(['Administrador', 'Director']), async (req, res) => {
+  const client = req.app.locals.mongoClient;
+  const db     = client.db(DB_NAME);
+
+  try {
+    const comisionId = new ObjectId(req.params.id);
+    const comision = await db.collection('comisiones-ubicaciones').findOne({ _id: comisionId });
+    if (!comision) {
+      return res.status(404).json({ success: false, message: 'Comisión no encontrada' });
+    }
+
+    const participantes = await db.collection('comisiones-participantes').find({ comision_id: comisionId }).toArray();
+    const debts = await db.collection('debts').find({ comision_id: comisionId }).toArray();
+    const debtsByUser = Object.fromEntries(debts.map(d => [d.user_id.toString(), d]));
+
+    const userIds = participantes.map(p => p.user).filter(Boolean);
+    const users = await db.collection('usuarios').find({ _id: { $in: userIds } }).toArray();
+    const usersMap = Object.fromEntries(users.map(u => [u._id.toString(), u]));
+
+    const participantsData = [];
+    for (const p of participantes) {
+      const uId = p.user?.toString();
+      const userDoc = usersMap[uId] || {};
+      const debtDoc = debtsByUser[uId];
+      const assignedAbs = Math.abs(parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString()));
+
+      const totalDebt = debtDoc ? parseFloat(debtDoc.total_amount?.toString() || assignedAbs) : assignedAbs;
+      const remainingDebt = debtDoc ? Math.max(0, parseFloat(debtDoc.remaining_balance?.toString() || 0)) : assignedAbs;
+      const paidDebt = Math.max(0, parseFloat((totalDebt - remainingDebt).toFixed(2)));
+
+      const balance = await netBalanceHelper(db, uId);
+      const availableWallet = Math.max(0, balance);
+      const suggestedDeduction = Math.min(availableWallet, remainingDebt);
+
+      participantsData.push({
+        user_id: uId,
+        name: userDoc.name || userDoc.username || 'Sin nombre',
+        username: userDoc.username || '—',
+        role_in_comision: p.role_in_comision,
+        total_debt: totalDebt,
+        remaining_debt: remainingDebt,
+        paid_debt: paidDebt,
+        wallet_available: availableWallet,
+        suggested_deduction: suggestedDeduction,
+        is_paid: remainingDebt <= 0 || (debtDoc && debtDoc.status === 'paid'),
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        comision: {
+          _id: comision._id,
+          location: comision.location?.text || comision.location,
+          development: comision.development?.text || comision.development,
+          client_name: comision.client_name,
+          sale_price: comision.sale_price,
+          total_commission: comision.total_commission,
+        },
+        participants: participantsData,
+      }
+    });
+  } catch (error) {
+    console.error('[GET /api/comisiones/:id/cancellation-payment-info]', error);
+    return res.status(500).json({ success: false, message: 'Error al obtener información de cobro', error: error.message });
+  }
+});
+
 
 // ── 3. PATCH /api/comisiones/:id/pagar ───────────────────────────────────────
-// La Administrador marca la comisión como pagada
 router.patch('/:id/pagar', authenticate, authorize(['Administrador']), async (req, res) => {
   const client = req.app.locals.mongoClient;
   const db     = client.db(DB_NAME);
@@ -867,35 +1023,33 @@ router.patch('/:id/pagar', authenticate, authorize(['Administrador']), async (re
     }
 
     const statusPagada = await db.collection('estatus').findOne({ order: 6 });
-
-    await Promise.all([
-      db.collection('comisiones-ubicaciones').updateOne(
-        { _id: comisionId },
-        { $set: { status: statusPagada._id, updated_at: now } }
-      ),
-      db.collection('comisiones-participantes').updateMany(
-        { comision_id: comisionId },
-        { $set: { status: statusPagada._id, updated_at: now } }
-      ),
-    ]);
-
-    // ── Notificar a los participantes y Director ──────────────────────────────
-    const participantes = await db
-      .collection('comisiones-participantes')
-      .find({ comision_id: comisionId })
-      .project({ user: 1, commission_amount: 1, adjusted_commission: 1 })
-      .toArray();
-
     const locationPago = comision?.location?.text || 'Sin ubicación';
-    
-    const directorIds = await getUserIdsByRole(db, 'Director');
-    const usersToNotify = [...new Set([...participantes.map(p => p.user.toString()), ...directorIds.map(id => id.toString())])];
 
-    await notify(db, usersToNotify.map(id => new ObjectId(id)),
-      `¡Tu comisión de ${locationPago} ha sido pagada!`, now);
+    // ── CASO A: Comisión Normal o Cancelación con Penalización al Cliente ───
+    if (!comision.is_cancellation || comision.penalty_target === 'cliente') {
+      await Promise.all([
+        db.collection('comisiones-ubicaciones').updateOne(
+          { _id: comisionId },
+          { $set: { status: statusPagada._id, updated_at: now } }
+        ),
+        db.collection('comisiones-participantes').updateMany(
+          { comision_id: comisionId },
+          { $set: { status: statusPagada._id, updated_at: now } }
+        ),
+      ]);
 
-    // ── Insertar débito en wallet al pagar la comisión ────────────────────────
-    if (!comision.is_cancellation) {
+      const participantes = await db
+        .collection('comisiones-participantes')
+        .find({ comision_id: comisionId })
+        .project({ user: 1, commission_amount: 1, adjusted_commission: 1 })
+        .toArray();
+
+      const directorIds = await getUserIdsByRole(db, 'Director');
+      const usersToNotify = [...new Set([...participantes.map(p => p.user.toString()), ...directorIds.map(id => id.toString())])];
+
+      await notify(db, usersToNotify.map(id => new ObjectId(id)),
+        `¡Tu comisión de ${locationPago} ha sido pagada!`, now);
+
       const txs = participantes.map(p => {
         const monto = parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString());
         return {
@@ -915,21 +1069,150 @@ router.patch('/:id/pagar', authenticate, authorize(['Administrador']), async (re
       if (txs.length > 0) {
         await db.collection('walletTransactions').insertMany(txs);
       }
+
+      return res.status(200).json({
+        success: true,
+        data:    { nuevo_status: statusPagada.name, all_paid: true },
+        message: 'Comisión marcada como pagada',
+        error:   null,
+      });
     }
 
-    return res.status(200).json({
-      success: true,
-      data:    { nuevo_status: statusPagada.name },
-      message: 'Comisión marcada como pagada',
-      error:   null,
-    });
+    // ── CASO B: Cancelación (Cobro individualizado de deudas) ──────────────────
+    const { participant_payments } = req.body;
+    if (!Array.isArray(participant_payments)) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        message: 'Para comisiones de cancelación debes especificar el desglose de pagos por participante (participant_payments)'
+      });
+    }
+
+    const existingDebts = await db.collection('debts').find({ comision_id: comisionId }).toArray();
+    const debtsByUser = Object.fromEntries(existingDebts.map(d => [d.user_id.toString(), d]));
+
+    const txsToInsert = [];
+    const debtsToUpdate = [];
+
+    for (const payment of participant_payments) {
+      const uId = payment.user_id?.toString();
+      const amount = parseFloat(payment.amount_paid || 0);
+      if (!uId || isNaN(amount) || amount < 0) continue;
+
+      let debt = debtsByUser[uId];
+      if (!debt && amount > 0) {
+        const part = await db.collection('comisiones-participantes').findOne({ comision_id: comisionId, user: new ObjectId(uId) });
+        const absMonto = Math.abs(parseFloat((part?.adjusted_commission ?? part?.commission_amount ?? 0).toString()));
+        const newDebtDoc = {
+          user_id: new ObjectId(uId),
+          comision_id: comisionId,
+          type: 'penalty',
+          description: `Penalización por cancelación - ${locationPago}`,
+          total_amount: Decimal128.fromString(absMonto.toString()),
+          remaining_balance: Decimal128.fromString(absMonto.toString()),
+          status: 'active',
+          created_by: new ObjectId(req.user.id),
+          created_at: now,
+          updated_at: now,
+        };
+        const insRes = await db.collection('debts').insertOne(newDebtDoc);
+        debt = { ...newDebtDoc, _id: insRes.insertedId };
+        debtsByUser[uId] = debt;
+      }
+
+      if (debt && amount > 0) {
+        const remaining = parseFloat(debt.remaining_balance.toString());
+        const effectivePay = Math.min(amount, remaining);
+        const newBalance = Math.max(0, parseFloat((remaining - effectivePay).toFixed(2)));
+        const newStatus = newBalance <= 0 ? 'paid' : 'active';
+
+        debtsToUpdate.push(
+          db.collection('debts').updateOne(
+            { _id: debt._id },
+            { $set: { remaining_balance: Decimal128.fromString(newBalance.toString()), status: newStatus, updated_at: now } }
+          )
+        );
+
+        txsToInsert.push({
+          user_id: new ObjectId(uId),
+          type: 'debit',
+          amount: Decimal128.fromString(effectivePay.toString()),
+          concept: 'payment',
+          description: `Abono a cancelación — ${locationPago}`,
+          debt_id: debt._id,
+          comision_id: comisionId,
+          reference_date: now,
+          created_by: new ObjectId(req.user.id),
+          created_at: now,
+        });
+
+        debt.remaining_balance = newBalance;
+        debt.status = newStatus;
+      }
+    }
+
+    if (txsToInsert.length > 0) {
+      await db.collection('walletTransactions').insertMany(txsToInsert);
+    }
+    if (debtsToUpdate.length > 0) {
+      await Promise.all(debtsToUpdate);
+    }
+
+    // Verificar si todos los participantes están en status 'paid'
+    const updatedDebts = await db.collection('debts').find({ comision_id: comisionId }).toArray();
+    const allDebtsPaid = updatedDebts.length > 0 && updatedDebts.every(d => parseFloat(d.remaining_balance.toString()) <= 0);
+
+    // Actualizar participantes individuales que ya saldaron
+    for (const d of updatedDebts) {
+      if (parseFloat(d.remaining_balance.toString()) <= 0) {
+        await db.collection('comisiones-participantes').updateOne(
+          { comision_id: comisionId, user: d.user_id },
+          { $set: { status: statusPagada._id, updated_at: now } }
+        );
+      }
+    }
+
+    if (allDebtsPaid) {
+      await db.collection('comisiones-ubicaciones').updateOne(
+        { _id: comisionId },
+        { $set: { status: statusPagada._id, updated_at: now } }
+      );
+      await db.collection('comisiones-participantes').updateMany(
+        { comision_id: comisionId },
+        { $set: { status: statusPagada._id, updated_at: now } }
+      );
+
+      const directorIds = await getUserIdsByRole(db, 'Director');
+      const participantes = await db.collection('comisiones-participantes').find({ comision_id: comisionId }).toArray();
+      const usersToNotify = [...new Set([...participantes.map(p => p.user.toString()), ...directorIds.map(id => id.toString())])];
+      await notify(db, usersToNotify.map(id => new ObjectId(id)), `La cancelación de ${locationPago} ha sido liquidada en su totalidad.`, now);
+
+      return res.status(200).json({
+        success: true,
+        data:    { nuevo_status: statusPagada.name, all_paid: true },
+        message: 'Cancelación liquidada al 100% y marcada como Pagada',
+        error:   null,
+      });
+    } else {
+      await db.collection('comisiones-ubicaciones').updateOne(
+        { _id: comisionId },
+        { $set: { updated_at: now } }
+      );
+
+      return res.status(200).json({
+        success: true,
+        data:    { nuevo_status: comision.status.name, all_paid: false },
+        message: 'Abonos registrados correctamente. La comisión permanece en Pendiente Pago con liquidación parcial.',
+        error:   null,
+      });
+    }
 
   } catch (error) {
     console.error('[PATCH /api/comisiones/:id/pagar]', error);
     return res.status(500).json({
       success: false,
       data:    null,
-      message: 'Error al marcar la comisión como pagada',
+      message: 'Error al procesar el pago de la comisión',
       error:   error.message,
     });
   }
@@ -1003,6 +1286,17 @@ router.patch('/:id/revertir-pago', authenticate, authorize(['Administrador', 'Di
       type:        'debit',
       concept:     'payment',
     });
+
+    // ── Si era cancelación, restaurar las deudas asociadas a active con su monto total ──
+    if (comision.is_cancellation) {
+      const debtsToRestore = await db.collection('debts').find({ comision_id: comisionId }).toArray();
+      for (const d of debtsToRestore) {
+        await db.collection('debts').updateOne(
+          { _id: d._id },
+          { $set: { remaining_balance: d.total_amount, status: 'active', updated_at: now } }
+        );
+      }
+    }
 
     // ── 5. Notificar a participantes y Director ─────────────────────────────
     const participantes = await db
@@ -1455,6 +1749,7 @@ router.get('/', authenticate, authorize(['Administrador', 'Director']), async (r
       .aggregate(aggregatePipeline)
       .toArray();
 
+    await enrichCancellationDebts(db, comisiones);
     hideDirectorData(comisiones, req.user.roleName);
 
     return res.status(200).json({
@@ -1631,9 +1926,14 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
         }
       }
 
+      const isComisionPastVerif = Boolean(comision.statusObj && comision.statusObj.order >= 2 && comision.statusObj.order !== 7);
       const oldP = oldParticipantes.find(op => op.user.toString() === userId.toString() && op.role_in_comision === roleInComision);
-      const isVerified = (reset_verifications === false && oldP) ? oldP.verification : false;
-      const statusToUse = (reset_verifications === false && oldP) ? oldP.status : statusInicial._id;
+      const isVerified = (reset_verifications === false)
+        ? (oldP ? oldP.verification : isComisionPastVerif)
+        : false;
+      const statusToUse = (reset_verifications === false)
+        ? (oldP ? oldP.status : (isComisionPastVerif ? comision.status : statusInicial._id))
+        : statusInicial._id;
 
       return {
         comision_id:         new ObjectId(id),
@@ -1704,9 +2004,14 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
           }
         }
         
+        const isComisionPastVerif = Boolean(comision.statusObj && comision.statusObj.order >= 2 && comision.statusObj.order !== 7);
         const oldPDirector = oldParticipantes.find(op => op.user.toString() === directorId.toString() && op.role_in_comision === 'director');
-        const isVerifiedDirector = (reset_verifications === false && oldPDirector) ? oldPDirector.verification : false;
-        const statusToUseDirector = (reset_verifications === false && oldPDirector) ? oldPDirector.status : statusInicial._id;
+        const isVerifiedDirector = (reset_verifications === false)
+          ? (oldPDirector ? oldPDirector.verification : isComisionPastVerif)
+          : false;
+        const statusToUseDirector = (reset_verifications === false)
+          ? (oldPDirector ? oldPDirector.status : (isComisionPastVerif ? comision.status : statusInicial._id))
+          : statusInicial._id;
 
         participanteDocs.push({
           comision_id:         new ObjectId(id),
@@ -1848,14 +2153,41 @@ router.patch('/editar/:id/', authenticate, async (req, res) => {
       }
     }
 
+    // 5. Si la comisión no es cancelación y ya estaba aprobada (en Pendiente Pago), reinsertar créditos de wallet
+    if (!is_cancellation && reset_verifications === false && comision.statusObj && comision.statusObj.order === 5) {
+      const txs = participanteDocs.map(p => {
+        const monto = parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString());
+        return {
+          user_id: p.user,
+          type: 'credit',
+          amount: Decimal128.fromString(monto.toFixed(2)),
+          concept: 'commission',
+          description: `Comisión aprobada - ${location?.text || comision.location?.text || 'Sin ubicación'}`,
+          debt_id: null,
+          comision_id: new ObjectId(id),
+          reference_date: now,
+          created_by: comision.created_by,
+          created_at: now
+        };
+      }).filter(t => parseFloat(t.amount.toString()) !== 0);
+
+      if (txs.length > 0) {
+        await db.collection('walletTransactions').insertMany(txs);
+      }
+    }
+
     // ── 6. Notificar a cada participante ──────────────────────────────────────
-    await notify(db, participanteDocs.map(p => p.user),
-      `La comisión de ${location.text} fue editada y requiere nueva verificación.`, now);
+    const notifMsg = (reset_verifications === false)
+      ? `La comisión de ${location.text} fue actualizada.`
+      : `La comisión de ${location.text} fue editada y requiere nueva verificación.`;
+    await notify(db, participanteDocs.map(p => p.user), notifMsg, now);
 
     return res.status(200).json({
       success: true,
       data:    { comision_id: id, total_commission, participantes: participanteDocs.length },
-      message: 'Comisión actualizada. Estatus y verificaciones han sido reiniciados.',
+      message: (reset_verifications === false)
+        ? 'Comisión actualizada.'
+        : 'Comisión actualizada. Estatus y verificaciones han sido reiniciados.',
       error:   null,
     });
 

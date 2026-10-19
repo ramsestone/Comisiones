@@ -8,7 +8,8 @@ function renderizarTarjeta(comision, index) {
     
     // Calcular porcentaje de verificación
     const participantes = comision.participantes || [];
-    const verificados = participantes.filter(p => p.verification === true).length;
+    const isPastVerif = (comision.status?.order >= 2 && comision.status?.order !== 7) || ['Verificada', 'Pendiente Aprobacion', 'Aprobada', 'Pendiente Pago', 'Pagada'].includes(comision.status?.name);
+    const verificados = participantes.filter(p => p.verification === true || isPastVerif).length;
     const totalParticipantes = participantes.length;
     const verifPorcentaje = totalParticipantes > 0 ? (verificados / totalParticipantes) * 100 : 0;
     

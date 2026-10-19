@@ -12,9 +12,11 @@ bin/*
 
 # Archivos temporales, respaldos y scripts locales
 backups/
-scratch/
+scratch/*
 diagrama_sistema_comisiones.html
 DOCUMENTACION_TECNICA.md
 flujo_comisiones.jpg
 public/diagrama_sistema_comisiones.html
 public/flujo_comisiones.jpg
+Reporte_Ejecutivo_Comisiones_Corte_28-29_Septiembre_2026.pdf
+Reporte_Ejecutivo_Comisiones_CDMX_Corte_28-29_Septiembre_2026.html

@@ -223,6 +223,7 @@
     .b-pg { background: var(--green-bg); color: var(--green-tx); border-color: var(--green-br); }
     .b-co { background: var(--red-bg);   color: var(--red-tx);   border-color: var(--red-br);   }
     .b-ca { background: var(--gray-bg);  color: var(--gray-tx);  border-color: var(--gray-br);  }
+    .b-partial { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 4px; }
 
     /* ── Meta grid ── */
     .card-meta {
@@ -417,6 +418,169 @@
     .star  { position: absolute; border-radius: 50%; animation: twinkle var(--dur) ease-in-out infinite alternate; }
     @keyframes twinkle { from { opacity: 0.2; transform: scale(1); } to { opacity: 1; transform: scale(1.4); } }
     .beam  { position: fixed; top: 0; right: 15%; width: 260px; height: 100vh; background: linear-gradient(180deg, rgba(96,230,26,0.07) 0%, transparent 70%); transform: skewX(-8deg); pointer-events: none; z-index: 0; }
+
+    /* ── Cancellation Debt & Modal Styles ── */
+    .cancellation-progress-box {
+      margin: 0.75rem 1.25rem 0.5rem;
+      padding: 10px 14px;
+      background: rgba(139, 92, 246, 0.06);
+      border: 1px solid rgba(139, 92, 246, 0.22);
+      border-radius: var(--radius-sm);
+    }
+    .cpb-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      margin-bottom: 6px;
+    }
+    .cpb-title {
+      color: #c4b5fd;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .cpb-pct {
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      color: var(--text-1);
+    }
+    .cpb-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .cpb-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #8b5cf6, #10b981);
+      border-radius: 99px;
+      transition: width 0.3s ease;
+    }
+    .cpb-metrics {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-2);
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .cpb-metrics span strong {
+      color: var(--text-1);
+      font-family: 'Space Mono', monospace;
+    }
+    .cancellation-modal {
+      width: 660px;
+      max-width: 95vw;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+    }
+    .cancellation-modal-head {
+      padding: 1.1rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+    }
+    .cancellation-modal-body {
+      padding: 1.25rem 1.4rem;
+      overflow-y: auto;
+      max-height: calc(90vh - 140px);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .cancellation-modal-footer {
+      padding: 0.9rem 1.4rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      background: var(--surface);
+    }
+    .part-cobro-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color .15s;
+    }
+    .part-cobro-card.is-paid {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.03);
+    }
+    .part-cobro-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .part-cobro-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 8px;
+      background: var(--surface);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+    }
+    .part-cobro-meta .c-lbl { color: var(--text-3); margin-bottom: 2px; }
+    .part-cobro-meta .c-val { font-weight: 600; font-family: 'Space Mono', monospace; font-size: 12px; }
+    .part-cobro-ctrls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+    .chip-btn {
+      padding: 3px 8px;
+      font-size: 11px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-md);
+      background: var(--surface);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: all .15s;
+      font-family: 'Nunito', sans-serif;
+    }
+    .chip-btn:hover {
+      background: var(--border-md);
+      color: var(--text-1);
+    }
+    .cobro-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+    .cobro-input {
+      width: 115px;
+      padding: 5px 8px;
+      font-size: 13px;
+      font-family: 'Space Mono', monospace;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-md);
+      background: var(--surface);
+      color: var(--text-1);
+      text-align: right;
+      outline: none;
+    }
+    .cobro-input:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    }
   </style>
 </head>
 <body>
@@ -724,18 +888,39 @@ function cardHTML(c) {
     const pctStr = isPenaltyToClient ? '' : ` (${fmtPct(p.percentage)})`;
     const penaltyLabel = isPenaltyToClient ? ' (Penalización al cliente)' : '';
 
+    const isPastVerif = (c.status?.order >= 2 && c.status?.order !== 7) || ['Verificada', 'Pendiente Aprobacion', 'Aprobada', 'Pendiente Pago', 'Pagada'].includes(c.status?.name);
+    const isVerified = Boolean(p.verification || isPastVerif);
+
+    // Información de deuda en caso de cancelación con penalización a miembros
+    const userKey = (p.usuario?._id || p.user || '').toString();
+    const debtDoc = (isCancelacion && c.penalty_target === 'miembros' && c.cancellation_summary?.debts_by_user)
+      ? c.cancellation_summary.debts_by_user[userKey]
+      : null;
+
+    let debtBadgeHtml = '';
+    if (debtDoc && (c.status?.name === 'Pendiente Pago' || c.status?.name === 'Pagada')) {
+      const rem = parseFloat(debtDoc.remaining_balance?.toString() || 0);
+      if (rem <= 0 || debtDoc.status === 'paid') {
+        debtBadgeHtml = `<span class="badge b-ap" style="font-size:10px; margin-right:6px;" title="Deuda saldada"><i class="ti ti-check"></i> Saldada</span>`;
+      } else {
+        debtBadgeHtml = `<span class="badge b-co" style="font-size:10px; margin-right:6px;" title="Deuda total: ${fmt(debtDoc.total_amount)}"><i class="ti ti-clock-pause"></i> Restante: ${fmt(rem)}</span>`;
+      }
+    }
+
     if (isMe && c.status?.name === 'Pendiente Verificacion') {
       rightHtml = `
         <span class="p-amount">${fmt(dispAmount)}${pctStr}${penaltyLabel}</span>
-        <button class="btn-verify ${p.verification ? 'verified' : ''}"
+        ${debtBadgeHtml}
+        <button class="btn-verify ${isVerified ? 'verified' : ''}"
           onclick="verificar('${c._id}', '${p._id}')"
-          ${p.verification ? 'disabled' : ''}>
-          <i class="ti ${p.verification ? 'ti-circle-check' : 'ti-circle'}"></i>
-          ${p.verification ? 'Verificado' : 'Verificar'}
+          ${isVerified ? 'disabled' : ''}>
+          <i class="ti ${isVerified ? 'ti-circle-check' : 'ti-circle'}"></i>
+          ${isVerified ? 'Verificado' : 'Verificar'}
         </button>`;
-    } else if (IS_DEV && USER.roleName === 'Administrador' && c.status?.name === 'Pendiente Verificacion' && !p.verification) {
+    } else if (IS_DEV && USER.roleName === 'Administrador' && c.status?.name === 'Pendiente Verificacion' && !isVerified) {
       rightHtml = `
         <span class="p-amount">${fmt(dispAmount)}${pctStr}${penaltyLabel}</span>
+        ${debtBadgeHtml}
         <button class="btn-verify btn-verify-dev"
           onclick="verificar('${c._id}', '${p._id}')"
           title="Verificar en nombre de ${p.usuario?.name || 'participante'} (Modo Dev)">
@@ -745,9 +930,10 @@ function cardHTML(c) {
     } else {
       rightHtml = `
         <span class="p-amount">${fmt(dispAmount)}${pctStr}${penaltyLabel}</span>
-        <span class="p-verified ${p.verification ? 'yes' : 'no'}">
-          <i class="ti ${p.verification ? 'ti-circle-check' : 'ti-circle'}" style="font-size:13px"></i>
-          ${p.verification ? 'Verificado' : 'Pendiente'}
+        ${debtBadgeHtml}
+        <span class="p-verified ${isVerified ? 'yes' : 'no'}">
+          <i class="ti ${isVerified ? 'ti-circle-check' : 'ti-circle'}" style="font-size:13px"></i>
+          ${isVerified ? 'Verificado' : 'Pendiente'}
         </span>`;
     }
     return `
@@ -766,6 +952,27 @@ function cardHTML(c) {
   const corrBanner = c.correction_comments
     ? `<div class="corr-banner"><i class="ti ti-alert-triangle"></i><span>${c.correction_comments}</span></div>`
     : '';
+
+  let cancellationProgressHtml = '';
+  if (isCancelacion && c.penalty_target === 'miembros' && c.cancellation_summary && c.cancellation_summary.total_debt > 0) {
+    const cs = c.cancellation_summary;
+    cancellationProgressHtml = `
+      <div class="cancellation-progress-box">
+        <div class="cpb-header">
+          <span class="cpb-title"><i class="ti ti-receipt-refund"></i> Cobro de Penalización por Cancelación</span>
+          <span class="cpb-pct">${cs.percent_paid}% saldado</span>
+        </div>
+        <div class="cpb-bar-wrap">
+          <div class="cpb-bar-fill" style="width: ${cs.percent_paid}%;"></div>
+        </div>
+        <div class="cpb-metrics">
+          <span>Total penalización: <strong>${fmt(cs.total_debt)}</strong></span>
+          <span>Cobrado: <strong style="color:var(--green-tx);">${fmt(cs.total_paid)}</strong></span>
+          <span>Por cobrar: <strong style="${cs.total_remaining > 0 ? 'color:var(--amber-tx);' : 'color:var(--green-tx);'}">${fmt(cs.total_remaining)}</strong></span>
+        </div>
+      </div>
+    `;
+  }
 
   let actions = '';
   const sName = c.status?.name;
@@ -786,9 +993,27 @@ function cardHTML(c) {
       <button class="btn btn-purple" style="opacity:.75" onclick="pedirCorreccion('${c._id}')" title="Pedir corrección como Director (Modo Dev)"><i class="ti ti-alert-circle"></i>Corregir (Dev)</button>`;
   }
   if (USER.roleName === 'Administrador' && sName === 'Pendiente Pago') {
-    actions += `
-      <button class="btn btn-green" onclick="pagar('${c._id}')"><i class="ti ti-cash"></i>Marcar como pagada</button>
-      <button class="btn btn-amber" onclick="pedirCorreccion('${c._id}')"><i class="ti ti-alert-circle"></i>Corregir</button>`;
+    if (isCancelacion) {
+      actions += `
+        <button class="btn btn-purple" id="btn-cobro-${c._id}" onclick="abrirModalCobroCancelacion('${c._id}')">
+          <i class="ti ti-wallet"></i>Gestionar Cobro
+        </button>
+        <button class="btn btn-amber" onclick="pedirCorreccion('${c._id}')"><i class="ti ti-alert-circle"></i>Corregir</button>`;
+    } else {
+      actions += `
+        <button class="btn btn-green" onclick="pagar('${c._id}')"><i class="ti ti-cash"></i>Marcar como pagada</button>
+        <button class="btn btn-amber" onclick="pedirCorreccion('${c._id}')"><i class="ti ti-alert-circle"></i>Corregir</button>`;
+    }
+  }
+
+  let badgeHtml = `<span class="badge ${st.cls}">${st.label}</span>`;
+  if (isCancelacion && sName === 'Pendiente Pago' && c.cancellation_summary?.is_partial) {
+    badgeHtml = `
+      <span class="badge b-partial" title="Cobrado ${c.cancellation_summary.percent_paid}% de penalizaciones">
+        <i class="ti ti-hourglass-empty"></i> Liquidación parcial (${c.cancellation_summary.percent_paid}%)
+      </span>
+      <span class="badge ${st.cls}">${st.label}</span>
+    `;
   }
 
   return `
@@ -800,7 +1025,7 @@ function cardHTML(c) {
         </div>
         <div class="card-head-right">
           ${gerenteActions}
-          <span class="badge ${st.cls}">${st.label}</span>
+          ${badgeHtml}
         </div>
       </div>
       <div class="card-meta">
@@ -812,6 +1037,7 @@ function cardHTML(c) {
 <div class="meta-item"><div class="lbl">Fecha operación</div><div class="val">${fmtDate(c.operation_date)}</div></div>
       </div>
       ${corrBanner}
+      ${cancellationProgressHtml}
       <div class="participants-section">
         <div class="participants-label">Participantes</div>
         ${partRows}
@@ -941,12 +1167,309 @@ async function aprobar(comisionId, accion, correction_comments = null) {
 }
 
 async function pagar(comisionId) {
+  const c = DATA.find(x => x._id === comisionId);
+  const isCancel = c && ((c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci') || Boolean(c.is_cancellation));
+  if (isCancel) {
+    const btn = document.querySelector(`#card-${comisionId} #btn-cobro-${comisionId}, #card-${comisionId} .btn-green, #card-${comisionId} .btn-purple`);
+    if (btn) {
+      btn.className = 'btn btn-purple';
+      btn.innerHTML = '<i class="ti ti-wallet"></i>Gestionar Cobro';
+      btn.onclick = () => abrirModalCobroCancelacion(comisionId);
+    }
+    abrirModalCobroCancelacion(comisionId);
+    return;
+  }
+
   try {
     const r = await fetch(`/api/comisiones/${comisionId}/pagar`, { method:'PATCH', credentials:'include' });
     const j = await r.json();
     toast(j.message);
     if (j.success) await reloadComision(comisionId);
   } catch(e) { toast('Error al marcar como pagada'); }
+}
+
+// ── Modal Cobro Cancelación ──────────────────────────────────────────────────
+let CURRENT_CANCELLATION = null;
+
+async function abrirModalCobroCancelacion(comisionId) {
+  if (document.getElementById('cancellationPaymentModal')) return;
+
+  try {
+    const r = await fetch(`/api/comisiones/${comisionId}/cancellation-payment-info`, { credentials: 'include' });
+    const j = await r.json();
+    if (!j.success) {
+      toast(j.message || 'Error al obtener información de cobro');
+      return;
+    }
+
+    CURRENT_CANCELLATION = j.data;
+    renderCancellationModal(comisionId);
+  } catch(e) {
+    console.error(e);
+    toast('Error de conexión al cargar cobro');
+  }
+}
+
+function closeCancellationModal() {
+  const m = document.getElementById('cancellationPaymentModal');
+  if (m) m.remove();
+  CURRENT_CANCELLATION = null;
+}
+
+function renderCancellationModal(comisionId) {
+  const data = CURRENT_CANCELLATION;
+  if (!data) return;
+
+  const c = data.comision;
+  const parts = data.participants;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'cancellationPaymentModal';
+
+  const partsRowsHtml = parts.map(p => {
+    const isPaid = p.is_paid || p.remaining_debt <= 0;
+    const maxPayable = Math.min(p.wallet_available, p.remaining_debt);
+
+    let controlsHtml = '';
+    if (isPaid) {
+      controlsHtml = `
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="badge b-ap" style="font-size:12px; padding: 4px 10px;">
+            <i class="ti ti-circle-check"></i> Deuda completamente liquidada
+          </span>
+          <input type="hidden" id="cobro-inp-${p.user_id}" value="0" />
+        </div>
+      `;
+    } else {
+      controlsHtml = `
+        <div class="part-cobro-ctrls">
+          <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            <button type="button" class="chip-btn" onclick="setCobroVal('${p.user_id}', ${p.suggested_deduction})">
+              Sugerido (${fmt(p.suggested_deduction)})
+            </button>
+            ${p.wallet_available >= p.remaining_debt ? `
+            <button type="button" class="chip-btn" style="border-color:var(--green-br); color:var(--green-tx);" onclick="setCobroVal('${p.user_id}', ${p.remaining_debt})">
+              Liquidar Todo (${fmt(p.remaining_debt)})
+            </button>` : ''}
+            <button type="button" class="chip-btn" onclick="setCobroVal('${p.user_id}', 0)">
+              $0 (Sin cobro)
+            </button>
+          </div>
+          <div class="cobro-input-wrap">
+            <span style="font-size:12px; color:var(--text-3); font-weight:600;">$</span>
+            <input type="number" 
+                   id="cobro-inp-${p.user_id}" 
+                   class="cobro-input" 
+                   min="0" 
+                   max="${maxPayable}" 
+                   step="0.01" 
+                   value="${p.suggested_deduction}" 
+                   oninput="onCobroValChange('${p.user_id}')" />
+          </div>
+        </div>
+        <div id="cobro-note-${p.user_id}" style="font-size:11px; color:var(--text-2); margin-top:4px;">
+          ${getCobroNoteText(p.suggested_deduction, p.remaining_debt, p.wallet_available)}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="part-cobro-card ${isPaid ? 'is-paid' : ''}" id="part-card-${p.user_id}">
+        <div class="part-cobro-top">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="p-avatar ${p.role_in_comision}">${initials(p.name)}</div>
+            <div>
+              <div style="font-size:13px; font-weight:600;">${p.name}</div>
+              <div style="font-size:11px; color:var(--text-2);">${p.role_in_comision}</div>
+            </div>
+          </div>
+          <div>
+            ${isPaid ? '' : `
+              <span class="badge ${p.wallet_available > 0 ? 'b-v' : 'b-co'}" style="font-size:10px;">
+                <i class="ti ${p.wallet_available > 0 ? 'ti-wallet' : 'ti-alert-circle'}"></i> 
+                Cartera: ${fmt(p.wallet_available)}
+              </span>`}
+          </div>
+        </div>
+        <div class="part-cobro-meta">
+          <div><div class="c-lbl">Penalización Total</div><div class="c-val">${fmt(p.total_debt)}</div></div>
+          <div><div class="c-lbl">Ya Cobrado</div><div class="c-val" style="color:var(--green-tx);">${fmt(p.paid_debt)}</div></div>
+          <div><div class="c-lbl">Deuda Restante</div><div class="c-val" style="color:${p.remaining_debt > 0 ? 'var(--amber-tx)' : 'var(--green-tx)'};">${fmt(p.remaining_debt)}</div></div>
+          <div><div class="c-lbl">Disponible Cartera</div><div class="c-val" style="color:${p.wallet_available > 0 ? 'var(--blue-tx)' : 'var(--text-3)'};">${fmt(p.wallet_available)}</div></div>
+        </div>
+        ${controlsHtml}
+      </div>
+    `;
+  }).join('');
+
+  overlay.innerHTML = `
+    <div class="modal cancellation-modal" role="dialog" aria-modal="true">
+      <div class="cancellation-modal-head">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="modal-icon" style="margin-bottom:0; background:rgba(139, 92, 246, 0.15);">
+            <i class="ti ti-cash" style="color:#c4b5fd;"></i>
+          </div>
+          <div>
+            <h3 style="margin-bottom:2px; font-size:16px;">Gestión de Cobro de Cancelación</h3>
+            <div style="font-size:12px; color:var(--text-2); font-family:'Space Mono', monospace;">
+              ${c.location} · ${c.development}
+            </div>
+          </div>
+        </div>
+        <button class="btn-icon" onclick="closeCancellationModal()" style="border:none; font-size:18px;"><i class="ti ti-x"></i></button>
+      </div>
+
+      <div class="cancellation-modal-body">
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div style="font-size:11px; color:var(--text-3);">CLIENTE</div>
+            <div style="font-size:13px; font-weight:600;">${c.client_name || '—'}</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text-3);">VALOR TOTAL PENALIZACIÓN</div>
+            <div style="font-size:13px; font-weight:700; color:var(--red-tx);">${fmt(c.total_commission)}</div>
+          </div>
+          <div>
+            <div style="font-size:11px; color:var(--text-3);">TOTAL A DEDUCIR AHORA</div>
+            <div id="modal-total-deducir" style="font-size:15px; font-weight:700; color:var(--green-tx); font-family:'Space Mono', monospace;">$0.00</div>
+          </div>
+        </div>
+
+        <div style="font-size:12px; color:var(--text-2); margin-top:2px;">
+          Define cuánto descontar de la cartera de cada participante para abonar a su penalización por cancelación:
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          ${partsRowsHtml}
+        </div>
+
+        <div class="corr-banner" style="margin:0; background:rgba(139, 92, 246, 0.08); border-color:rgba(139, 92, 246, 0.25); color:#c4b5fd;">
+          <i class="ti ti-info-circle" style="color:#c4b5fd;"></i>
+          <span>
+            <strong>Información:</strong> Si uno o más participantes quedan con saldo deudor restante, la comisión se mantendrá en <em>Pendiente Pago</em> con la etiqueta de <strong>Liquidación Parcial</strong> y las deudas seguirán activas en Cartera de Deudores hasta liquidarse al 100%.
+          </span>
+        </div>
+      </div>
+
+      <div class="cancellation-modal-footer">
+        <button class="mbtn" onclick="closeCancellationModal()">Cancelar</button>
+        <button class="mbtn btn-purple" id="btnConfirmCobro" style="font-weight:700; padding:8px 18px;" onclick="ejecutarCobroCancelacion('${comisionId}')">
+          <i class="ti ti-check"></i> Aplicar Cobros
+        </button>
+      </div>
+    </div>
+  `;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeCancellationModal(); });
+  document.body.appendChild(overlay);
+  updateModalTotalDeducir();
+}
+
+function getCobroNoteText(val, remaining, wallet) {
+  val = parseFloat(val) || 0;
+  remaining = parseFloat(remaining) || 0;
+  wallet = parseFloat(wallet) || 0;
+
+  if (val === 0) {
+    return 'Sin cobro en esta ocasión. Deuda permanecerá intacta.';
+  }
+  const nuevoRestante = Math.max(0, parseFloat((remaining - val).toFixed(2)));
+  if (nuevoRestante === 0) {
+    return `<span style="color:var(--green-tx); font-weight:600;">✓ Liquidará totalmente la deuda de este participante.</span>`;
+  }
+  return `Deducirá <strong>${fmt(val)}</strong> de cartera. Saldo deudor restante será <strong>${fmt(nuevoRestante)}</strong>.`;
+}
+
+function setCobroVal(userId, val) {
+  const inp = document.getElementById(`cobro-inp-${userId}`);
+  if (!inp) return;
+  inp.value = Number(val).toFixed(2);
+  onCobroValChange(userId);
+}
+
+function onCobroValChange(userId) {
+  const inp = document.getElementById(`cobro-inp-${userId}`);
+  if (!inp || !CURRENT_CANCELLATION) return;
+
+  const p = CURRENT_CANCELLATION.participants.find(x => x.user_id === userId);
+  if (!p) return;
+
+  let val = parseFloat(inp.value);
+  if (isNaN(val) || val < 0) val = 0;
+
+  const maxVal = Math.min(p.wallet_available, p.remaining_debt);
+  if (val > maxVal) {
+    val = maxVal;
+    inp.value = maxVal.toFixed(2);
+  }
+
+  const noteEl = document.getElementById(`cobro-note-${userId}`);
+  if (noteEl) {
+    noteEl.innerHTML = getCobroNoteText(val, p.remaining_debt, p.wallet_available);
+  }
+  updateModalTotalDeducir();
+}
+
+function updateModalTotalDeducir() {
+  if (!CURRENT_CANCELLATION) return;
+  let total = 0;
+  CURRENT_CANCELLATION.participants.forEach(p => {
+    const inp = document.getElementById(`cobro-inp-${p.user_id}`);
+    if (inp) {
+      const v = parseFloat(inp.value) || 0;
+      total += v;
+    }
+  });
+  const el = document.getElementById('modal-total-deducir');
+  if (el) el.textContent = fmt(total);
+}
+
+async function ejecutarCobroCancelacion(comisionId) {
+  if (!CURRENT_CANCELLATION) return;
+
+  const payments = [];
+  for (const p of CURRENT_CANCELLATION.participants) {
+    const inp = document.getElementById(`cobro-inp-${p.user_id}`);
+    const amt = inp ? parseFloat(inp.value) || 0 : 0;
+    payments.push({
+      user_id: p.user_id,
+      amount_paid: amt
+    });
+  }
+
+  const btn = document.getElementById('btnConfirmCobro');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm" style="border-top-color:#fff;"></span> Aplicando cobros…';
+  }
+
+  try {
+    const r = await fetch(`/api/comisiones/${comisionId}/pagar`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ participant_payments: payments })
+    });
+    const j = await r.json();
+    toast(j.message || 'Cobros procesados');
+    if (j.success) {
+      closeCancellationModal();
+      await reloadComision(comisionId);
+    } else {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-check"></i> Aplicar Cobros';
+      }
+    }
+  } catch(e) {
+    console.error(e);
+    toast('Error al aplicar cobros');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-check"></i> Aplicar Cobros';
+    }
+  }
 }
 
 function pedirCorreccion(comisionId) {
@@ -1001,9 +1524,18 @@ async function doPedirCorreccion(comisionId) {
   closeCorrectionModal();
 }
 
-async function reloadComision() {
+async function reloadComision(comisionIdToFocus = null) {
+  const currentScroll = window.scrollY;
   const isLimitado = ['Asesor', 'Gerente'].includes(USER.roleName);
   await loadComisiones(isLimitado);
+  if (comisionIdToFocus) {
+    const el = document.getElementById('card-' + comisionIdToFocus);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+  }
+  window.scrollTo({ top: currentScroll, behavior: 'instant' });
 }
 
 function showError(msg) {

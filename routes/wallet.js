@@ -290,11 +290,45 @@ router.post('/debts/:debt_id/payment', authenticate, authorize(['Administrador']
             concept: 'payment',
             description: description ?? `Pago a deuda — ${debt.description}`,
             debt_id: new ObjectId(debt_id),
-            comision_id: null,
+            comision_id: debt.comision_id ? new ObjectId(debt.comision_id) : null,
             reference_date: now,
             created_by: new ObjectId(created_by),
             created_at: now,
         });
+
+        // 3. Sincronización bidireccional con Comisiones si la deuda proviene de una cancelación
+        if (debt.comision_id) {
+            const comisionId = new ObjectId(debt.comision_id);
+            const statusPagada = await db.collection('estatus').findOne({ order: 6 });
+
+            if (newStatus === 'paid' && statusPagada) {
+                await db.collection('comisiones-participantes').updateOne(
+                    { comision_id: comisionId, user: debt.user_id },
+                    { $set: { status: statusPagada._id, updated_at: now } }
+                );
+            }
+
+            const allDebts = await db.collection('debts').find({ comision_id: comisionId }).toArray();
+            const allPaid = allDebts.length > 0 && allDebts.every(d =>
+                d._id.toString() === debt_id ? newStatus === 'paid' : (d.status === 'paid' || parseFloat(d.remaining_balance?.toString() || 0) <= 0)
+            );
+
+            if (allPaid && statusPagada) {
+                await db.collection('comisiones-ubicaciones').updateOne(
+                    { _id: comisionId },
+                    { $set: { status: statusPagada._id, updated_at: now } }
+                );
+                await db.collection('comisiones-participantes').updateMany(
+                    { comision_id: comisionId },
+                    { $set: { status: statusPagada._id, updated_at: now } }
+                );
+            } else {
+                await db.collection('comisiones-ubicaciones').updateOne(
+                    { _id: comisionId },
+                    { $set: { updated_at: now } }
+                );
+            }
+        }
 
         return res.status(200).json({
             success: true,

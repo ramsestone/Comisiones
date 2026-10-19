@@ -301,6 +301,17 @@ async function getReporteCorteData(db, startDateStr, endDateStr) {
   const totalGerenciaPropia = gerentes.reduce((sum, g) => sum + g.propia, 0);
 
   // --- 6. ANEXO: PADRÓN DETALLADO DE COMISIONES EN CORTE ---
+  const cancellationIds = comisiones.filter(c => c.is_cancellation).map(c => c._id);
+  const cancellationDebts = cancellationIds.length > 0
+    ? await db.collection('debts').find({ comision_id: { $in: cancellationIds } }).toArray()
+    : [];
+  const debtsByComision = {};
+  for (const d of cancellationDebts) {
+    const cid = d.comision_id?.toString();
+    if (!debtsByComision[cid]) debtsByComision[cid] = [];
+    debtsByComision[cid].push(d);
+  }
+
   // Sorted alphabetically by Desarrollo then Ubicación
   const padron = [...comisiones].sort((a, b) => {
     const devA = (a.development?.text || '').toUpperCase();
@@ -309,16 +320,37 @@ async function getReporteCorteData(db, startDateStr, endDateStr) {
     const locA = (a.location?.text || '').toUpperCase();
     const locB = (b.location?.text || '').toUpperCase();
     return locA.localeCompare(locB);
-  }).map((c, idx) => ({
-    index: idx + 1,
-    ubicacion: c.location?.text || c.location || 'N/A',
-    desarrollo: c.development?.text || c.development || 'N/A',
-    concepto: c.is_cancellation ? 'Cancelación' : (c.concept?.text || c.concept || 'N/A'),
-    cliente: (c.client_name || '').toUpperCase().trim(),
-    precioVenta: formatCurrency(c.sale_price),
-    comisionTotal: formatCurrency(c.total_commission),
-    isNegative: Number(c.total_commission) < 0
-  }));
+  }).map((c, idx) => {
+    let cancellationDetail = null;
+    if (c.is_cancellation) {
+      const cDebts = debtsByComision[c._id.toString()] || [];
+      const totalPenalty = cDebts.reduce((sum, d) => sum + parseFloat(d.total_amount?.toString() || 0), 0) || Math.abs(Number(c.total_commission) || 0);
+      const remainingBalance = cDebts.reduce((sum, d) => sum + parseFloat(d.remaining_balance?.toString() || 0), 0);
+      const deductedAmount = Math.max(0, parseFloat((totalPenalty - remainingBalance).toFixed(2)));
+      cancellationDetail = {
+        totalPenalty,
+        totalPenaltyFormateada: formatCurrency(totalPenalty),
+        deductedAmount,
+        deductedFormateada: formatCurrency(deductedAmount),
+        remainingBalance,
+        remainingFormateada: formatCurrency(remainingBalance),
+        allPaid: remainingBalance <= 0,
+        isPartial: deductedAmount > 0 && remainingBalance > 0
+      };
+    }
+
+    return {
+      index: idx + 1,
+      ubicacion: c.location?.text || c.location || 'N/A',
+      desarrollo: c.development?.text || c.development || 'N/A',
+      concepto: c.is_cancellation ? 'Cancelación' : (c.concept?.text || c.concept || 'N/A'),
+      cliente: (c.client_name || '').toUpperCase().trim(),
+      precioVenta: formatCurrency(c.sale_price),
+      comisionTotal: formatCurrency(c.total_commission),
+      isNegative: Number(c.total_commission) < 0,
+      cancellationDetail
+    };
+  });
 
   // Headers metadata
   const { periodoTexto, diasTexto } = formatCutPeriod(startDateStr, endDateStr);

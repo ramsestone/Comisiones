@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte de Auditoría: Historial y Trazabilidad de Comisiones</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-inner: #0f172a;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --primary: #3b82f6;
+      --primary-light: #60a5fa;
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.12);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.12);
+      --purple: #8b5cf6;
+      --purple-bg: rgba(139, 92, 246, 0.12);
+      --cyan: #06b6d4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      background-color: #0b0f19;
+      color: var(--text);
+      line-height: 1.5;
+      padding: 32px 20px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6, #10b981, #8b5cf6);
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .badge-audit {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #93c5fd;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: var(--success-bg);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+    .header-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* Key Findings Grid */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .summary-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .summary-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .summary-title {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .summary-value {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .summary-desc {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Executive Table */
+    .table-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 28px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .table-header {
+      padding: 18px 24px;
+      background: #172133;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .table-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      text-align: left;
+    }
+    th {
+      background: #111827;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+      color: var(--text);
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .code-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      background: #0f172a;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      color: #93c5fd;
+      font-weight: 600;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .pill-green {
+      background: var(--success-bg);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .pill-blue {
+      background: rgba(59, 130, 246, 0.15);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* Section Title */
+    .section-heading {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      margin: 32px 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Detailed Case Cards */
+    .case-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    .case-header {
+      padding: 16px 24px;
+      background: #172133;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .case-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .case-num {
+      width: 28px;
+      height: 28px;
+      background: #3b82f6;
+      color: #fff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .case-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .case-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .case-body {
+      padding: 20px 24px;
+    }
+
+    /* Timeline Stepper */
+    .timeline {
+      position: relative;
+      padding-left: 28px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      top: 10px;
+      bottom: 10px;
+      left: 8px;
+      width: 2px;
+      background: #334155;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 18px;
+    }
+    .timeline-item:last-child {
+      margin-bottom: 0;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -28px;
+      top: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #1e293b;
+      border: 2px solid #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      color: #fff;
+    }
+    .timeline-item.done .timeline-dot {
+      background: #10b981;
+      border-color: #10b981;
+    }
+    .timeline-item.waiting .timeline-dot {
+      background: #f59e0b;
+      border-color: #f59e0b;
+    }
+    .timeline-item.final .timeline-dot {
+      background: #8b5cf6;
+      border-color: #8b5cf6;
+    }
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .timeline-role {
+      font-weight: 700;
+      font-size: 13px;
+      color: #f8fafc;
+    }
+    .timeline-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: #94a3b8;
+      background: #0f172a;
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+    }
+    .timeline-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .highlight-box {
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: rgba(59, 130, 246, 0.08);
+      border-left: 3px solid #3b82f6;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .highlight-box strong {
+      color: #fff;
+    }
+
+    /* Print / Action Buttons */
+    .actions-bar {
+      margin-top: 28px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-print {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-print:hover {
+      background: #1d4ed8;
+    }
+
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        padding: 0 !important;
+      }
+      .actions-bar {
+        display: none !important;
+      }
+      .header, .summary-card, .table-container, .case-card {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        box-shadow: none !important;
+      }
+      th {
+        background: #f1f5f9 !important;
+        color: #334155 !important;
+      }
+      td, .timeline-role, h1, .case-title {
+        color: #0f172a !important;
+      }
+      .timeline-time, .code-pill {
+        background: #f8fafc !important;
+        color: #1e293b !important;
+        border-color: #cbd5e1 !important;
+      }
+      .case-header, .table-header {
+        background: #f8fafc !important;
+        border-color: #e2e8f0 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-top">
+        <span class="badge-audit"><i class="fa-solid fa-shield-halved"></i> Auditoría Técnica de Sistema</span>
+        <span class="badge-status"><i class="fa-solid fa-circle-check"></i> 100% Autorizadas y Registradas</span>
+      </div>
+      <h1>Historial y Trazabilidad de Aprobación de Comisiones</h1>
+      <p class="header-subtitle">
+        Informe cronológico y forense sobre el flujo de verificación, candados de sistema y estado de autorización de las 5 comisiones en corte.
+      </p>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div>
+          <div class="summary-title">Estatus Actual</div>
+          <div class="summary-value" style="color: #34d399;">Pendiente Pago (5/5)</div>
+          <div class="summary-desc">Aprobadas por Dirección y listas para dispersión</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
+          <i class="fa-solid fa-file-pen"></i>
+        </div>
+        <div>
+          <div class="summary-title">Modificaciones o Edición</div>
+          <div class="summary-value" style="color: #60a5fa;">0 Ediciones</div>
+          <div class="summary-desc">Montos, clientes y participantes 100% íntegros</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <div>
+          <div class="summary-title">Causa de Retención</div>
+          <div class="summary-value" style="color: #fbbf24;">Candado de Doble Rol</div>
+          <div class="summary-desc">Faltaba verificación como participante antes de aprobar</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon" style="background: rgba(139, 92, 246, 0.15); color: #c084fc;">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <div>
+          <div class="summary-title">Liberación Final</div>
+          <div class="summary-value" style="color: #c084fc;">15/Oct/2026 ~17:42</div>
+          <div class="summary-desc">Aprobación inmediata tras última verificación</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Executive Summary Table -->
+    <div class="table-container">
+      <div class="table-header">
+        <h2><i class="fa-solid fa-table-list" style="color: #3b82f6;"></i> Cuadro General de Verificaciones y Aprobación</h2>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Desarrollo / Unidad</th>
+            <th>Expediente</th>
+            <th>Cliente</th>
+            <th>Verificación Asesor</th>
+            <th>Verificación Gerente</th>
+            <th>Verificación Dirección</th>
+            <th>Aprobación Final</th>
+            <th>Estatus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>ORIENTE 233</strong><br><span class="code-pill">OP33-N003-B307</span></td>
+            <td><span class="code-pill">4323</span></td>
+            <td>Ángel Díaz Yáñez</td>
+            <td>11/Oct 11:24 pm</td>
+            <td>11/Oct 11:18 pm</td>
+            <td><strong style="color: #f59e0b;">15/Oct 05:41:50 pm</strong></td>
+            <td><strong>15/Oct 05:41:52 pm</strong></td>
+            <td><span class="status-pill pill-green"><i class="fa-solid fa-check"></i> Pendiente Pago</span></td>
+          </tr>
+          <tr>
+            <td><strong>OTHON PARK</strong><br><span class="code-pill">OTHO-N003-B301</span></td>
+            <td><span class="code-pill">1213</span></td>
+            <td>Israel Correa González</td>
+            <td>11/Oct 11:35 am</td>
+            <td>11/Oct 11:31 am</td>
+            <td><strong style="color: #f59e0b;">15/Oct 05:42:08 pm</strong></td>
+            <td><strong>15/Oct 05:42:09 pm</strong></td>
+            <td><span class="status-pill pill-green"><i class="fa-solid fa-check"></i> Pendiente Pago</span></td>
+          </tr>
+          <tr>
+            <td><strong>RESIDENCIAL EDUARDO MOLINA 1</strong><br><span class="code-pill">GR-125</span></td>
+            <td><span class="code-pill">365</span></td>
+            <td>Edgar García Rojas</td>
+            <td>09/Oct 06:43 pm</td>
+            <td>09/Oct 06:43 pm</td>
+            <td><strong style="color: #f59e0b;">15/Oct 05:42:30 pm</strong></td>
+            <td><strong>15/Oct 05:42:32 pm</strong></td>
+            <td><span class="status-pill pill-green"><i class="fa-solid fa-check"></i> Pendiente Pago</span></td>
+          </tr>
+          <tr>
+            <td><strong>RESIDENCIAL EDUARDO MOLINA</strong><br><span class="code-pill">BOD-33</span></td>
+            <td><span class="code-pill">1673</span></td>
+            <td>Liliam Nataly Vázquez Pérez</td>
+            <td>12/Oct 12:34 pm</td>
+            <td>12/Oct 12:34 pm</td>
+            <td><strong style="color: #f59e0b;">15/Oct 05:42:44 pm</strong></td>
+            <td><strong>15/Oct 05:42:45 pm</strong></td>
+            <td><span class="status-pill pill-green"><i class="fa-solid fa-check"></i> Pendiente Pago</span></td>
+          </tr>
+          <tr>
+            <td><strong>FLORESTA RESIDENCIAL 1</strong><br><span class="code-pill">FL01-N002-B201</span></td>
+            <td><span class="code-pill">2452</span></td>
+            <td>Alberto García Meza</td>
+            <td>11/Oct (2 asesores)</td>
+            <td>11/Oct (2 gerentes)</td>
+            <td>12/Oct 02:30 pm</td>
+            <td><strong>15/Oct 05:41:33 pm</strong></td>
+            <td><span class="status-pill pill-green"><i class="fa-solid fa-check"></i> Pendiente Pago</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Timeline Case Details -->
+    <div class="section-heading">
+      <i class="fa-solid fa-clock-rotate-left" style="color: #8b5cf6;"></i>
+      Trazabilidad Cronológica Paso a Paso por Caso
+    </div>
+
+    <!-- Case 1 -->
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title-wrap">
+          <div class="case-num">1</div>
+          <div>
+            <div class="case-title">ORIENTE 233 — Ubicación: OP33-N003-B307</div>
+            <div class="case-meta">Cliente: Ángel Díaz Yáñez · Expediente: 4323 · Registrado el 11/Oct a las 12:21 pm</div>
+          </div>
+        </div>
+        <span class="status-pill pill-green"><i class="fa-solid fa-check"></i> Aprobada</span>
+      </div>
+      <div class="case-body">
+        <div class="timeline">
+          <div class="timeline-item done">
+            <div class="timeline-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Gerente: Guillermo Ramón Munguía Miranda</span>
+              <span class="timeline-time">11/Oct/2026, 11:18:25 p.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su porcentaje asignado (0.25%). Notificación: Faltan 2 verificaciones.</div>
+          </div>
+
+          <div class="timeline-item done">
+            <div class="timeline-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Asesor: Jonathan González Fernández</span>
+              <span class="timeline-time">11/Oct/2026, 11:24:30 p.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su porcentaje asignado (0.60%). Notificación: Faltan 1 verificaciones.</div>
+          </div>
+
+          <div class="timeline-item waiting">
+            <div class="timeline-dot"><i class="fa-solid fa-hourglass-half"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Director (como participante): Thayde Ariadna Díaz Téllez</span>
+              <span class="timeline-time" style="color: #f59e0b;">15/Oct/2026, 05:41:50 p.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su 0.10% de Dirección. Al completarse el 100%, la comisión se elevó a <strong>Pendiente de Aprobación</strong>.</div>
+          </div>
+
+          <div class="timeline-item final">
+            <div class="timeline-dot"><i class="fa-solid fa-stamp"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Aprobación Oficial Dirección (Ariadna Díaz)</span>
+              <span class="timeline-time" style="color: #c084fc;">15/Oct/2026, 05:41:52 p.m. (2 seg después)</span>
+            </div>
+            <div class="timeline-desc">Comisión aprobada oficialmente y transferida a <strong>Pendiente Pago</strong> para Administración. Crédito generado en Wallet: $27,383.51.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case 2 -->
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title-wrap">
+          <div class="case-num">2</div>
+          <div>
+            <div class="case-title">OTHON PARK — Ubicación: OTHO-N003-B301</div>
+            <div class="case-meta">Cliente: Israel Correa González · Expediente: 1213 · Registrado el 11/Oct a las 11:31 am</div>
+          </div>
+        </div>
+        <span class="status-pill pill-green"><i class="fa-solid fa-check"></i> Aprobada</span>
+      </div>
+      <div class="case-body">
+        <div class="timeline">
+          <div class="timeline-item done">
+            <div class="timeline-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Gerente: María Teresa Fernández Rodríguez</span>
+              <span class="timeline-time">11/Oct/2026, 11:31:36 a.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su porcentaje asignado (0.25%). Notificación: Faltan 2 verificaciones.</div>
+          </div>
+
+          <div class="timeline-item done">
+            <div class="timeline-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Asesor: Georgina García Lozano</span>
+              <span class="timeline-time">11/Oct/2026, 11:35:26 a.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su porcentaje asignado (0.60%). Notificación: Faltan 1 verificaciones.</div>
+          </div>
+
+          <div class="timeline-item waiting">
+            <div class="timeline-dot"><i class="fa-solid fa-hourglass-half"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Director (como participante): Thayde Ariadna Díaz Téllez</span>
+              <span class="timeline-time" style="color: #f59e0b;">15/Oct/2026, 05:42:08 p.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su 0.10% de Dirección. Al completarse el 100%, la comisión se elevó a <strong>Pendiente de Aprobación</strong>.</div>
+          </div>
+
+          <div class="timeline-item final">
+            <div class="timeline-dot"><i class="fa-solid fa-stamp"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Aprobación Oficial Dirección (Ariadna Díaz)</span>
+              <span class="timeline-time" style="color: #c084fc;">15/Oct/2026, 05:42:09 p.m. (1 seg después)</span>
+            </div>
+            <div class="timeline-desc">Comisión aprobada oficialmente y transferida a <strong>Pendiente Pago</strong> para Administración. Crédito generado en Wallet: $25,646.02.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case 3 -->
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title-wrap">
+          <div class="case-num">3</div>
+          <div>
+            <div class="case-title">RESIDENCIAL EDUARDO MOLINA 1 — Ubicación: GR-125</div>
+            <div class="case-meta">Cliente: Edgar García Rojas · Expediente: 365 · Registrado el 08/Oct a las 04:15 pm</div>
+          </div>
+        </div>
+        <span class="status-pill pill-green"><i class="fa-solid fa-check"></i> Aprobada</span>
+      </div>
+      <div class="case-body">
+        <div class="timeline">
+          <div class="timeline-item done">
+            <div class="timeline-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Asesor: José Luis Camelo Vázquez</span>
+              <span class="timeline-time">09/Oct/2026, 06:43:11 p.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su porcentaje asignado (1.20%). Notificación: Faltan 2 verificaciones.</div>
+          </div>
+
+          <div class="timeline-item done">
+            <div class="timeline-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Gerente: José Luis Camelo Vázquez</span>
+              <span class="timeline-time">09/Oct/2026, 06:43:33 p.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su porcentaje asignado (0.50%). Notificación: Faltan 1 verificaciones.</div>
+          </div>
+
+          <div class="timeline-item waiting">
+            <div class="timeline-dot"><i class="fa-solid fa-hourglass-half"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Director (como participante): Thayde Ariadna Díaz Téllez</span>
+              <span class="timeline-time" style="color: #f59e0b;">15/Oct/2026, 05:42:30 p.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su 0.10% de Dirección. Al completarse el 100%, la comisión se elevó a <strong>Pendiente de Aprobación</strong>.</div>
+          </div>
+
+          <div class="timeline-item final">
+            <div class="timeline-dot"><i class="fa-solid fa-stamp"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Aprobación Oficial Dirección (Ariadna Díaz)</span>
+              <span class="timeline-time" style="color: #c084fc;">15/Oct/2026, 05:42:32 p.m. (2 seg después)</span>
+            </div>
+            <div class="timeline-desc">Comisión aprobada oficialmente y transferida a <strong>Pendiente Pago</strong> para Administración. Crédito generado en Wallet: $3,600.00.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case 4 -->
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title-wrap">
+          <div class="case-num">4</div>
+          <div>
+            <div class="case-title">RESIDENCIAL EDUARDO MOLINA — Ubicación: BOD-33</div>
+            <div class="case-meta">Cliente: Liliam Nataly Vázquez Pérez · Expediente: 1673 · Registrado el 12/Oct a las 12:33 pm</div>
+          </div>
+        </div>
+        <span class="status-pill pill-green"><i class="fa-solid fa-check"></i> Aprobada</span>
+      </div>
+      <div class="case-body">
+        <div class="timeline">
+          <div class="timeline-item done">
+            <div class="timeline-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Asesor: María Mercedes Cornejo Gómez</span>
+              <span class="timeline-time">12/Oct/2026, 12:34:08 p.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su porcentaje asignado (1.20%). Notificación: Faltan 2 verificaciones.</div>
+          </div>
+
+          <div class="timeline-item done">
+            <div class="timeline-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Gerente: José Luis Camelo Vázquez</span>
+              <span class="timeline-time">12/Oct/2026, 12:34:39 p.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su porcentaje asignado (0.50%). Notificación: Faltan 1 verificaciones.</div>
+          </div>
+
+          <div class="timeline-item waiting">
+            <div class="timeline-dot"><i class="fa-solid fa-hourglass-half"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Director (como participante): Thayde Ariadna Díaz Téllez</span>
+              <span class="timeline-time" style="color: #f59e0b;">15/Oct/2026, 05:42:44 p.m.</span>
+            </div>
+            <div class="timeline-desc">Verificó su 0.10% de Dirección. Al completarse el 100%, la comisión se elevó a <strong>Pendiente de Aprobación</strong>.</div>
+          </div>
+
+          <div class="timeline-item final">
+            <div class="timeline-dot"><i class="fa-solid fa-stamp"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Aprobación Oficial Dirección (Ariadna Díaz)</span>
+              <span class="timeline-time" style="color: #c084fc;">15/Oct/2026, 05:42:45 p.m. (1 seg después)</span>
+            </div>
+            <div class="timeline-desc">Comisión aprobada oficialmente y transferida a <strong>Pendiente Pago</strong> para Administración. Crédito generado en Wallet: $2,340.00.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case 5 (Floresta) -->
+    <div class="case-card">
+      <div class="case-header">
+        <div class="case-title-wrap">
+          <div class="case-num">5</div>
+          <div>
+            <div class="case-title">FLORESTA RESIDENCIAL 1 — Ubicación: FL01-N002-B201</div>
+            <div class="case-meta">Cliente: Alberto García Meza · Expediente: 2452 · Registrado el 11/Oct a las 11:57 am</div>
+          </div>
+        </div>
+        <span class="status-pill pill-green"><i class="fa-solid fa-check"></i> Aprobada</span>
+      </div>
+      <div class="case-body">
+        <div class="timeline">
+          <div class="timeline-item done">
+            <div class="timeline-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Verificaciones Asesores y Gerentes (4 participantes)</span>
+              <span class="timeline-time">11/Oct/2026 entre 04:15 pm y 11:22 pm</span>
+            </div>
+            <div class="timeline-desc">Verificaron Isaías Gabriel (0.15%), Rafael Preciado (0.28%), Guillermo Munguía (0.25%) y Mercedes Avilés (0.50%).</div>
+          </div>
+
+          <div class="timeline-item done">
+            <div class="timeline-dot"><i class="fa-solid fa-check"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Director (como participante): Thayde Ariadna Díaz Téllez</span>
+              <span class="timeline-time">12/Oct/2026, 02:30:52 p.m.</span>
+            </div>
+            <div class="timeline-desc">Completó su 0.10%. La comisión subió a <strong>Pendiente de Aprobación</strong> desde el 12 de Octubre.</div>
+          </div>
+
+          <div class="timeline-item final">
+            <div class="timeline-dot"><i class="fa-solid fa-stamp"></i></div>
+            <div class="timeline-header">
+              <span class="timeline-role">Aprobación Oficial Dirección (Ariadna Díaz)</span>
+              <span class="timeline-time" style="color: #c084fc;">15/Oct/2026, 05:41:33 p.m.</span>
+            </div>
+            <div class="timeline-desc">Aprobada oficialmente por Dirección junto con las otras 4 comisiones. Crédito generado en Wallet: $45,027.36.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Explanatory Technical Verdict -->
+    <div class="highlight-box">
+      <strong><i class="fa-solid fa-circle-info"></i> Dictamen Técnico de Auditoría:</strong>
+      No existió ningún error de captura, desfase de base de datos ni modificación manual. El sistema operó conforme a su diseño de seguridad: <em>"Una comisión no puede ser aprobada formalmente para pago por Dirección hasta que el 100% de los participantes hayan verificado su porcentaje individual"</em>. Al faltar la verificación de Dirección como participante en los primeros 4 casos, el botón verde de aprobación no estuvo disponible hasta ayer 15 de Octubre a las 17:41 hrs, momento en el cual se completaron y aprobaron en tiempo real.
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="actions-bar">
+      <button class="btn btn-print" onclick="window.print()">
+        <i class="fa-solid fa-print"></i> Imprimir o Guardar como PDF
+      </button>
+    </div>
+
+  </div>
+
+</body>
+</html>
