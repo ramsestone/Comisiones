@@ -64,8 +64,10 @@ async function getUserIdsByRole(db, roleName) {
 
 // ── Helpers de Cartera / Saldo y Cancelaciones ────────────────────────────────
 const netBalanceHelper = async (db, userId) => {
+  if (!userId || !ObjectId.isValid(userId)) return 0;
+  const userOid = new ObjectId(userId);
   const resultado = await db.collection('walletTransactions').aggregate([
-    { $match: { user_id: new ObjectId(userId) } },
+    { $match: { $or: [{ user_id: userOid }, { user_id: userId.toString() }] } },
     {
       $group: {
         _id: '$type',
@@ -921,23 +923,27 @@ router.get('/:id/cancellation-payment-info', authenticate, authorize(['Administr
   const db     = client.db(DB_NAME);
 
   try {
-    const comisionId = new ObjectId(req.params.id);
-    const comision = await db.collection('comisiones-ubicaciones').findOne({ _id: comisionId });
+    const rawId = req.params.id;
+    console.log('[GET /api/comisiones/:id/cancellation-payment-info] ID:', rawId, 'User:', req.user?.username);
+    const idQuery = ObjectId.isValid(rawId) ? { $in: [new ObjectId(rawId), rawId] } : rawId;
+    const comision = await db.collection('comisiones-ubicaciones').findOne({ _id: idQuery });
     if (!comision) {
       return res.status(404).json({ success: false, message: 'Comisión no encontrada' });
     }
 
-    const participantes = await db.collection('comisiones-participantes').find({ comision_id: comisionId }).toArray();
-    const debts = await db.collection('debts').find({ comision_id: comisionId }).toArray();
-    const debtsByUser = Object.fromEntries(debts.map(d => [d.user_id.toString(), d]));
+    const participantes = await db.collection('comisiones-participantes').find({ comision_id: idQuery }).toArray();
+    const debts = await db.collection('debts').find({ comision_id: idQuery }).toArray();
+    const debtsByUser = Object.fromEntries(
+      debts.filter(d => d && d.user_id).map(d => [d.user_id.toString(), d])
+    );
 
-    const userIds = participantes.map(p => p.user).filter(Boolean);
-    const users = await db.collection('usuarios').find({ _id: { $in: userIds } }).toArray();
+    const userIds = participantes.map(p => p.user).filter(u => u && ObjectId.isValid(u)).map(u => new ObjectId(u));
+    const users = userIds.length > 0 ? await db.collection('usuarios').find({ _id: { $in: userIds } }).toArray() : [];
     const usersMap = Object.fromEntries(users.map(u => [u._id.toString(), u]));
 
     const participantsData = [];
     for (const p of participantes) {
-      const uId = p.user?.toString();
+      const uId = (p.user || p.usuario?._id || '')?.toString();
       const userDoc = usersMap[uId] || {};
       const debtDoc = debtsByUser[uId];
       const assignedAbs = Math.abs(parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString()));
@@ -946,7 +952,14 @@ router.get('/:id/cancellation-payment-info', authenticate, authorize(['Administr
       const remainingDebt = debtDoc ? Math.max(0, parseFloat(debtDoc.remaining_balance?.toString() || 0)) : assignedAbs;
       const paidDebt = Math.max(0, parseFloat((totalDebt - remainingDebt).toFixed(2)));
 
-      const balance = await netBalanceHelper(db, uId);
+      let balance = 0;
+      if (uId) {
+        try {
+          balance = await netBalanceHelper(db, uId);
+        } catch (e) {
+          balance = 0;
+        }
+      }
       const availableWallet = Math.max(0, balance);
       const suggestedDeduction = Math.min(availableWallet, remainingDebt);
 
@@ -969,9 +982,9 @@ router.get('/:id/cancellation-payment-info', authenticate, authorize(['Administr
       data: {
         comision: {
           _id: comision._id,
-          location: comision.location?.text || comision.location,
-          development: comision.development?.text || comision.development,
-          client_name: comision.client_name,
+          location: comision.location?.text || comision.location || '—',
+          development: comision.development?.text || comision.development || '—',
+          client_name: comision.client_name || '—',
           sale_price: comision.sale_price,
           total_commission: comision.total_commission,
         },
