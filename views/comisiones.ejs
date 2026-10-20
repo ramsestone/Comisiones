@@ -1194,19 +1194,36 @@ let CURRENT_CANCELLATION = null;
 async function abrirModalCobroCancelacion(comisionId) {
   if (document.getElementById('cancellationPaymentModal')) return;
 
+  let infoData = null;
   try {
     const r = await fetch(`/api/comisiones/${comisionId}/cancellation-payment-info`, { credentials: 'include' });
-    const j = await r.json();
+    let j;
+    try {
+      j = await r.json();
+    } catch (parseErr) {
+      console.error('Error parseando respuesta:', parseErr);
+      toast(r.ok ? 'Error en formato de datos' : `Error del servidor (${r.status})`);
+      return;
+    }
+
     if (!j.success) {
       toast(j.message || 'Error al obtener información de cobro');
       return;
     }
 
-    CURRENT_CANCELLATION = j.data;
-    renderCancellationModal(comisionId);
+    infoData = j.data;
   } catch(e) {
-    console.error(e);
-    toast('Error de conexión al cargar cobro');
+    console.error('Error de red al consultar cobro:', e);
+    toast('Error de conexión con el servidor. Verifica que el servicio esté activo.');
+    return;
+  }
+
+  try {
+    CURRENT_CANCELLATION = infoData;
+    renderCancellationModal(comisionId);
+  } catch(renderErr) {
+    console.error('Error al renderizar modal de cobro:', renderErr);
+    toast('Error al desplegar ventana de cobro: ' + renderErr.message);
   }
 }
 
