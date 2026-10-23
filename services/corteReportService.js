@@ -205,6 +205,36 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
     ubiUpdated.forEach(u => idSet.add(u._id.toString()));
   }
 
+  // ── Incluir cancelaciones activas o del periodo del corte ───────────────────
+  // Para que el reporte de corte no omita cancelaciones cuyo registro, fecha de operación
+  // o movimiento de deudas pertenezca al corte.
+  const cancelDebtIds = await db.collection('debts').distinct('comision_id', {
+    $or: [
+      { created_at: { $gte: dStart, $lte: dEnd } },
+      { updated_at: { $gte: dStart, $lte: dEnd } }
+    ]
+  });
+  cancelDebtIds.forEach(id => id && idSet.add(id.toString()));
+
+  const cancelUbis = await db.collection('comisiones-ubicaciones').find({
+    $or: [
+      { is_cancellation: true },
+      { 'concept.text': /cancelaci/i },
+      { concept: /cancelaci/i }
+    ],
+    $and: [
+      {
+        $or: [
+          { register_date: { $gte: dStart, $lte: dEnd } },
+          { operation_date: { $gte: dStart, $lte: dEnd } },
+          { created_at: { $gte: dStart, $lte: dEnd } },
+          { updated_at: { $gte: dStart, $lte: dEnd } }
+        ]
+      }
+    ]
+  }).toArray();
+  cancelUbis.forEach(u => idSet.add(u._id.toString()));
+
   // Exclude legacy/test items outside corte
   idSet.delete(undefined);
   idSet.delete('6aa89ef91858cee60474d293');
@@ -214,7 +244,12 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
   
   let rawQuery = { _id: { $in: comisionObjectIds } };
   if (tipoFiltro === 'pagadas') {
-    rawQuery.status = STATUS_PAGADA;
+    rawQuery.$or = [
+      { status: STATUS_PAGADA },
+      { is_cancellation: true },
+      { 'concept.text': /cancelaci/i },
+      { concept: /cancelaci/i }
+    ];
   }
 
   let rawComisiones = [];
@@ -267,8 +302,9 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
 
   const conceptMap = {};
   comisiones.forEach(c => {
-    let cName = c.concept?.text || 'Otro';
-    if (c.is_cancellation) cName = 'Cancelación';
+    let cName = c.concept?.text || c.concept || 'Otro';
+    const isCancel = Boolean(c.is_cancellation) || (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci');
+    if (isCancel) cName = 'Cancelación';
     if (!conceptMap[cName]) {
       conceptMap[cName] = {
         concepto: cName,
@@ -397,9 +433,20 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
   const totalGerenciaPropia = gerentes.reduce((sum, g) => sum + g.propia, 0);
 
   // --- 6. ANEXO: PADRÓN DETALLADO DE COMISIONES EN CORTE ---
-  const cancellationIds = comisiones.filter(c => c.is_cancellation).map(c => c._id);
+  const cancellationIds = comisiones.filter(c => 
+    Boolean(c.is_cancellation) || 
+    (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci')
+  ).map(c => c._id);
+
+  const cancIdMatches = cancellationIds.flatMap(id => {
+    const list = [id];
+    if (typeof id === 'string' && ObjectId.isValid(id)) list.push(new ObjectId(id));
+    if (id instanceof ObjectId) list.push(id.toString());
+    return list;
+  });
+
   const cancellationDebts = cancellationIds.length > 0
-    ? await db.collection('debts').find({ comision_id: { $in: cancellationIds } }).toArray()
+    ? await db.collection('debts').find({ comision_id: { $in: cancIdMatches } }).toArray()
     : [];
   const debtsByComision = {};
   for (const d of cancellationDebts) {
@@ -421,7 +468,8 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
     return locA.localeCompare(locB);
   }).map((c, idx) => {
     let cancellationDetail = null;
-    if (c.is_cancellation) {
+    const isCancel = Boolean(c.is_cancellation) || (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci');
+    if (isCancel) {
       const cDebts = debtsByComision[c._id.toString()] || [];
       const totalPenalty = cDebts.reduce((sum, d) => sum + parseFloat(d.total_amount?.toString() || 0), 0) || Math.abs(Number(c.total_commission) || 0);
       const remainingBalance = cDebts.reduce((sum, d) => sum + parseFloat(d.remaining_balance?.toString() || 0), 0);
@@ -442,7 +490,7 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
       index: idx + 1,
       ubicacion: c.location?.text || c.location || 'N/A',
       desarrollo: c.development?.text || c.development || 'N/A',
-      concepto: c.is_cancellation ? 'Cancelación' : (c.concept?.text || c.concept || 'N/A'),
+      concepto: isCancel ? 'Cancelación' : (c.concept?.text || c.concept || 'N/A'),
       statusName: statusMap[c.status?.toString()] || 'N/A',
       cliente: (c.client_name || '').toUpperCase().trim(),
       precioVenta: formatCurrency(c.sale_price),
