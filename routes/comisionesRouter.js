@@ -150,15 +150,46 @@ async function enrichCancellationDebts(db, comisiones) {
 
     const totalPaid = Math.max(0, parseFloat((totalDebt - totalRemaining).toFixed(2)));
     const percentPaid = totalDebt > 0 ? Math.round((totalPaid / totalDebt) * 100) : 0;
+    const isAllPaid = totalDebt > 0 && totalRemaining <= 0;
+
     c.cancellation_summary = {
       total_debt: totalDebt,
       total_remaining: totalRemaining,
       total_paid: totalPaid,
       percent_paid: percentPaid,
-      all_paid: totalRemaining <= 0,
+      all_paid: isAllPaid,
       is_partial: totalPaid > 0 && totalRemaining > 0,
       debts_by_user: debtsByUser
     };
+
+    // Auto-sincronización: si la cancelación ya se cobró completa (100% saldada, $0 por cobrar)
+    // pero en base de datos sigue en Pendiente Pago (order 5), actualizarla a Pagada (order 6)
+    if (isAllPaid && c.status?.order !== 6) {
+      try {
+        const statusPagada = await db.collection('estatus').findOne({ order: 6 });
+        if (statusPagada) {
+          const now = new Date();
+          const cid = c._id;
+          const idMatches = [cid];
+          if (typeof cid === 'string' && ObjectId.isValid(cid)) idMatches.push(new ObjectId(cid));
+          if (cid instanceof ObjectId) idMatches.push(cid.toString());
+
+          await Promise.all([
+            db.collection('comisiones-ubicaciones').updateOne(
+              { _id: cid },
+              { $set: { status: statusPagada._id, updated_at: now } }
+            ),
+            db.collection('comisiones-participantes').updateMany(
+              { comision_id: { $in: idMatches } },
+              { $set: { status: statusPagada._id, updated_at: now } }
+            ),
+          ]);
+          c.status = statusPagada;
+        }
+      } catch (errSync) {
+        console.error('[enrichCancellationDebts] Error auto-sincronizando cancelación liquidada:', errSync);
+      }
+    }
   }
 }
 
@@ -353,10 +384,13 @@ router.get('/mis-comisiones', authenticate, async (req, res) => {
     await enrichCancellationDebts(db, comisiones);
     hideDirectorData(comisiones, req.user.roleName);
 
+    // Filtrar aquellas comisiones que acaban de ser auto-sincronizadas a Pagada
+    const activeComisiones = comisiones.filter(c => c.status?.order !== 6);
+
     return res.status(200).json({
       success: true,
-      data:    comisiones,
-      message: `${comisiones.length} comisión(es) encontrada(s)`,
+      data:    activeComisiones,
+      message: `${activeComisiones.length} comisión(es) encontrada(s)`,
       error:   null,
     });
 
@@ -1185,14 +1219,18 @@ router.patch('/:id/pagar', authenticate, authorize(['Administrador']), async (re
     }
 
     // Verificar si todos los participantes están en status 'paid'
-    const updatedDebts = await db.collection('debts').find({ comision_id: comisionId }).toArray();
+    const idMatches = [comisionId];
+    if (typeof comisionId === 'string' && ObjectId.isValid(comisionId)) idMatches.push(new ObjectId(comisionId));
+    if (comisionId instanceof ObjectId) idMatches.push(comisionId.toString());
+
+    const updatedDebts = await db.collection('debts').find({ comision_id: { $in: idMatches } }).toArray();
     const allDebtsPaid = updatedDebts.length > 0 && updatedDebts.every(d => parseFloat(d.remaining_balance.toString()) <= 0);
 
     // Actualizar participantes individuales que ya saldaron
     for (const d of updatedDebts) {
       if (parseFloat(d.remaining_balance.toString()) <= 0) {
         await db.collection('comisiones-participantes').updateOne(
-          { comision_id: comisionId, user: d.user_id },
+          { comision_id: { $in: idMatches }, user: d.user_id },
           { $set: { status: statusPagada._id, updated_at: now } }
         );
       }
@@ -1204,12 +1242,12 @@ router.patch('/:id/pagar', authenticate, authorize(['Administrador']), async (re
         { $set: { status: statusPagada._id, updated_at: now } }
       );
       await db.collection('comisiones-participantes').updateMany(
-        { comision_id: comisionId },
+        { comision_id: { $in: idMatches } },
         { $set: { status: statusPagada._id, updated_at: now } }
       );
 
       const directorIds = await getUserIdsByRole(db, 'Director');
-      const participantes = await db.collection('comisiones-participantes').find({ comision_id: comisionId }).toArray();
+      const participantes = await db.collection('comisiones-participantes').find({ comision_id: { $in: idMatches } }).toArray();
       const usersToNotify = [...new Set([...participantes.map(p => p.user.toString()), ...directorIds.map(id => id.toString())])];
       await notify(db, usersToNotify.map(id => new ObjectId(id)), `La cancelación de ${locationPago} ha sido liquidada en su totalidad.`, now);
 
@@ -1778,10 +1816,13 @@ router.get('/', authenticate, authorize(['Administrador', 'Director']), async (r
     await enrichCancellationDebts(db, comisiones);
     hideDirectorData(comisiones, req.user.roleName);
 
+    // Filtrar aquellas comisiones que acaban de ser auto-sincronizadas a Pagada
+    const activeComisiones = comisiones.filter(c => c.status?.order !== 6);
+
     return res.status(200).json({
       success: true,
-      data:    comisiones,
-      message: `${comisiones.length} comisión(es) encontrada(s)`,
+      data:    activeComisiones,
+      message: `${activeComisiones.length} comisión(es) encontrada(s)`,
       error:   null,
     });
 

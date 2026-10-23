@@ -994,11 +994,13 @@ function cardHTML(c) {
   }
   if (USER.roleName === 'Administrador' && sName === 'Pendiente Pago') {
     if (isCancelacion) {
-      actions += `
-        <button class="btn btn-purple" id="btn-cobro-${c._id}" onclick="abrirModalCobroCancelacion('${c._id}')">
-          <i class="ti ti-wallet"></i>Gestionar Cobro
-        </button>
-        <button class="btn btn-amber" onclick="pedirCorreccion('${c._id}')"><i class="ti ti-alert-circle"></i>Corregir</button>`;
+      if (!c.cancellation_summary?.all_paid) {
+        actions += `
+          <button class="btn btn-purple" id="btn-cobro-${c._id}" onclick="abrirModalCobroCancelacion('${c._id}')">
+            <i class="ti ti-wallet"></i>Gestionar Cobro
+          </button>
+          <button class="btn btn-amber" onclick="pedirCorreccion('${c._id}')"><i class="ti ti-alert-circle"></i>Corregir</button>`;
+      }
     } else {
       actions += `
         <button class="btn btn-green" onclick="pagar('${c._id}')"><i class="ti ti-cash"></i>Marcar como pagada</button>
@@ -1007,7 +1009,13 @@ function cardHTML(c) {
   }
 
   let badgeHtml = `<span class="badge ${st.cls}">${st.label}</span>`;
-  if (isCancelacion && sName === 'Pendiente Pago' && c.cancellation_summary?.is_partial) {
+  if (isCancelacion && (c.cancellation_summary?.all_paid || sName === 'Pagada')) {
+    badgeHtml = `
+      <span class="badge b-ap">
+        <i class="ti ti-circle-check"></i> Pagada (100% saldada)
+      </span>
+    `;
+  } else if (isCancelacion && sName === 'Pendiente Pago' && c.cancellation_summary?.is_partial) {
     badgeHtml = `
       <span class="badge b-partial" title="Cobrado ${c.cancellation_summary.percent_paid}% de penalizaciones">
         <i class="ti ti-hourglass-empty"></i> Liquidación parcial (${c.cancellation_summary.percent_paid}%)
