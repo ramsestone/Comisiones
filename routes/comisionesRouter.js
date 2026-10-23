@@ -90,17 +90,26 @@ async function enrichCancellationDebts(db, comisiones) {
 
   if (!cancelComisiones.length) return;
 
-  const comisionIds = cancelComisiones.map(c => c._id);
+  const comisionIds = cancelComisiones.flatMap(c => {
+    const ids = [c._id];
+    if (typeof c._id === 'string' && ObjectId.isValid(c._id)) ids.push(new ObjectId(c._id));
+    if (c._id instanceof ObjectId) ids.push(c._id.toString());
+    return ids;
+  });
+
   const allDebts = await db.collection('debts').find({ comision_id: { $in: comisionIds } }).toArray();
   const debtsByComisionUser = {};
   for (const d of allDebts) {
-    const key = `${d.comision_id.toString()}_${d.user_id.toString()}`;
-    debtsByComisionUser[key] = d;
+    if (d && d.comision_id && d.user_id) {
+      const key = `${d.comision_id.toString()}_${d.user_id.toString()}`;
+      debtsByComisionUser[key] = d;
+    }
   }
 
   for (const c of cancelComisiones) {
     let totalDebt = 0;
     let totalRemaining = 0;
+    const debtsByUser = {};
 
     if (Array.isArray(c.participantes)) {
       for (const p of c.participantes) {
@@ -120,6 +129,8 @@ async function enrichCancellationDebts(db, comisiones) {
             paid: paid,
             is_paid: rem <= 0 || debt.status === 'paid'
           };
+          p.remaining_debt = rem;
+          debtsByUser[uId] = debt;
           totalDebt += tot;
           totalRemaining += rem;
         } else {
@@ -130,6 +141,7 @@ async function enrichCancellationDebts(db, comisiones) {
             paid: 0,
             is_paid: false
           };
+          p.remaining_debt = assignedAbs;
           totalDebt += assignedAbs;
           totalRemaining += assignedAbs;
         }
@@ -144,7 +156,8 @@ async function enrichCancellationDebts(db, comisiones) {
       total_paid: totalPaid,
       percent_paid: percentPaid,
       all_paid: totalRemaining <= 0,
-      is_partial: totalPaid > 0 && totalRemaining > 0
+      is_partial: totalPaid > 0 && totalRemaining > 0,
+      debts_by_user: debtsByUser
     };
   }
 }

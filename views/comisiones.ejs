@@ -1584,29 +1584,58 @@ function exportCSV() {
       if (c.penalty_target === 'cliente') {
         conceptText += ' (Penalización al cliente)';
         penalizacionText = 'Penalización al cliente';
-      } else if (c.penalty_target === 'miembros') {
+      } else if (c.penalty_target === 'miembros' || !c.penalty_target) {
         penalizacionText = 'Penalización a miembros';
       }
     }
 
     if (c.participantes && c.participantes.length > 0) {
       for (const p of c.participantes) {
+        let comisionVal = '';
+        if (isCancel && c.penalty_target !== 'cliente') {
+          const rem = p.debt_info?.remaining != null 
+            ? p.debt_info.remaining 
+            : (p.remaining_debt != null 
+                ? p.remaining_debt 
+                : Math.abs(parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString())));
+          const isPaid = Boolean(p.debt_info?.is_paid || rem <= 0);
+
+          if (isPaid || rem <= 0) {
+            comisionVal = '0';
+          } else {
+            comisionVal = '-$' + Number(rem).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          }
+        } else {
+          comisionVal = p.commission_amount != null ? Number(p.commission_amount).toFixed(2) : '';
+        }
+
         lines.push([
           escape(c.development?.text || c.development || ''),
           escape(c.register_date ? new Date(c.register_date).toLocaleDateString('es-MX') : ''),
           escape(conceptText),
           escape(c.operation_date ? new Date(c.operation_date).toLocaleDateString('es-MX') : ''),
-          escape(p.usuario?.name || ''),
+          escape(p.usuario?.name || p.name || ''),
           escape(c.expediente_id || ''), // referencia
           escape(c.client_name || ''),
-          escape(c.location?.text || ''),
+          escape(c.location?.text || c.location || ''),
           escape(c.sale_price ?? ''),
           escape(p.percentage != null ? Number((p.percentage * 100).toFixed(4)).toLocaleString('es-MX', { maximumFractionDigits: 3 }) + '%' : ''),
-          escape(p.commission_amount != null ? Number(p.commission_amount).toFixed(2) : ''),
+          escape(comisionVal),
           escape(penalizacionText)
         ].join(','));
       }
     } else {
+      let comisionVal = '';
+      if (isCancel && c.penalty_target !== 'cliente') {
+        const rem = c.cancellation_summary?.total_remaining != null 
+          ? c.cancellation_summary.total_remaining 
+          : Math.abs(parseFloat((c.total_commission ?? 0).toString()));
+        if (rem <= 0) {
+          comisionVal = '0';
+        } else {
+          comisionVal = '-$' + Number(rem).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+      }
       lines.push([
           escape(c.development?.text || c.development || ''),
           escape(c.register_date ? new Date(c.register_date).toLocaleDateString('es-MX') : ''),
@@ -1615,10 +1644,10 @@ function exportCSV() {
           '', // Vendedor
           escape(c.expediente_id || ''), // referencia
           escape(c.client_name || ''),
-          escape(c.location?.text || ''),
+          escape(c.location?.text || c.location || ''),
           escape(c.sale_price ?? ''),
           '', // % Comisión
-          '', // Comisión
+          escape(comisionVal), // Comisión
           escape(penalizacionText)
       ].join(','));
     }
