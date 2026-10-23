@@ -95,60 +95,118 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
   const dStart = new Date(Date.UTC(sParts[0], sParts[1] - 1, sParts[2], 0, 0, 0, 0));
   const dEnd = new Date(Date.UTC(eParts[0], eParts[1] - 1, eParts[2], 23, 59, 59, 999));
 
-  const STATUS_PENDIENTE_PAGO = new ObjectId('6a1896a7af04e9763c7526c6');
-  const STATUS_PAGADA         = new ObjectId('6a1896a7af04e9763c7526c7');
-  const STATUS_APROBADA       = new ObjectId('6a1896a7af04e9763c7526c5');
+  const STATUS_PENDIENTE_VERIFICACION = new ObjectId('6a1896a7af04e9763c7526c2');
+  const STATUS_VERIFICADA             = new ObjectId('6a1896a7af04e9763c7526c3');
+  const STATUS_PENDIENTE_APROBACION   = new ObjectId('6a1896a7af04e9763c7526c4');
+  const STATUS_APROBADA               = new ObjectId('6a1896a7af04e9763c7526c5');
+  const STATUS_PENDIENTE_PAGO         = new ObjectId('6a1896a7af04e9763c7526c6');
+  const STATUS_PAGADA                 = new ObjectId('6a1896a7af04e9763c7526c7');
 
-  let targetStatuses;
   let subtituloReporte;
   let destinatarioSubText;
   let conceptImpactDesc;
 
+  // Directora users & roles
+  const dirRoles = await db.collection('roles').find({ name: /director/i }).toArray();
+  const dirRoleIds = dirRoles.map(r => r._id);
+  const dirUsers = await db.collection('usuarios').find({ role: { $in: dirRoleIds } }).toArray();
+  const dirUserIds = dirUsers.map(u => u._id);
+
+  let idSet = new Set();
+
   if (tipoFiltro === 'pagadas') {
-    targetStatuses = [STATUS_PAGADA];
     subtituloReporte = "Comisiones marcadas como pagadas por Administración (Dispersión realizada)";
     destinatarioSubText = "Comisiones Marcadas como Pagadas";
     conceptImpactDesc = "Pagada / Dispersada";
-  } else if (tipoFiltro === 'todas') {
-    targetStatuses = [STATUS_PENDIENTE_PAGO, STATUS_APROBADA, STATUS_PAGADA];
-    subtituloReporte = "Comisiones aprobadas para dispersión de pago y pagadas (Corte Consolidado)";
-    destinatarioSubText = "Corte Consolidado de Comisiones";
-    conceptImpactDesc = "Pendiente Pago / Pagada";
-  } else {
-    // Default: 'verificadas_directora'
-    targetStatuses = [STATUS_PENDIENTE_PAGO, STATUS_APROBADA];
+
+    // 1. Transaction records in walletTransactions (payment / debits)
+    const walletComisionIds = await db.collection('walletTransactions').distinct('comision_id', {
+      concept: 'payment',
+      created_at: { $gte: dStart, $lte: dEnd }
+    });
+    // 2. Cancellation penalty debts
+    const debtComisionIds = await db.collection('debts').distinct('comision_id', {
+      created_at: { $gte: dStart, $lte: dEnd }
+    });
+    // 3. Status Pagada updated in range
+    const ubiUpdated = await db.collection('comisiones-ubicaciones').find({
+      updated_at: { $gte: dStart, $lte: dEnd },
+      status: STATUS_PAGADA
+    }).toArray();
+
+    walletComisionIds.forEach(id => id && idSet.add(id.toString()));
+    debtComisionIds.forEach(id => id && idSet.add(id.toString()));
+    ubiUpdated.forEach(u => idSet.add(u._id.toString()));
+
+  } else if (tipoFiltro === 'verificadas_directora') {
     subtituloReporte = "Comisiones verificadas y aprobadas por Dirección (Pendientes para dispersión de pago)";
     destinatarioSubText = "Comisiones Verificadas con Dirección";
     conceptImpactDesc = "Pendiente Pago / Aprobada por Dirección";
+
+    // 1. Participaciones verificadas por la Directora en el rango
+    const dirParts = await db.collection('comisiones-participantes').find({
+      user: { $in: dirUserIds },
+      verification: true,
+      updated_at: { $gte: dStart, $lte: dEnd }
+    }).toArray();
+    dirParts.forEach(p => p.comision_id && idSet.add(p.comision_id.toString()));
+
+    // 2. Todas las participaciones verificadas en el rango
+    const allVerifiedParts = await db.collection('comisiones-participantes').find({
+      verification: true,
+      updated_at: { $gte: dStart, $lte: dEnd }
+    }).toArray();
+    allVerifiedParts.forEach(p => p.comision_id && idSet.add(p.comision_id.toString()));
+
+    // 3. Wallet transactions de tipo credit generadas al aprobar
+    const walletCreditIds = await db.collection('walletTransactions').distinct('comision_id', {
+      type: 'credit',
+      created_at: { $gte: dStart, $lte: dEnd }
+    });
+    walletCreditIds.forEach(id => id && idSet.add(id.toString()));
+
+    // 4. Debts de cancelación generadas o liquidadas en el rango
+    const debtIds = await db.collection('debts').distinct('comision_id', {
+      $or: [
+        { created_at: { $gte: dStart, $lte: dEnd } },
+        { updated_at: { $gte: dStart, $lte: dEnd } }
+      ]
+    });
+    debtIds.forEach(id => id && idSet.add(id.toString()));
+
+    // 5. Comisiones en estatus válidos actualizadas en el rango
+    const ubiUpdated = await db.collection('comisiones-ubicaciones').find({
+      updated_at: { $gte: dStart, $lte: dEnd },
+      status: { $in: [STATUS_VERIFICADA, STATUS_PENDIENTE_APROBACION, STATUS_APROBADA, STATUS_PENDIENTE_PAGO, STATUS_PAGADA] }
+    }).toArray();
+    ubiUpdated.forEach(u => idSet.add(u._id.toString()));
+
+  } else {
+    // TODAS
+    subtituloReporte = "Comisiones aprobadas para dispersión de pago y pagadas (Corte Consolidado)";
+    destinatarioSubText = "Corte Consolidado de Comisiones";
+    conceptImpactDesc = "Pendiente Pago / Pagada";
+
+    const walletIds = await db.collection('walletTransactions').distinct('comision_id', {
+      created_at: { $gte: dStart, $lte: dEnd }
+    });
+    const debtIds = await db.collection('debts').distinct('comision_id', {
+      $or: [
+        { created_at: { $gte: dStart, $lte: dEnd } },
+        { updated_at: { $gte: dStart, $lte: dEnd } }
+      ]
+    });
+    const ubiUpdated = await db.collection('comisiones-ubicaciones').find({
+      updated_at: { $gte: dStart, $lte: dEnd }
+    }).toArray();
+
+    walletIds.forEach(id => id && idSet.add(id.toString()));
+    debtIds.forEach(id => id && idSet.add(id.toString()));
+    ubiUpdated.forEach(u => idSet.add(u._id.toString()));
   }
-
-  // 1. Transaction records in walletTransactions
-  let walletQuery = { created_at: { $gte: dStart, $lte: dEnd } };
-  if (tipoFiltro === 'pagadas') {
-    walletQuery.concept = 'payment';
-  } else if (tipoFiltro === 'verificadas_directora') {
-    walletQuery.type = 'credit';
-  }
-  const walletComisionIds = await db.collection('walletTransactions').distinct('comision_id', walletQuery);
-
-  // 2. Cancellation penalty debts
-  const debtComisionIds = await db.collection('debts').distinct('comision_id', {
-    created_at: { $gte: dStart, $lte: dEnd }
-  });
-
-  // 3. Status updated_at in range
-  const ubiUpdated = await db.collection('comisiones-ubicaciones').find({
-    updated_at: { $gte: dStart, $lte: dEnd },
-    status: { $in: targetStatuses }
-  }).toArray();
-
-  const idSet = new Set([
-    ...walletComisionIds.map(id => id?.toString()),
-    ...debtComisionIds.map(id => id?.toString()),
-    ...ubiUpdated.map(u => u._id.toString())
-  ]);
 
   // Exclude legacy/test items outside corte
+  idSet.delete(undefined);
   idSet.delete('6aa89ef91858cee60474d293');
   idSet.delete('6aa89f671858cee60474d29a');
 
@@ -157,10 +215,6 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
   let rawQuery = { _id: { $in: comisionObjectIds } };
   if (tipoFiltro === 'pagadas') {
     rawQuery.status = STATUS_PAGADA;
-  } else if (tipoFiltro === 'verificadas_directora') {
-    rawQuery.status = { $in: [STATUS_PENDIENTE_PAGO, STATUS_APROBADA] };
-  } else {
-    rawQuery.status = { $in: [STATUS_PENDIENTE_PAGO, STATUS_APROBADA, STATUS_PAGADA] };
   }
 
   let rawComisiones = [];
@@ -171,9 +225,13 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
   // If no comisiones matched via transactions/updated_at, fallback to register_date for safety
   let comisiones = rawComisiones;
   if (comisiones.length === 0) {
+    const fallbackStatusQuery = tipoFiltro === 'pagadas' 
+      ? STATUS_PAGADA 
+      : { $in: [STATUS_VERIFICADA, STATUS_PENDIENTE_APROBACION, STATUS_APROBADA, STATUS_PENDIENTE_PAGO, STATUS_PAGADA] };
+
     comisiones = await db.collection('comisiones-ubicaciones').find({
       register_date: { $gte: dStart, $lte: dEnd },
-      status: { $in: targetStatuses }
+      status: fallbackStatusQuery
     }).toArray();
   }
 
