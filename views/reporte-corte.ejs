@@ -337,7 +337,7 @@
         <i class="fas fa-file-invoice-dollar" style="color:#60e61a; font-size:18px;"></i>
         <div>
           <strong style="font-size:13px;">Reporte Ejecutivo de Corte de Comisiones</strong>
-          <div style="font-size:11px; opacity:0.8;"><%= meta.periodoTexto %> <%= meta.diasTexto %></div>
+          <div style="font-size:11px; opacity:0.8;"><%= meta.destinatarioSub %> · <%= meta.periodoTexto %> <%= meta.diasTexto %></div>
         </div>
       </div>
       <div style="display:flex; gap:8px;">
@@ -353,7 +353,7 @@
       <!-- Top Title Header -->
       <div class="header-system">SISTEMA DE GESTIÓN DE COMISIONES | GRUPO URBANIA</div>
       <div class="header-title">REPORTE EJECUTIVO DE CORTE DE COMISIONES</div>
-      <div class="header-subtitle">Comisiones aprobadas y transicionadas a estatus 'Pendiente de Pago' (Corte de 48 Horas)</div>
+      <div class="header-subtitle"><%= meta.subtitulo || "Comisiones aprobadas y transicionadas a estatus 'Pendiente de Pago' (Corte de 48 Horas)" %></div>
 
       <!-- Metadata Box -->
       <div class="meta-box">
@@ -368,7 +368,7 @@
           <div class="meta-val-sub"><%= meta.horaEmision %></div>
         </div>
         <div class="meta-col">
-          <div class="meta-label">DESTINATARIO</div>
+          <div class="meta-label">DESTINATARIO / CORTE</div>
           <div class="meta-val-main"><%= meta.destinatarioPrincipal %></div>
           <div class="meta-val-sub"><%= meta.destinatarioSub %></div>
         </div>
@@ -562,6 +562,11 @@
               <td class="text-left" style="font-size: 9px;"><%= row.desarrollo %></td>
               <td class="text-left <%- row.concepto === 'Cancelación' ? 'concept-name' : '' %>" style="font-weight: 600;">
                 <%= row.concepto %>
+                <% if (row.statusName) { %>
+                  <div style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: <%= row.statusName === 'Pagada' ? '#15803d' : '#2563eb' %>; margin-top: 1px;">
+                    <i class="fas <%= row.statusName === 'Pagada' ? 'fa-check-double' : 'fa-clock' %>" style="font-size:7px;"></i> <%= row.statusName %>
+                  </div>
+                <% } %>
                 <% if (row.cancellationDetail) { %>
                   <div style="font-size: 8px; font-weight: 400; color: #64748b; line-height: 1.2; margin-top: 1px;">
                     <% if (row.cancellationDetail.allPaid) { %>
@@ -615,6 +620,11 @@
               <td class="text-left" style="font-size: 9px;"><%= row.desarrollo %></td>
               <td class="text-left <%- row.concepto === 'Cancelación' ? 'concept-name' : '' %>" style="font-weight: 600;">
                 <%= row.concepto %>
+                <% if (row.statusName) { %>
+                  <div style="font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: <%= row.statusName === 'Pagada' ? '#15803d' : '#2563eb' %>; margin-top: 1px;">
+                    <i class="fas <%= row.statusName === 'Pagada' ? 'fa-check-double' : 'fa-clock' %>" style="font-size:7px;"></i> <%= row.statusName %>
+                  </div>
+                <% } %>
                 <% if (row.cancellationDetail) { %>
                   <div style="font-size: 8px; font-weight: 400; color: #64748b; line-height: 1.2; margin-top: 1px;">
                     <% if (row.cancellationDetail.allPaid) { %>

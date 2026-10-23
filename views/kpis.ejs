@@ -256,6 +256,74 @@
       color: var(--green-tx);
       border-color: var(--green-br);
     }
+    /* Filter cards for Corte report */
+    .corte-filter-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 6px;
+    }
+    @media (max-width: 600px) {
+      .corte-filter-options {
+        grid-template-columns: 1fr;
+      }
+    }
+    .corte-radio-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1.5px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+    .corte-radio-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .corte-radio-card.active {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: #10b981;
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.2);
+    }
+    .corte-radio-card .radio-header {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .corte-radio-card .radio-icon {
+      font-size: 13px;
+      color: var(--text-2);
+      transition: color 0.2s;
+    }
+    .corte-radio-card.active .radio-icon {
+      color: #10b981;
+    }
+    .corte-radio-card .radio-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-1);
+      flex: 1;
+    }
+    .corte-radio-card.active .radio-title {
+      color: #34d399;
+    }
+    .corte-radio-card .radio-check {
+      font-size: 12px;
+      color: transparent;
+      transition: color 0.2s;
+    }
+    .corte-radio-card.active .radio-check {
+      color: #10b981;
+    }
+    .corte-radio-card .radio-desc {
+      font-size: 10px;
+      color: var(--text-2);
+      margin-top: 4px;
+      line-height: 1.3;
+    }
     .corte-inputs-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -825,7 +893,7 @@
               </div>
               <div>
                 <h3 class="corte-modal-title">Generar Reporte Ejecutivo de Corte</h3>
-                <p class="corte-modal-subtitle">Comisiones aprobadas para dispersión de pago (Corte de 48 Horas)</p>
+                <p class="corte-modal-subtitle">Comisiones aprobadas y verificadas con la Directora (Corte de 48 Horas)</p>
               </div>
             </div>
             <button class="corte-modal-close" onclick="closeCorteModal()" type="button">&times;</button>
@@ -845,6 +913,39 @@
               </button>
             </div>
 
+            <!-- Filtro de Tipo de Reporte -->
+            <div class="corte-form-group" style="margin-bottom: 16px;">
+              <label style="font-size: 12px; font-weight: 700; color: var(--text-2); display: flex; align-items: center; gap: 6px;">
+                <i class="fas fa-filter" style="color: var(--accent);"></i> Filtrar Reporte por:
+              </label>
+              <div class="corte-filter-options">
+                <div class="corte-radio-card active" id="cardFiltroDirectora" onclick="selectCorteFiltro('verificadas_directora')">
+                  <div class="radio-header">
+                    <i class="fas fa-user-check radio-icon"></i>
+                    <span class="radio-title">Verificadas con Directora</span>
+                    <i class="fas fa-check-circle radio-check"></i>
+                  </div>
+                  <div class="radio-desc">Aprobadas por Dirección / Pendiente de Pago</div>
+                </div>
+                <div class="corte-radio-card" id="cardFiltroPagadas" onclick="selectCorteFiltro('pagadas')">
+                  <div class="radio-header">
+                    <i class="fas fa-money-bill-wave radio-icon"></i>
+                    <span class="radio-title">Marcadas como Pagadas</span>
+                    <i class="fas fa-check-circle radio-check"></i>
+                  </div>
+                  <div class="radio-desc">Comisiones pagadas por Administración</div>
+                </div>
+                <div class="corte-radio-card" id="cardFiltroTodas" onclick="selectCorteFiltro('todas')">
+                  <div class="radio-header">
+                    <i class="fas fa-layer-group radio-icon"></i>
+                    <span class="radio-title">Todas (Consolidado)</span>
+                    <i class="fas fa-check-circle radio-check"></i>
+                  </div>
+                  <div class="radio-desc">Consolidado general en el período</div>
+                </div>
+              </div>
+            </div>
+
             <div class="corte-inputs-grid">
               <div class="corte-form-group">
                 <label for="corteStartDate"><i class="fas fa-calendar-alt"></i> Fecha de Inicio</label>
@@ -854,6 +955,11 @@
                 <label for="corteEndDate"><i class="fas fa-calendar-check"></i> Fecha de Fin</label>
                 <input type="date" id="corteEndDate" class="input-date" style="width:100%;" required />
               </div>
+            </div>
+
+            <div class="corte-info-banner" id="corteInfoBanner" style="margin-top: 4px;">
+              <i class="fas fa-info-circle"></i>
+              <span id="corteInfoBannerText">Generando reporte de comisiones aprobadas y verificadas con la Directora (listas para dispersión).</span>
             </div>
 
           </div>
@@ -1318,6 +1424,30 @@
       document.getElementById('corteEndDate').value = lastDay.toISOString().slice(0, 10);
     }
 
+    let currentCorteFiltro = 'verificadas_directora';
+
+    function selectCorteFiltro(tipo) {
+      currentCorteFiltro = tipo;
+      document.querySelectorAll('.corte-radio-card').forEach(c => c.classList.remove('active'));
+      const activeCard = tipo === 'verificadas_directora' 
+        ? document.getElementById('cardFiltroDirectora') 
+        : (tipo === 'pagadas' ? document.getElementById('cardFiltroPagadas') : document.getElementById('cardFiltroTodas'));
+      if (activeCard) activeCard.classList.add('active');
+
+      const modalSub = document.querySelector('.corte-modal-subtitle');
+      const bannerText = document.getElementById('corteInfoBannerText');
+      if (tipo === 'verificadas_directora') {
+        if (modalSub) modalSub.textContent = 'Comisiones aprobadas y verificadas con la Directora (Corte de 48 Horas)';
+        if (bannerText) bannerText.textContent = 'Generando reporte de comisiones aprobadas y verificadas con la Directora (listas para dispersión).';
+      } else if (tipo === 'pagadas') {
+        if (modalSub) modalSub.textContent = 'Comisiones con dispersión marcada como pagada por Administración';
+        if (bannerText) bannerText.textContent = 'Generando reporte de comisiones que fueron formalmente marcadas como pagadas por Administración.';
+      } else {
+        if (modalSub) modalSub.textContent = 'Consolidado general de comisiones en corte (Aprobadas y Pagadas)';
+        if (bannerText) bannerText.textContent = 'Generando reporte consolidado de comisiones aprobadas y pagadas.';
+      }
+    }
+
     function ejecutarCorteYPrint() {
       const startDate = document.getElementById('corteStartDate').value;
       const endDate = document.getElementById('corteEndDate').value;
@@ -1336,7 +1466,7 @@
       btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Generando...';
 
       const iframe = document.getElementById('cortePrintIframe');
-      const url = `/api/kpis/reporte-corte-html?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+      const url = `/api/kpis/reporte-corte-html?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&tipoFiltro=${encodeURIComponent(currentCorteFiltro)}`;
 
       iframe.onload = function() {
         btn.disabled = false;
@@ -1361,7 +1491,7 @@
         alert('Por favor selecciona las fechas de inicio y fin.');
         return;
       }
-      const url = `/api/kpis/reporte-corte-html?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+      const url = `/api/kpis/reporte-corte-html?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&tipoFiltro=${encodeURIComponent(currentCorteFiltro)}`;
       window.open(url, '_blank');
     }
 

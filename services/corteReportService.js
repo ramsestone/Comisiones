@@ -87,7 +87,7 @@ function formatCutPeriod(startDateStr, endDateStr) {
 /**
  * Retrieves and computes all data for Corte Report
  */
-async function getReporteCorteData(db, startDateStr, endDateStr) {
+async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'verificadas_directora') {
   const sParts = startDateStr.split('-').map(Number);
   const eParts = endDateStr.split('-').map(Number);
 
@@ -95,25 +95,51 @@ async function getReporteCorteData(db, startDateStr, endDateStr) {
   const dStart = new Date(Date.UTC(sParts[0], sParts[1] - 1, sParts[2], 0, 0, 0, 0));
   const dEnd = new Date(Date.UTC(eParts[0], eParts[1] - 1, eParts[2], 23, 59, 59, 999));
 
-  // 1. Transaction records in walletTransactions (credits for approved commissions or payments)
-  const walletComisionIds = await db.collection('walletTransactions').distinct('comision_id', {
-    created_at: { $gte: dStart, $lte: dEnd }
-  });
+  const STATUS_PENDIENTE_PAGO = new ObjectId('6a1896a7af04e9763c7526c6');
+  const STATUS_PAGADA         = new ObjectId('6a1896a7af04e9763c7526c7');
+  const STATUS_APROBADA       = new ObjectId('6a1896a7af04e9763c7526c5');
+
+  let targetStatuses;
+  let subtituloReporte;
+  let destinatarioSubText;
+  let conceptImpactDesc;
+
+  if (tipoFiltro === 'pagadas') {
+    targetStatuses = [STATUS_PAGADA];
+    subtituloReporte = "Comisiones marcadas como pagadas por Administración (Dispersión realizada)";
+    destinatarioSubText = "Comisiones Marcadas como Pagadas";
+    conceptImpactDesc = "Pagada / Dispersada";
+  } else if (tipoFiltro === 'todas') {
+    targetStatuses = [STATUS_PENDIENTE_PAGO, STATUS_APROBADA, STATUS_PAGADA];
+    subtituloReporte = "Comisiones aprobadas para dispersión de pago y pagadas (Corte Consolidado)";
+    destinatarioSubText = "Corte Consolidado de Comisiones";
+    conceptImpactDesc = "Pendiente Pago / Pagada";
+  } else {
+    // Default: 'verificadas_directora'
+    targetStatuses = [STATUS_PENDIENTE_PAGO, STATUS_APROBADA];
+    subtituloReporte = "Comisiones verificadas y aprobadas por Dirección (Pendientes para dispersión de pago)";
+    destinatarioSubText = "Comisiones Verificadas con Dirección";
+    conceptImpactDesc = "Pendiente Pago / Aprobada por Dirección";
+  }
+
+  // 1. Transaction records in walletTransactions
+  let walletQuery = { created_at: { $gte: dStart, $lte: dEnd } };
+  if (tipoFiltro === 'pagadas') {
+    walletQuery.concept = 'payment';
+  } else if (tipoFiltro === 'verificadas_directora') {
+    walletQuery.type = 'credit';
+  }
+  const walletComisionIds = await db.collection('walletTransactions').distinct('comision_id', walletQuery);
 
   // 2. Cancellation penalty debts
   const debtComisionIds = await db.collection('debts').distinct('comision_id', {
     created_at: { $gte: dStart, $lte: dEnd }
   });
 
-  // 3. Status updated_at in range (for commissions in Pendiente Pago / Pagada)
+  // 3. Status updated_at in range
   const ubiUpdated = await db.collection('comisiones-ubicaciones').find({
     updated_at: { $gte: dStart, $lte: dEnd },
-    status: {
-      $in: [
-        new ObjectId('6a1896a7af04e9763c7526c6'), // Pendiente Pago
-        new ObjectId('6a1896a7af04e9763c7526c7')  // Pagada
-      ]
-    }
+    status: { $in: targetStatuses }
   }).toArray();
 
   const idSet = new Set([
@@ -127,15 +153,27 @@ async function getReporteCorteData(db, startDateStr, endDateStr) {
   idSet.delete('6aa89f671858cee60474d29a');
 
   const comisionObjectIds = [...idSet].filter(Boolean).map(id => new ObjectId(id));
-  const rawComisiones = await db.collection('comisiones-ubicaciones').find({
-    _id: { $in: comisionObjectIds }
-  }).toArray();
+  
+  let rawQuery = { _id: { $in: comisionObjectIds } };
+  if (tipoFiltro === 'pagadas') {
+    rawQuery.status = STATUS_PAGADA;
+  } else if (tipoFiltro === 'verificadas_directora') {
+    rawQuery.status = { $in: [STATUS_PENDIENTE_PAGO, STATUS_APROBADA] };
+  } else {
+    rawQuery.status = { $in: [STATUS_PENDIENTE_PAGO, STATUS_APROBADA, STATUS_PAGADA] };
+  }
+
+  let rawComisiones = [];
+  if (comisionObjectIds.length > 0) {
+    rawComisiones = await db.collection('comisiones-ubicaciones').find(rawQuery).toArray();
+  }
 
   // If no comisiones matched via transactions/updated_at, fallback to register_date for safety
   let comisiones = rawComisiones;
   if (comisiones.length === 0) {
     comisiones = await db.collection('comisiones-ubicaciones').find({
-      register_date: { $gte: dStart, $lte: dEnd }
+      register_date: { $gte: dStart, $lte: dEnd },
+      status: { $in: targetStatuses }
     }).toArray();
   }
 
@@ -163,9 +201,9 @@ async function getReporteCorteData(db, startDateStr, endDateStr) {
   };
 
   const conceptImpact = {
-    'Escritura': 'Pendiente Pago / Aprobado',
-    'Contrato': 'Pendiente Pago / Aprobado',
-    'Bono': 'Pendiente Pago / Aprobado',
+    'Escritura': conceptImpactDesc,
+    'Contrato': conceptImpactDesc,
+    'Bono': conceptImpactDesc,
     'Cancelación': 'Ajuste / Descuento Wallet'
   };
 
@@ -312,6 +350,9 @@ async function getReporteCorteData(db, startDateStr, endDateStr) {
     debtsByComision[cid].push(d);
   }
 
+  const allStatuses = await db.collection('estatus').find({}).toArray();
+  const statusMap = Object.fromEntries(allStatuses.map(s => [s._id.toString(), s.name]));
+
   // Sorted alphabetically by Desarrollo then Ubicación
   const padron = [...comisiones].sort((a, b) => {
     const devA = (a.development?.text || '').toUpperCase();
@@ -344,6 +385,7 @@ async function getReporteCorteData(db, startDateStr, endDateStr) {
       ubicacion: c.location?.text || c.location || 'N/A',
       desarrollo: c.development?.text || c.development || 'N/A',
       concepto: c.is_cancellation ? 'Cancelación' : (c.concept?.text || c.concept || 'N/A'),
+      statusName: statusMap[c.status?.toString()] || 'N/A',
       cliente: (c.client_name || '').toUpperCase().trim(),
       precioVenta: formatCurrency(c.sale_price),
       comisionTotal: formatCurrency(c.total_commission),
@@ -366,7 +408,9 @@ async function getReporteCorteData(db, startDateStr, endDateStr) {
       fechaEmision,
       horaEmision,
       destinatarioPrincipal: 'Dirección General / Comercial',
-      destinatarioSub: 'Corte para Dispersión de Pago',
+      destinatarioSub: destinatarioSubText,
+      subtitulo: subtituloReporte,
+      tipoFiltro,
       startDateStr,
       endDateStr
     },

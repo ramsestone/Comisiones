@@ -680,13 +680,13 @@ router.get('/reporte-corte-html', authenticate, async (req, res) => {
     return res.status(403).send('Acceso denegado. Solo Directores y Administradores pueden generar el reporte de corte.');
   }
 
-  const { startDate, endDate } = req.query;
+  const { startDate, endDate, tipoFiltro = 'verificadas_directora' } = req.query;
   if (!startDate || !endDate) {
     return res.status(400).send('Se requieren las fechas de inicio y fin (startDate y endDate).');
   }
 
   try {
-    const reportData = await getReporteCorteData(db, startDate, endDate);
+    const reportData = await getReporteCorteData(db, startDate, endDate, tipoFiltro);
     return res.render('reporte-corte', reportData);
   } catch (err) {
     console.error('[GET /api/kpis/reporte-corte-html]', err);
@@ -704,13 +704,13 @@ router.get('/reporte-corte-data', authenticate, async (req, res) => {
     return res.status(403).json({ success: false, message: 'Acceso denegado' });
   }
 
-  const { startDate, endDate } = req.query;
+  const { startDate, endDate, tipoFiltro = 'verificadas_directora' } = req.query;
   if (!startDate || !endDate) {
     return res.status(400).json({ success: false, message: 'Se requieren las fechas startDate y endDate.' });
   }
 
   try {
-    const reportData = await getReporteCorteData(db, startDate, endDate);
+    const reportData = await getReporteCorteData(db, startDate, endDate, tipoFiltro);
     return res.status(200).json({ success: true, data: reportData });
   } catch (err) {
     console.error('[GET /api/kpis/reporte-corte-data]', err);
