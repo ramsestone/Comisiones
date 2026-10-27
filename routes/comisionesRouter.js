@@ -164,7 +164,7 @@ async function enrichCancellationDebts(db, comisiones) {
 
     // Auto-sincronización: si la cancelación ya se cobró completa (100% saldada, $0 por cobrar)
     // pero en base de datos sigue en Pendiente Pago (order 5), actualizarla a Pagada (order 6)
-    if (isAllPaid && c.status?.order !== 6) {
+    if (isAllPaid && c.status?.order === 5) {
       try {
         const statusPagada = await db.collection('estatus').findOne({ order: 6 });
         if (statusPagada) {
