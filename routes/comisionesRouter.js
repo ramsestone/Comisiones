@@ -266,6 +266,26 @@ router.get('/mis-comisiones', authenticate, async (req, res) => {
           $match: matchStage,
         },
 
+        // ── 2. Buscar creador de la comisión ───────────────────────────────
+        {
+          $lookup: {
+            from:         'usuarios',
+            localField:   'created_by',
+            foreignField: '_id',
+            as:           'creador_info',
+          },
+        },
+        { $unwind: { path: '$creador_info', preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from:         'roles',
+            localField:   'creador_info.role',
+            foreignField: '_id',
+            as:           'creador_rol',
+          },
+        },
+        { $unwind: { path: '$creador_rol', preserveNullAndEmptyArrays: true } },
+
         // ── Join estatus de la comisión ──────────────────────────────────────
         {
           $lookup: {
@@ -346,7 +366,11 @@ router.get('/mis-comisiones', authenticate, async (req, res) => {
             register_date:        1,
             correction_comments:  1,
             created_at:           1,
-            created_by:           1,
+            created_by: {
+              _id:      { $ifNull: ['$creador_info._id', '$created_by'] },
+              name:     { $ifNull: ['$creador_info.name', '—'] },
+              roleName: { $ifNull: ['$creador_rol.name', '—'] },
+            },
             is_cancellation:      1,
             penalty_target:       1,
             'status.name':        1,
@@ -1739,6 +1763,26 @@ router.get('/', authenticate, authorize(['Administrador', 'Director']), async (r
     }
 
     aggregatePipeline.push(
+        // ── 0. Join creador de la comisión ────────────────────────────────────
+        {
+          $lookup: {
+            from:         'usuarios',
+            localField:   'created_by',
+            foreignField: '_id',
+            as:           'creador_info',
+          },
+        },
+        { $unwind: { path: '$creador_info', preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from:         'roles',
+            localField:   'creador_info.role',
+            foreignField: '_id',
+            as:           'creador_rol',
+          },
+        },
+        { $unwind: { path: '$creador_rol', preserveNullAndEmptyArrays: true } },
+
         // ── 1. Join estatus de la comisión ────────────────────────────────────
         {
           $lookup: {
@@ -1805,6 +1849,15 @@ router.get('/', authenticate, authorize(['Administrador', 'Director']), async (r
 
 
 
+        {
+          $addFields: {
+            created_by: {
+              _id:      { $ifNull: ['$creador_info._id', '$created_by'] },
+              name:     { $ifNull: ['$creador_info.name', '—'] },
+              roleName: { $ifNull: ['$creador_rol.name', '—'] },
+            },
+          },
+        },
         { $sort: { created_at: -1 } }
     );
 

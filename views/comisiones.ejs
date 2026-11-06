@@ -614,6 +614,7 @@
       <i class="fas fa-search"></i>
       <input type="text" id="filterSearch" placeholder="Buscar cliente, ubicación, desarrollo, participante…">
     </div>
+    <select class="filter-select" id="filterCreator"><option value="">Todos los registradores</option></select>
     <select class="filter-select" id="filterStatus">
       <option value="">Todos los estados</option>
       <option value="Pendiente Verificacion">Pendiente verificación</option>
@@ -681,10 +682,16 @@ function toast(msg) {
 let USER = null;
 let IS_DEV = false;
 let DATA = [];
-const FILTERS = { search: '', status: '', company: '', dev: '', concept: '' };
+const FILTERS = { search: '', creator: '', status: '', company: '', dev: '', concept: '' };
 
 function getFiltered() {
   return DATA.filter(c => {
+    if (FILTERS.creator) {
+      const cId = (c.created_by?._id || c.created_by || '').toString();
+      const cName = (c.created_by?.name || '').toString().toLowerCase();
+      const fVal = FILTERS.creator.toString().toLowerCase();
+      if (cId !== FILTERS.creator && cName !== fVal) return false;
+    }
     if (FILTERS.status) {
       const sName = (c.status?.name || '').trim().toLowerCase();
       const fName = FILTERS.status.trim().toLowerCase();
@@ -696,6 +703,7 @@ function getFiltered() {
     if (FILTERS.search) {
       const hay = [
         c.client_name, c.location?.text, c.development?.text, c.company?.text,
+        (c.created_by?.name || ''),
         ...(c.participantes || []).map(p => p.usuario?.name || ''),
       ].join(' ').toLowerCase();
       if (!hay.includes(FILTERS.search)) return false;
@@ -705,7 +713,7 @@ function getFiltered() {
 }
 
 function updateFilterClear() {
-  const active = FILTERS.search || FILTERS.status || FILTERS.company || FILTERS.dev || FILTERS.concept || $('filterFrom').value || $('filterTo').value;
+  const active = FILTERS.search || FILTERS.creator || FILTERS.status || FILTERS.company || FILTERS.dev || FILTERS.concept || $('filterFrom').value || $('filterTo').value;
   $('filterClear').classList.toggle('hidden', !active);
 }
 
@@ -831,13 +839,46 @@ function populateFilterDropdowns() {
   const selC = $('filterCompany');
   const selD = $('filterDev');
   const selConcept = $('filterConcept');
-  // Limpiar opciones previas salvo el primer "Todas"
+  const selCreator = $('filterCreator');
+
+  // Limpiar opciones previas salvo el primer "Todas / Todos"
   while (selC.options.length > 1) selC.remove(1);
   while (selD.options.length > 1) selD.remove(1);
   while (selConcept.options.length > 1) selConcept.remove(1);
+  if (selCreator) while (selCreator.options.length > 1) selCreator.remove(1);
+
   companies.forEach(n => { const o = document.createElement('option'); o.value = o.textContent = n; selC.appendChild(o); });
   developments.forEach(n => { const o = document.createElement('option'); o.value = o.textContent = n; selD.appendChild(o); });
   concepts.forEach(n => { const o = document.createElement('option'); o.value = o.textContent = n; selConcept.appendChild(o); });
+
+  // Poblar filtro de registradores (Gerentes y Directores)
+  if (selCreator) {
+    const creatorsMap = new Map();
+    DATA.forEach(c => {
+      const cr = c.created_by;
+      if (!cr) return;
+      const id = (cr._id || cr).toString();
+      const name = cr.name || null;
+      const role = cr.roleName || '';
+      if (id && name && name !== '—') {
+        const isTargetRole = ['Gerente', 'Director'].includes(role);
+        if (!creatorsMap.has(id) && (isTargetRole || !role || role === '—')) {
+          creatorsMap.set(id, { id, name, role });
+        }
+      }
+    });
+
+    const sortedCreators = Array.from(creatorsMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+    sortedCreators.forEach(cr => {
+      const o = document.createElement('option');
+      o.value = cr.id;
+      o.textContent = cr.role && cr.role !== '—' ? `${cr.name} (${cr.role})` : cr.name;
+      selCreator.appendChild(o);
+    });
+
+    // Si el usuario actual es Gerente, mostrar por defecto sus opciones o solo si hay más de 1
+    selCreator.style.display = (sortedCreators.length > 0) ? 'inline-block' : 'none';
+  }
 }
 
 function render() {
@@ -860,7 +901,8 @@ function cardHTML(c) {
   const isCancelacion = (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci') || Boolean(c.is_cancellation);
   let dispTotal = 0;
 
-  const isCreador = c.created_by === USER.id;
+  const creatorId = (c.created_by?._id || c.created_by || '').toString();
+  const isCreador = creatorId === USER.id;
   const isAdmin = USER.roleName === 'Administrador';
   
   let gerenteActions = '';
@@ -1680,6 +1722,12 @@ document.addEventListener('DOMContentLoaded', () => {
     FILTERS.search = this.value.toLowerCase().trim();
     updateFilterClear(); render();
   });
+  if ($('filterCreator')) {
+    $('filterCreator').addEventListener('change', function() {
+      FILTERS.creator = this.value;
+      updateFilterClear(); render();
+    });
+  }
   $('filterStatus').addEventListener('change', function() {
     FILTERS.status = this.value;
     updateFilterClear(); render();
@@ -1697,8 +1745,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateFilterClear(); render();
   });
   $('filterClear').addEventListener('click', () => {
-    FILTERS.search = FILTERS.status = FILTERS.company = FILTERS.dev = FILTERS.concept = '';
+    FILTERS.search = FILTERS.creator = FILTERS.status = FILTERS.company = FILTERS.dev = FILTERS.concept = '';
     $('filterSearch').value  = '';
+    if ($('filterCreator')) $('filterCreator').value = '';
     $('filterStatus').value  = '';
     $('filterCompany').value = '';
     $('filterDev').value     = '';
