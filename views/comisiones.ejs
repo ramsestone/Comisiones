@@ -581,6 +581,49 @@
       border-color: #8b5cf6;
       box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
     }
+    /* Estilos sugerencia de descomisión */
+    .manager-sugg-banner {
+      background: rgba(14, 165, 233, 0.08);
+      border: 1px dashed rgba(14, 165, 233, 0.35);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin: 10px 0 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .manager-sugg-banner i {
+      color: #38bdf8;
+      font-size: 16px;
+      margin-top: 2px;
+    }
+    .manager-sugg-content {
+      flex: 1;
+      font-size: 12px;
+      color: var(--text-2);
+      line-height: 1.45;
+    }
+    .manager-sugg-content strong {
+      color: var(--text-1);
+    }
+    .manager-sugg-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(14, 165, 233, 0.2);
+      color: #38bdf8;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      margin-right: 6px;
+    }
+    .manager-sugg-date {
+      font-size: 10px;
+      color: var(--text-3);
+      margin-top: 3px;
+    }
   </style>
 </head>
 <body>
@@ -1018,6 +1061,15 @@ function cardHTML(c) {
 
   let actions = '';
   const sName = c.status?.name;
+
+  // Botón para que el Gerente (y Admin/Director) pueda sugerir/proponer el descuento de la cancelación
+  if (isCancelacion && ['Gerente', 'Administrador', 'Director'].includes(USER.roleName)) {
+    actions += `
+      <button class="btn btn-outline" style="border-color:rgba(14, 165, 233, 0.4); color:#38bdf8;" onclick="abrirModalSugerenciaDescomision('${c._id}')" title="Sugerir importe o fecha de descuento para esta cancelación">
+        <i class="ti ti-bulb"></i>${c.manager_suggestion ? 'Editar Sugerencia' : 'Sugerir Descomisión'}
+      </button>`;
+  }
+
   if (IS_DEV && USER.roleName === 'Administrador' && sName === 'Pendiente Verificacion') {
     actions += `
       <button class="btn btn-purple" onclick="verificarTodos('${c._id}')" title="Verificar todos los participantes de esta comisión (Modo Dev)">
@@ -1088,6 +1140,26 @@ function cardHTML(c) {
       </div>
       ${corrBanner}
       ${cancellationProgressHtml}
+      ${(() => {
+        if (!c.manager_suggestion) return '';
+        const ms = c.manager_suggestion;
+        const montoStr = ms.monto !== null && ms.monto !== undefined
+          ? (ms.tipo === 'porcentaje' ? `${ms.monto}%` : fmt(ms.monto))
+          : null;
+        return `
+          <div class="manager-sugg-banner">
+            <i class="ti ti-bulb"></i>
+            <div class="manager-sugg-content">
+              <div>
+                <strong>Recomendación de Gerencia (${ms.updated_by?.name || 'Gerente'}):</strong>
+                ${montoStr ? `<span class="manager-sugg-badge"><i class="ti ti-arrow-down-right"></i>Sugerido: ${montoStr}</span>` : ''}
+              </div>
+              ${ms.comentario ? `<div style="margin-top:4px; font-style:italic; color:var(--text-1);">"${ms.comentario}"</div>` : ''}
+              <div class="manager-sugg-date">Registrado el ${fmtDate(ms.updated_at || c.updated_at)}</div>
+            </div>
+          </div>
+        `;
+      })()}
       <div class="participants-section">
         <div class="participants-label">Participantes</div>
         ${partRows}
@@ -1535,6 +1607,123 @@ async function ejecutarCobroCancelacion(comisionId) {
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = '<i class="ti ti-check"></i> Aplicar Cobros';
+    }
+  }
+}
+
+// ── Modal Sugerencia Descomisión (Gerente) ──────────────────────────────────
+function abrirModalSugerenciaDescomision(comisionId) {
+  if (document.getElementById('suggestionModal')) return;
+
+  const c = DATA.find(x => (x._id || x.comision_id)?.toString() === comisionId.toString());
+  if (!c) return;
+
+  const existing = c.manager_suggestion || {};
+  const currentTipo = existing.tipo || 'monto';
+  const currentMonto = (existing.monto !== null && existing.monto !== undefined) ? existing.monto : '';
+  const currentComentario = existing.comentario || '';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'suggestionModal';
+  overlay.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" style="max-width:480px;">
+      <div class="modal-icon" style="background:rgba(14, 165, 233, 0.15);">
+        <i class="ti ti-bulb" style="color:#38bdf8;"></i>
+      </div>
+      <h3>Sugerencia de Descomisión</h3>
+      <p style="font-size:12px; color:var(--text-2); margin-bottom:14px;">
+        Propón el monto aproximado o porcentaje a descontar y el periodo o motivo para el Administrador y la Directora. 
+        <br><strong style="color:var(--text-3); font-size:11px;">(Nota: Es una recomendación visual; el Administrador aplicará el cobro).</strong>
+      </p>
+
+      <div style="display:flex; flex-direction:column; gap:12px; text-align:left; margin-bottom:16px;">
+        <div>
+          <label style="font-size:11px; font-weight:700; color:var(--text-3); text-transform:uppercase;">Tipo de sugerencia</label>
+          <div style="display:flex; gap:12px; margin-top:4px;">
+            <label style="font-size:12px; cursor:pointer; display:flex; align-items:center; gap:5px;">
+              <input type="radio" name="suggTipo" value="monto" ${currentTipo !== 'porcentaje' ? 'checked' : ''} onchange="toggleSuggUnit()"> Importe fijo ($)
+            </label>
+            <label style="font-size:12px; cursor:pointer; display:flex; align-items:center; gap:5px;">
+              <input type="radio" name="suggTipo" value="porcentaje" ${currentTipo === 'porcentaje' ? 'checked' : ''} onchange="toggleSuggUnit()"> Porcentaje (%)
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:11px; font-weight:700; color:var(--text-3); text-transform:uppercase;" id="lblSuggUnit">Monto sugerido ($)</label>
+          <input type="number" step="0.01" class="cobro-input" id="inpSuggMonto" value="${currentMonto}" placeholder="Ej. 2500" style="width:100%; text-align:left; margin-top:4px; padding:8px 10px;" />
+        </div>
+
+        <div>
+          <label style="font-size:11px; font-weight:700; color:var(--text-3); text-transform:uppercase;">Comentario o periodo recomendado</label>
+          <textarea id="inpSuggComentario" rows="3" class="cobro-input" style="width:100%; text-align:left; margin-top:4px; padding:8px 10px; resize:vertical;" placeholder="Ej. Descontar en la siguiente comisión de escrituración del asesor...">${currentComentario}</textarea>
+        </div>
+      </div>
+
+      <div class="modal-btns">
+        <button class="mbtn" onclick="closeSuggestionModal()">Cancelar</button>
+        <button class="mbtn btn-purple" id="btnGuardarSugg" style="background:#0284c7; border-color:#38bdf8;" onclick="guardarSugerenciaDescomision('${comisionId}')">
+          Guardar Sugerencia
+        </button>
+      </div>
+    </div>
+  `;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeSuggestionModal(); });
+  document.body.appendChild(overlay);
+}
+
+function toggleSuggUnit() {
+  const isPct = document.querySelector('input[name="suggTipo"]:checked')?.value === 'porcentaje';
+  const lbl = document.getElementById('lblSuggUnit');
+  if (lbl) lbl.textContent = isPct ? 'Porcentaje sugerido (%)' : 'Monto sugerido ($)';
+}
+
+function closeSuggestionModal() {
+  const m = document.getElementById('suggestionModal');
+  if (m) m.remove();
+}
+
+async function guardarSugerenciaDescomision(comisionId) {
+  const tipo = document.querySelector('input[name="suggTipo"]:checked')?.value || 'monto';
+  const monto = document.getElementById('inpSuggMonto')?.value;
+  const comentario = document.getElementById('inpSuggComentario')?.value || '';
+
+  const btn = document.getElementById('btnGuardarSugg');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm" style="border-top-color:#fff;"></span> Guardando…';
+  }
+
+  try {
+    const r = await fetch(`/api/comisiones/${comisionId}/sugerencia-descomision`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sugerencia_monto: monto,
+        sugerencia_tipo: tipo,
+        comentario: comentario
+      })
+    });
+    const j = await r.json();
+    toast(j.message || 'Sugerencia guardada');
+    if (j.success) {
+      closeSuggestionModal();
+      await reloadComision(comisionId);
+    } else {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = 'Guardar Sugerencia';
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    toast('Error al guardar la sugerencia');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = 'Guardar Sugerencia';
     }
   }
 }

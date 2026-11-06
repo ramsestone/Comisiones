@@ -9,6 +9,7 @@ const ejsLayouts = require('express-ejs-layouts');
 const { injectUserLocals } = require('./JWT/authCookies');
 const cron = require('node-cron');
 const { syncEKData } = require('./services/ekSyncService');
+const { checkAndNotifyCancellationReminders } = require('./services/cancellationReminderService');
 
 
 const app = express();
@@ -99,6 +100,17 @@ connectDatabase().then(() => {
         }
       } catch (err) {
         console.error('Error en cron job de EK:', err);
+      }
+    });
+
+    // Recordatorio automático de descomisiones/cancelaciones a Gerentes (corre los días 1, 10 y 20 a las 09:00 AM)
+    cron.schedule('0 9 1,10,20 * *', async () => {
+      try {
+        if (app.locals.mongoClient) {
+          await checkAndNotifyCancellationReminders(app.locals.mongoClient);
+        }
+      } catch (err) {
+        console.error('Error en cron job de recordatorio de descomisiones:', err);
       }
     });
   });

@@ -12,17 +12,6 @@ function formatCurrency(amount) {
   });
 }
 
-/**
- * Formats date as Mexican Spanish readable string
- */
-function formatSpanishDate(date) {
-  const months = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-  const d = new Date(date);
-  return `${d.getUTCDate()} de ${months[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
-}
 
 /**
  * Get Spanish day of the week
@@ -96,11 +85,11 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
   const dEnd = new Date(Date.UTC(eParts[0], eParts[1] - 1, eParts[2], 23, 59, 59, 999));
 
   const STATUS_PENDIENTE_VERIFICACION = new ObjectId('6a1896a7af04e9763c7526c2');
-  const STATUS_VERIFICADA             = new ObjectId('6a1896a7af04e9763c7526c3');
-  const STATUS_PENDIENTE_APROBACION   = new ObjectId('6a1896a7af04e9763c7526c4');
-  const STATUS_APROBADA               = new ObjectId('6a1896a7af04e9763c7526c5');
-  const STATUS_PENDIENTE_PAGO         = new ObjectId('6a1896a7af04e9763c7526c6');
-  const STATUS_PAGADA                 = new ObjectId('6a1896a7af04e9763c7526c7');
+  const STATUS_VERIFICADA = new ObjectId('6a1896a7af04e9763c7526c3');
+  const STATUS_PENDIENTE_APROBACION = new ObjectId('6a1896a7af04e9763c7526c4');
+  const STATUS_APROBADA = new ObjectId('6a1896a7af04e9763c7526c5');
+  const STATUS_PENDIENTE_PAGO = new ObjectId('6a1896a7af04e9763c7526c6');
+  const STATUS_PAGADA = new ObjectId('6a1896a7af04e9763c7526c7');
 
   let subtituloReporte;
   let destinatarioSubText;
@@ -241,7 +230,7 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
   idSet.delete('6aa89f671858cee60474d29a');
 
   const comisionObjectIds = [...idSet].filter(Boolean).map(id => new ObjectId(id));
-  
+
   let rawQuery = { _id: { $in: comisionObjectIds } };
   if (tipoFiltro === 'pagadas') {
     rawQuery.$or = [
@@ -260,8 +249,8 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
   // If no comisiones matched via transactions/updated_at, fallback to register_date for safety
   let comisiones = rawComisiones;
   if (comisiones.length === 0) {
-    const fallbackStatusQuery = tipoFiltro === 'pagadas' 
-      ? STATUS_PAGADA 
+    const fallbackStatusQuery = tipoFiltro === 'pagadas'
+      ? STATUS_PAGADA
       : { $in: [STATUS_VERIFICADA, STATUS_PENDIENTE_APROBACION, STATUS_APROBADA, STATUS_PENDIENTE_PAGO, STATUS_PAGADA] };
 
     comisiones = await db.collection('comisiones-ubicaciones').find({
@@ -433,8 +422,8 @@ async function getReporteCorteData(db, startDateStr, endDateStr, tipoFiltro = 'v
   const totalGerenciaPropia = gerentes.reduce((sum, g) => sum + g.propia, 0);
 
   // --- 6. ANEXO: PADRÓN DETALLADO DE COMISIONES EN CORTE ---
-  const cancellationIds = comisiones.filter(c => 
-    Boolean(c.is_cancellation) || 
+  const cancellationIds = comisiones.filter(c =>
+    Boolean(c.is_cancellation) ||
     (c.concept?.text || c.concept || '').toString().toLowerCase().includes('cancelaci')
   ).map(c => c._id);
 

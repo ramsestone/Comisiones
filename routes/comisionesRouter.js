@@ -373,6 +373,7 @@ router.get('/mis-comisiones', authenticate, async (req, res) => {
             },
             is_cancellation:      1,
             penalty_target:       1,
+            manager_suggestion:   1,
             'status.name':        1,
             'status.order':       1,
             'status.description': 1,
@@ -1420,6 +1421,74 @@ router.patch('/:id/revertir-pago', authenticate, authorize(['Administrador', 'Di
       data:    null,
       message: 'Error al retornar la comisión a Pendiente por Pagar',
       error:   error.message,
+    });
+  }
+});
+
+
+// ── PATCH /api/comisiones/:id/sugerencia-descomision ───────────────────────
+// El Gerente registra o actualiza su sugerencia/propuesta de descuento para una cancelación
+router.patch('/:id/sugerencia-descomision', authenticate, authorize(['Administrador', 'Director', 'Gerente']), async (req, res) => {
+  const client = req.app.locals.mongoClient;
+  const db     = client.db(DB_NAME);
+
+  try {
+    const comisionId = new ObjectId(req.params.id);
+    const { sugerencia_monto, sugerencia_tipo, comentario } = req.body;
+    const now = new Date();
+
+    const comision = await db.collection('comisiones-ubicaciones').findOne({ _id: comisionId });
+    if (!comision) {
+      return res.status(404).json({ success: false, message: 'Comisión no encontrada' });
+    }
+
+    if (!comision.is_cancellation) {
+      return res.status(400).json({ success: false, message: 'Solo se pueden registrar sugerencias en comisiones de cancelación' });
+    }
+
+    const sugerenciaDoc = {
+      monto: (sugerencia_monto !== undefined && sugerencia_monto !== null && sugerencia_monto !== '') ? Number(sugerencia_monto) : null,
+      tipo: sugerencia_tipo || 'monto', // 'monto' | 'porcentaje'
+      comentario: (comentario || '').trim(),
+      updated_by: {
+        _id: new ObjectId(req.user.id),
+        name: req.user.name,
+        roleName: req.user.roleName
+      },
+      updated_at: now
+    };
+
+    await db.collection('comisiones-ubicaciones').updateOne(
+      { _id: comisionId },
+      { $set: { manager_suggestion: sugerenciaDoc, updated_at: now } }
+    );
+
+    // Notificar a Administradores y Directores si la sugerencia fue cargada por un Gerente
+    if (req.user.roleName === 'Gerente') {
+      const locText = comision.location?.text || 'Sin ubicación';
+      const adminAndDirIds = await db.collection('usuarios').aggregate([
+        { $lookup: { from: 'roles', localField: 'role', foreignField: '_id', as: 'r' } },
+        { $unwind: '$r' },
+        { $match: { 'r.name': { $in: ['Administrador', 'Director'] }, active: true } },
+        { $project: { _id: 1 } }
+      ]).toArray();
+
+      const notifMsg = `💬 El Gerente ${req.user.name} sugirió descomisión para ${locText}: ${sugerenciaDoc.monto ? (sugerenciaDoc.tipo === 'porcentaje' ? sugerenciaDoc.monto + '%' : '$' + Number(sugerenciaDoc.monto).toLocaleString('es-MX')) : ''} "${sugerenciaDoc.comentario}"`;
+      await notify(db, adminAndDirIds.map(u => u._id), notifMsg, now);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: sugerenciaDoc,
+      message: 'Sugerencia de descomisión guardada correctamente'
+    });
+
+  } catch (error) {
+    console.error('[PATCH /api/comisiones/:id/sugerencia-descomision]', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al guardar sugerencia',
+      error: error.message
     });
   }
 });
