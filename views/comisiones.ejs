@@ -791,7 +791,7 @@ async function init() {
     $('btnNew').style.display = 'flex';
   }
 
-  if (['Director', 'Administrador'].includes(USER.roleName)) {
+  if (['Gerente', 'Director', 'Administrador'].includes(USER.roleName)) {
     $('btnExport').style.display = 'flex';
   }
 
@@ -1828,8 +1828,14 @@ function exportCSV() {
       }
     }
 
-    if (c.participantes && c.participantes.length > 0) {
-      for (const p of c.participantes) {
+    const visibleParticipantes = (c.participantes || []).filter(p => {
+      if (p.role_in_comision === 'director' && !['Director', 'Administrador'].includes(USER.roleName)) return false;
+      if (p.role_in_comision === 'gerente' && USER.roleName === 'Asesor') return false;
+      return true;
+    });
+
+    if (visibleParticipantes.length > 0) {
+      for (const p of visibleParticipantes) {
         let comisionVal = '';
         if (isCancel && c.penalty_target !== 'cliente') {
           const rem = p.debt_info?.remaining != null 
@@ -1845,7 +1851,8 @@ function exportCSV() {
             comisionVal = '-$' + Number(rem).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
           }
         } else {
-          comisionVal = p.commission_amount != null ? Number(p.commission_amount).toFixed(2) : '';
+          const monto = p.adjusted_commission ?? p.commission_amount;
+          comisionVal = monto != null ? Number(monto).toFixed(2) : '';
         }
 
         lines.push([
@@ -1863,7 +1870,7 @@ function exportCSV() {
           escape(penalizacionText)
         ].join(','));
       }
-    } else {
+    } else if (['Director', 'Administrador'].includes(USER.roleName)) {
       let comisionVal = '';
       if (isCancel && c.penalty_target !== 'cliente') {
         const rem = c.cancellation_summary?.total_remaining != null 

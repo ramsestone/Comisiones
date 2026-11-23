@@ -36,6 +36,34 @@ function applyHierarchyPrivacy(comisiones, roleName) {
         (sum, p) => sum + parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString()),
         0
       );
+
+      if (c.cancellation_summary) {
+        let totalDebt = 0;
+        let totalRemaining = 0;
+        const visibleDebtsByUser = {};
+        for (const p of c.participantes) {
+          const uId = (p.usuario?._id || p.user)?.toString();
+          const tot = p.debt_info?.total ?? Math.abs(parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString()));
+          const rem = p.debt_info?.remaining ?? (p.remaining_debt ?? tot);
+          totalDebt += tot;
+          totalRemaining += rem;
+          if (uId && c.cancellation_summary.debts_by_user?.[uId]) {
+            visibleDebtsByUser[uId] = c.cancellation_summary.debts_by_user[uId];
+          }
+        }
+        const totalPaid = Math.max(0, parseFloat((totalDebt - totalRemaining).toFixed(2)));
+        const percentPaid = totalDebt > 0 ? Math.round((totalPaid / totalDebt) * 100) : 0;
+        c.cancellation_summary = {
+          ...c.cancellation_summary,
+          total_debt: totalDebt,
+          total_remaining: totalRemaining,
+          total_paid: totalPaid,
+          percent_paid: percentPaid,
+          all_paid: totalDebt > 0 && totalRemaining <= 0,
+          is_partial: totalPaid > 0 && totalRemaining > 0,
+          debts_by_user: visibleDebtsByUser,
+        };
+      }
     }
   });
 }
@@ -2500,6 +2528,18 @@ router.get('/obtener/:id', authenticate, async (req, res) => {
         ? (participantes.find(p => p.role_in_comision === 'director') || null)
         : undefined,
     };
+
+    const visibleParticipants = [
+      ...participants.advisors,
+      ...(participants.managers || []),
+      ...(participants.director ? [participants.director] : []),
+    ];
+    if (!includeDirector) {
+      ubicacion.total_commission = visibleParticipants.reduce(
+        (sum, p) => sum + parseFloat((p.adjusted_commission ?? p.commission_amount ?? 0).toString()),
+        0
+      );
+    }
 
     return res.status(200).json({
       success: true,

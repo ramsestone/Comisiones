@@ -12,6 +12,18 @@ function formatCurrency(amount) {
   });
 }
 
+/**
+ * Formats date as Mexican Spanish readable string
+ */
+function formatSpanishDate(date) {
+  const months = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  const d = new Date(date);
+  return `${d.getUTCDate()} de ${months[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
+}
+
 
 /**
  * Get Spanish day of the week
